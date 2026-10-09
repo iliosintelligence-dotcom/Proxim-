@@ -158,3 +158,212 @@ Milestone ordering and verification gaps in the middle of the plan. Events, outb
 - Fixed rate-card CPM pricing (no auctions) and 100 percent human approval of signposts in v1; on-device caps reset on reinstall and are client-trusted, with billing capped at budget and overshoot absorbed by Proxim.
 - A dedicated new Supabase project is used and the existing 'ilios Healthcare' project (wjsjkemamttsuilhihip) is never reused; the Postgres major version is whatever the new project provides.
 - AWS KMS (ECC_NIST_P256) reached via OIDC from Vercel is acceptable as the signing-key custodian; an OHTTP relay from a different organization is commercially obtainable before health traffic, otherwise the health pilot stays sandbox-only.
+
+---
+
+# Review of PLAN-ADDENDUM-01
+
+Adversarial critic review of [`PLAN-ADDENDUM-01.md`](PLAN-ADDENDUM-01.md), 2026-10-09. **2 blockers, 12 important, 5 minor.** The addendum has **not yet been revised** to address these.
+
+## Verdict
+
+The addendum is a serious piece of work. Its main decisions hold up: no hosted ad notifications, local-only delivery, a relationship test for owner mode, an identity firewall, and honest background physics. I found no blocker in the direction. I did find three internal contradictions that break the flagship resort scenario as written. It also silently breaks invariants in four places, and v1 is much heavier than it claims.
+
+The three contradictions:
+- The owner-only app makes zero tile fetches, so it cannot hold the sensitive-zone data that I13 and I16 require at post time.
+- The 24 h fail-closed revocation rule means the typical first-time guest, whose app was last opened at booking, never gets the welcome.
+- The 12 h zone_state TTL kills departure for any multi-day stay.
+
+Owner binding can also be used to run an unlabelled ad marketplace.
+
+Store-policy claims are plausible. Compare fetched text with the addendum:
+- Apple 2.5.18, 2.5.16, 4.5.3, 4.5.4, 4.10 and 5.1.5 read as the addendum says. I fetched the guidelines page, but it showed no "updated 2026-06-08" date, so that date is unconfirmed.
+- Android geofencing limits (100 per app per user, 100-150 m radius, latency text, FLAG_MUTABLE, re-register rules) match the Android docs.
+- Google's ads and system-notification rule is confirmed only through secondary summaries: support.google.com was unreachable from this sandbox, the same limit the addendum reports.
+- Apple's text says "Push Notifications", so whether 4.5.4 binds SDK-posted local notifications is genuinely open, as the addendum says.
+- Apple DTS (forum snippet) supports UNLocationNotificationTrigger needing only When-In-Use. A tutorial and a forum post report suspended-app and missed-trigger problems. Path S stays correctly flagged.
+- Android's docs say background-location approval is not guaranteed and is limited to core functionality. The dry-run treatment (gap 6) understates that.
+
+Recommended fixes before merge:
+1. Resolve gaps 1-5 and 8.
+2. Re-tier the milestones as in the scope assessment.
+3. Add the Play-approval gate before M16.
+4. Remove the promised 2-3 minute delivery figure until the p50/p95 and iOS inconsistencies are fixed.
+
+## Scope assessment
+
+v1 is not yet small enough for a very small team, and it only partly respects 'advertising first'. The addendum correctly keeps owner mode behind M11 and a signed design partner. But it moves a lot of owner-driven machinery into the hosted v1 path:
+- the full event set in proxim-detect (cross, pass, dwell, sequence, exit);
+- the eight new invariants I13-I20 with named CI tests;
+- notification and region OS models at M4;
+- the claim ladder with postcard proof, at M5;
+- G1/G2 reporting rules, at M9;
+- a notification benefit-rule engine, at M3.
+It also adds a 25+ class picker backed by a new Overture/PostGIS/PMTiles/search pipeline, a noise-profile Drive-it preview, a WASM geometry port and ODbL lineage tooling. 'Days of work' for Stage 0 is not credible next to that list.
+
+Cut or defer:
+- Keep the event enum, field reservations and signed envelope v2.
+- Implement ENTER, APPROACH and internal hysteresis only; the other events arrive with Stage 1.1 or 2.
+- v1 picks: POI, area/neighbourhood, road corridor and custom shapes. Building, junction, car park, transit, brand and import come once they compile to those shapes.
+- Move the claim ladder, G1/G2 reporting, notification models and the benefit engine to Stage 1.1/2.
+- Keep I13-I20 as design constraints and write each test with its feature. Only I17, I18, the I2 lint scope and I8' need v1 tests.
+- Run the ODbL open-extract process only after counsel has advised.
+- Make the design-partner letter and a Play/Apple review outcome an explicit entry gate to M15-M18.
+
+Keep as is: the hosted-notification deny, local-only delivery, mode as policy data, and the not-building list.
+
+## Silent invariant changes (9)
+
+- I8 to I8' weakens a PLAN invariant: tile fetches carrying no app key becomes 'never both key and location in one request'. It is marked as a change, but it leaves owner-only apps with no tile packs, which silently breaks I13/I16/R6/R7 (no device-side sensitive-zone data). Not acknowledged anywhere.
+- I14 (identity firewall) and the 'arm list never leaves the device' claim are not guaranteed unless the owner bundle fetch is independent of arming. Per-venue or per-signpost fetching leaks the arm list. The addendum does not specify which.
+- I14 and the hostVeto design: the veto is called on every candidate decision with intent and distance bucket, so identity-bearing host code learns per-user proximity even when nothing is posted. The addendum says this is out of scope for Proxim, but the SDK is the channel.
+- I16 (dropped, never deferred, inside sensitive buffers for all classes) and the 'exit/dwell/sequence refused for zones touching a buffer' rule are unenforceable on owner-only devices for the same reason as I8'. They are also unmeasured for dense or campus venues.
+- I19 (zone_state TTL 12 h, hard 24 h) is incompatible with the stated departure and dwell behaviour for multi-day stays. Either the invariant is relaxed silently or the feature does not work.
+- I10/I20 (revoked content never rendered; revocation purge) with the 'no network call between wake and post' rule and the 24 h fail-closed window: the first-arrival case cannot satisfy both freshness and delivery.
+- R2/R6/I6 'nothing logged or queued in a buffer' versus verify-on-wake: the verify step takes a location fix (and on iOS Path S the OS monitors the region) before the buffer test runs. The addendum treats the fix itself as acceptable without saying so. Likely fine (no log), but the order should be stated and tested.
+- PLAN Section 7's mandatory 'Sponsored' label is changed to 'Public information' for hosted verified civic content in Section 2.3 and 8.1, but the Section 10 conflicts table does not list it.
+- PLAN Section 5.3 / R-tier wording: hosted background (M3/M11) with partners that already hold Always is left in place, although the addendum's own store-policy logic says background location may not serve advertising. The conflict with the addendum's M3 rewording is not called out.
+
+## Findings (19)
+
+### A1. [BLOCKER] Owner-only apps cannot enforce sensitive-zone rules
+
+Owner-only apps cannot enforce sensitive-zone rules. I8' says an owner-only app makes zero tile fetches, but I13, I16, R6 and R7 require the device to know it is outside every sensitive buffer at post time. That data ships only in public tile packs, and the confidential kinds are deliberately excluded from them. An owner-only device has no registry, so either the gate silently passes (a health bypass) or it fails closed and nothing ever posts.
+
+**Fix:** Compile sensitive-zone data per venue into the owner bundle: all non-confidential buffers within ring + buffer + margin of each venue ring and approach corridor. Reject at authoring any venue whose ring overlaps a confidential coarse-barred cell. Add a core test that an owner bundle with no sensitive data refuses to post. Add the venue-neighbourhood case to the M15 verification.
+
+### A2. [BLOCKER] The 24 h fail-closed revocation rule contradicts the flagship scenario
+
+The 24 h fail-closed revocation rule contradicts the flagship scenario. Service notifications fail closed when the revocation list is older than 24 h, and wake-time network calls are banned (the M8 test asserts none). The list refreshes only 'whenever the app runs'. The typical guest opened the app at booking, days or weeks before arrival. The ring fires with a stale list and nothing posts. Bundle hard TTL is 7 d, so bookings made further ahead also expire. Worked-example step 11 assumes a list under 24 h old without saying how.
+
+**Fix:** State the real freshness mechanism: periodic background refresh (WorkManager, BGAppRefreshTask) with measured hit rates. Alternatively, use a longer fail-closed window for service class with an explicit takedown-latency tradeoff. Alternatively, allow a bounded non-location revocation fetch at wake, but only after quantifying that its timing reveals arrival to Proxim, which would break I14's spirit. Add 'app unopened for 3, 8 and 21 days' scenarios to M16 and M18. Do not publish the 'within 2-3 minutes' promise before this is resolved.
+
+### A3. [IMPORTANT] Departure and dwell break on any stay longer than 12-24 h
+
+Departure and dwell break on any stay longer than 12-24 h. zone_state TTL is 12 h (24 h hard). EXIT is 'valid only after a valid ENTER or reconciled IN', and OS exit callbacks 'never override a fresh confident inside fix'. After the TTL the state is gone, so a guest leaving after a 3-night stay has no IN state and the exit is suppressed. Departure is one of the owner's two headline examples. Extending the TTL conflicts with I3/I19 retention.
+
+**Fix:** Specify the exit rule for armed signposts: OS EXIT callback plus one confident outside fix is sufficient when the signpost is armed and the arm window is current. No stored visit state is then needed. Or set the I19 TTL from the arm window and say so. Add a 'multi-day stay then exit' golden vector.
+
+### A4. [IMPORTANT] owner_binding is a loophole
+
+owner_binding is a loophole. 'OWNER iff sender org == partner org, or an active binding both orgs signed' lets any partner app bind unrelated third parties. A mall app binding 200 tenants, or a partner selling bindings, yields third-party promotion with a 'From <tenant>' label instead of 'Sponsored', no rate card, no hosted deny, and only 5-10% post-hoc review after the first three signposts. The only barrier is the intent taxonomy enforced by review. Section 8 already lists 'Owner (+ hosted sponsor slots)' and malls with tenants, which contradicts 'third-party sponsored content inside owner mode is forbidden'.
+
+**Fix:** Restrict bindings to same legal entity, parent/affiliate or managing agent with a documented contract and human verification. Tenants, sponsors and events with sponsors are hosted mode, which means no notifications. Strike the hybrid rows from the v2 table or mark them 'hosted, in-app only'. Require human review for every owner signpost whose sender is not the partner org itself. Add a mall-tenant promotion case to the advertiser-posing-as-owner corpus.
+
+### A5. [IMPORTANT] Possible leak of the arm list (I14)
+
+Possible leak of the arm list (I14). The arm list is meant never to leave the device. The addendum does not say whether the owner manifest/bundle fetch is all-venues-for-this-app or per-venue/per-signpost. A chain app that fetches only the bundle for the booked venue tells Proxim which venue (and roughly when) each IP/app install is going to. That is identity-adjacent and breaks the stated 'Proxim never sees which signposts are armed'.
+
+**Fix:** Mandate fetch-all-for-app (or coarse fixed buckets) independent of arming. Add an egress-audit test that bundle requests are identical for different arm lists. Put a size cap on bundle count per app.
+
+### A6. [IMPORTANT] Store-approval dependency is ordered too late and 'dry-run' is not a clearance
+
+Store-approval dependency is ordered too late and 'dry-run' is not a clearance. The Android owner product depends on Google approving ACCESS_BACKGROUND_LOCATION for an arrival welcome as core functionality, which Android's docs say is not guaranteed and which the addendum marks [U]. A dry run cannot predict review. M12 'dry-runs' need a sample resort app with working notification delivery, which is not built until M16-M17. 'Store approvals in hand' appears only at M18, after M15-M17 engineering. There is no stated plan B if Play rejects (the OS-callback-only fallback addresses FGS, not the permission).
+
+**Fix:** Make an actual Play declaration and App Store review outcome for the design partner's real app a gate before M16 build-out. State explicitly: if background location is denied, owner mode degrades to foreground/partner-fed in-app only and the notification product is dropped. Remove the dry-run claim from M12 or move it after M17.
+
+### A7. [IMPORTANT] Hosted background mode (PLAN M3/M11) is not re-examined by the addendum's own logic
+
+Hosted background mode (PLAN M3/M11) is not re-examined by the addendum's own logic. It says Google denies ads-only background location and limits M3 to 'never to obtain background location for advertising'. But navigation-type hosted partners that already hold Always would still feed hosted approach rings in background, using location granted for another declared purpose to serve ads. That raises the same Play/Apple 5.1.5 and data-use-disclosure question and is not flagged.
+
+**Fix:** Add an explicit open item and counsel/store question. Default hosted background to off until a partner's declared purposes include it. Reflect this in the Section 10 row and M11 verification.
+
+### A8. [IMPORTANT] The latency story is inconsistent
+
+The latency story is inconsistent. '2-3 minutes after boundary' at 15 m/s is 1.8-2.7 km, but the example and table say about 1.7 km (about 1.9 min). The pilot gate allows p90 within 5 minutes, the iOS figure is 3-5 minutes, Android is up to 6 minutes, and the p95 is about 5 km, which exceeds the 3 km access road in the example (the guest reaches reception first). The 'honest promise copy' quotes only the optimistic Android figure and omits iOS. All of these numbers are [MODEL].
+
+**Fix:** Reconcile p50/p95 in minutes and km. State separate Android and iOS promises. Replace contract copy with 'typically within a few minutes, sometimes later, not guaranteed'. Do not put model numbers in sender-facing UI as probabilities until M4/M11 field data exists.
+
+### A9. [IMPORTANT] Sensitive-zone coverage is unmeasured for owner mode
+
+Sensitive-zone coverage is unmeasured for owner mode. I16 drops all notifications for all classes inside any sensitive buffer (default 1,000 m, and the registry includes pharmacies and clinics). PLAN-REVIEW #5 already showed this blankets urban cores. The use-case map (campus, parking, events, malls, city hotels, estates) mostly sits in dense areas, and university campuses often contain a medical centre. The addendum lists these as v2 without a coverage analysis.
+
+**Fix:** Run the M5 coverage map for owner mode before promising urban use cases. Mark urban and campus rows 'only where buffers allow'. Pick a rural or resort-type design partner.
+
+### A10. [IMPORTANT] The generalization is real at the detector, envelope and schema level but is two products at the gate/selection/billing level
+
+The generalization is real at the detector, envelope and schema level but is two products at the gate/selection/billing level. The Section 2.3 table differs on about 12 dimensions: verification, moderation, label, distribution, selection (V x Q x R x P versus priority/recency), billing, reporting, TTL, arm state, zone_state and veto. The claim that mode-as-data leaves 'the kernel unforked' is overstated: there are two gate pipelines. The second use case tested (events with sponsors, mall tenants) fails the model, as noted above.
+
+**Fix:** Say plainly: shared detector, envelope, packs-format and renderer; two gate/selection pipelines. Test the abstraction against a third non-resort case (parking operator or museum) in the Stage 0 design review. Do not claim kernel unity.
+
+### A11. [IMPORTANT] v1 scope is not small and breaches 'advertising first'
+
+v1 scope is not small and breaches 'advertising first'. 'Days of schema work' for Stage 0 contradicts the M0-M7 changes. Build-now includes:
+- proxim-detect with CROSS, PASS, DWELL, EXIT and SEQUENCE logic, none of which hosted v1 uses (enter and approach only);
+- owner-mode policy rows and I13-I20 tests;
+- a notification benefit-rule engine at M3;
+- notification and region OS models plus a Path S device test at M4;
+- the claim ladder with postcard proof, needed only for Stage 1.1 and owner mode;
+- G1/G2 report policy at M9;
+- a 25+ class pick catalogue with a PostGIS ref schema, pick-layer PMTiles, intersection index, search corpus and Photon fallback;
+- a Drive-it simulator with noise profiles and 200 seeded runs per preview;
+- an ODbL lineage and open-extract publishing process;
+- a keyboard/coordinates-table editor;
+- GeoJSON/GPX import fuzzing.
+Individually reasonable; together they are a multi-month load before the first advertiser sees a console.
+
+**Fix:** Cut v1 to the following:
+- Detector: ENTER, EXIT hysteresis (internal only) and APPROACH, with the event enum and fields reserved.
+- Pickers: POI, area/neighbourhood, road corridor, custom shape. Building, junction, car park, transit and import follow once they compile to the same shapes.
+- Schema: reserve fields only. I13-I20 stay design rules, with tests landing alongside their features (M15+). Only I17, I18, the I2 lint scope and I8' need v1 tests.
+- Defer the claim ladder, G1/G2 reporting and notification OS models to Stage 1.1 or 2.
+Keep the per-venue ODbL extract until counsel has spoken.
+
+### A12. [IMPORTANT] Private-content protection is thinner than its framing
+
+Private-content protection is thinner than its framing. The owner bundle is fetched with a publishable key, so anyone with the APK can pull every guide and geometry (gate locations, 'emergency contacts', reception instructions). The semantic leak the linter cannot catch is, for example, a gate-procedure sentence. The planned `visibility` field and the word 'private' will mislead owners. Estate/HOA bundles expose perimeter and visitor-gate details, the same confidentiality issue as PLAN-REVIEW #4.
+
+**Fix:** Console must say 'anyone with your app can read this'. Rename the field (`audience_scope`) and remove the word 'private'. Add a human-review checklist item for operational details (procedures, staff names, gate instructions). Estate bundles carry no perimeter detail beyond the ring.
+
+### A13. [IMPORTANT] The surveillance path through host callbacks is not closed
+
+The surveillance path through host callbacks is not closed. hostVeto receives a distance bucket and intent on every candidate decision, including ones it denies. The owner's app, which holds identity, therefore learns per-user presence near the venue even when nothing posts. That is an arrival oracle against I14's spirit. The addendum notes 'owner callbacks correlate' (risk 13) and offers a disable option, but veto is not covered by it. Workforce check-in is in the use-case map.
+
+**Fix:** Make veto opt-in per signpost, declare it in the consent sheet and DPA, and drop it from v2.0. Put field-service/workforce rows in 'not building' until counsel and employee-monitoring rules are reviewed. Limit veto input to intent only, with no distance bucket.
+
+### A14. [IMPORTANT] Moderation weakness in owner mode for lock-screen content: after the first three signposts, text is approved by rules plus an advisory LLM with 5-10% sampling, and the experience can be a `web` page on the owner's domain that Proxim does not control
+
+Moderation weakness in owner mode for lock-screen content: after the first three signposts, text is approved by rules plus an advisory LLM with 5-10% sampling, and the experience can be a `web` page on the owner's domain that Proxim does not control. Re-crawl catches changes only on a schedule. A compromised or malicious owner account (credential theft) can push a phishing notification to every armed device that is still within its TTL.
+
+**Fix:** Keep human review for every revision that changes notification title/body, geometry or link domain (not just first three). Allow auto-approval only for guide-content-only edits on already approved signposts. Add account-takeover/MFA requirements for owner-lane orgs and a signed-revision cool-off delay.
+
+### A15. [MINOR] Silent invariant weakening
+
+Silent invariant weakening. I8' ('never both app key and location-derived value in one request') is weaker than I8 and PLAN-REVIEW #11/#12 (Web Origin header, attestation key ids) already show the key-or-location separation is leaky. The new owner fetch cadence, IP and time make it more so. I2 is re-scoped to device-facing routes, but /v1/ref/at and the Drive-it preview are coordinate-bearing endpoints on the same API and need rate-limit and no-log guarantees. The addendum also silently changes PLAN Section 7's mandatory 'Sponsored' label to 'Public information' for hosted verified civic content, and the Section 10 conflict table omits it.
+
+**Fix:** List the 'Public information' label as an explicit Section 10 conflict with a rule for who qualifies and a counsel flag. Add a no-log/no-retention requirement for authoring coordinate endpoints, and an egress-audit test for the owner fetch cadence.
+
+### A16. [MINOR] Pack-budget accounting omits per-signpost signatures
+
+Pack-budget accounting omits per-signpost signatures. M2 requires a signature on every signpost (no splicing). 500 signposts times an ES256 signature (64 bytes, about 86 base64url characters) is about 32-43 KB of incompressible data, roughly 10-12% of the 350 KB tier-0 budget before the reserved fields and local road context.
+
+**Fix:** Add the signature overhead to the M2 size experiment. Consider one signed Merkle root per pack with per-entry inclusion proofs.
+
+### A17. [MINOR] Driving behaviour rules conflict
+
+Driving behaviour rules conflict. Section 5.3 and 5.4 say 'post silently while moving'. L3 says 'not at speed unless passive and title-only, or held until stationary with a 10 min expiry'. Arrival expiry is 30 min. Speed from a single wake fix is often absent, so 'unknown means quiet' is the common case. iOS has no 'silent while moving' that stops lock-screen exposure to a driver.
+
+**Fix:** Pick one rule (post passive, title only) and make L3 and 5.3 agree. Remove the claim that this addresses distracted-driving exposure; keep it as a COUNSEL item.
+
+### A18. [MINOR] The reasoning for denying hostVeto to hosted partners is inconsistent with PLAN Section 7
+
+The reasoning for denying hostVeto to hosted partners is inconsistent with PLAN Section 7. The addendum says a hosted callback would reveal place category as a side channel. But PLAN already gives headless partners the `Proxim.signposts` SignpostDecision stream, which tells the partner which signposts matched. 'Declarative suppress flags with no return value' also leak, because the partner sees whether its slot filled.
+
+**Fix:** Either accept that hosted partners can infer place category from decisions (a pre-existing PLAN decision) and say so, or require ProximRequiredChrome-style rendering for all hosted modes. Do not cite the side-channel as the reason.
+
+### A19. [MINOR] Milestone ordering and verifiability issues:
+- M3 verification asks counsel to review the policy matrix, but counsel funding is open question 6.
+- M9 builds G1/G2 reporting policy before any G1 exists (claims arrive in Stage 1.1).
+- The design-partner validation in risk 14 is not a milestone gate before M15.
+- Provisional pilot gates sit beside promised copy that they contradict (see the latency gap).
+- M12 already carries OHTTP, KMS drills, pen test and DPIA; adding owner dry-runs and a counsel memo there creates a bottleneck
+
+Milestone ordering and verifiability issues:
+- M3 verification asks counsel to review the policy matrix, but counsel funding is open question 6.
+- M9 builds G1/G2 reporting policy before any G1 exists (claims arrive in Stage 1.1).
+- The design-partner validation in risk 14 is not a milestone gate before M15.
+- Provisional pilot gates sit beside promised copy that they contradict (see the latency gap).
+- M12 already carries OHTTP, KMS drills, pen test and DPIA; adding owner dry-runs and a counsel memo there creates a bottleneck.
+
+**Fix:** Move G1/G2 reporting to Stage 1.1. Add an explicit design-partner letter of intent and Play-declaration outcome as the M15 entry gate. Split the counsel memo into hosted (M12) and owner (before M15). Defer counsel review of the matrix to M12.
+

@@ -1,8 +1,7 @@
-> **Status: DRAFT for owner review (2026-10-09).** Addendum to [`PLAN.md`](PLAN.md) covering the owner's
+> **Status: DRAFT - critic review complete, revisions pending (2026-10-09).** Addendum to [`PLAN.md`](PLAN.md) covering the owner's
 > expanded requirements: general location-trigger platform (advertising first), selectable map features,
 > enter/exit/cross events, notification delivery, and the estate/resort use case.
-> Produced by six domain specialists + synthesis. **The adversarial critic's review was still pending when this
-> was saved** - see `PLAN-REVIEW.md` for findings once added. Nothing here is legal advice.
+> The critic found **2 blockers, 12 important and 5 minor issues** (see the end of [`PLAN-REVIEW.md`](PLAN-REVIEW.md)); the text below does **not** yet incorporate them. In particular the resort walkthrough in section 7 and the v1 scope in sections 8 and 11 are known to need changes. Nothing here is legal advice.
 
 # PLAN ADDENDUM 01: From ad network to location-trigger platform
 
