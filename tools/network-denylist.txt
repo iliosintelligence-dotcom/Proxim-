@@ -1,0 +1,68 @@
+# Network crate denylist (privacy invariant I1: the core has no network dependency).
+#
+# One pattern per line. Patterns are fnmatch globs matched against the exact
+# crate name as cargo reports it (lowercase, '-' and '_' as published). Lines
+# starting with '#' and blank lines are ignored.
+#
+# Used by:  tools/check-no-network.py   (transitive check over `cargo metadata`)
+# Mirrored in: deny.toml [bans] (cargo-deny, run in CI as a second line of defence)
+# If you add a pattern here, add the same crate to deny.toml and to the
+# self-test in tools/tests/test_tools.py.
+
+# HTTP clients and servers
+reqwest*
+hyper*
+h2
+h3
+ureq*
+curl
+curl-sys
+isahc
+surf
+attohttpc
+minreq
+http-types
+awc
+actix-web*
+axum*
+warp
+tide
+rocket
+tower-http
+tonic
+tonic-*
+
+# TLS
+openssl
+openssl-sys
+openssl-probe
+native-tls
+rustls
+rustls-*
+tokio-rustls
+tokio-native-tls
+webpki
+webpki-roots
+s2n-quic*
+quinn*
+
+# Sockets, event loops and async runtimes that exist to do I/O
+socket2
+mio
+tokio
+tokio-*
+async-std
+async-io
+async-net
+smol
+polling
+tungstenite
+tokio-tungstenite
+async-tungstenite
+websocket
+ws
+
+# DNS and name resolution
+trust-dns-*
+hickory-*
+c-ares
