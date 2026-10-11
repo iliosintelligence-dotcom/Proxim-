@@ -1,0 +1,52 @@
+# Determinism guard (engine-spec 2.4, ADR-001 decision 3): std f64/f32 transcendental methods
+# differ in the last ulp across platforms. All such math goes through the `libm` crate, and then
+# only on quantized domains inside proxim-geo::trig. Deny-level via [workspace.lints.clippy].
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-dbg-in-tests = true
+
+disallowed-methods = [
+  { path = "f64::sin", reason = "use libm::sin on a quantized domain in proxim-geo::trig" },
+  { path = "f64::cos", reason = "use libm::cos on a quantized domain in proxim-geo::trig" },
+  { path = "f64::tan", reason = "tan is not used by the engine (ADR-001)" },
+  { path = "f64::asin", reason = "not used by the engine" },
+  { path = "f64::acos", reason = "not used by the engine" },
+  { path = "f64::atan", reason = "not used by the engine" },
+  { path = "f64::atan2", reason = "atan2 is not used; headings are Q30 unit vectors" },
+  { path = "f64::sinh", reason = "not used by the engine" },
+  { path = "f64::cosh", reason = "not used by the engine" },
+  { path = "f64::tanh", reason = "not used by the engine" },
+  { path = "f64::exp", reason = "exp is not used; filters use rational weights" },
+  { path = "f64::exp2", reason = "not used by the engine" },
+  { path = "f64::exp_m1", reason = "not used by the engine" },
+  { path = "f64::ln", reason = "not used by the engine" },
+  { path = "f64::ln_1p", reason = "not used by the engine" },
+  { path = "f64::log", reason = "not used by the engine" },
+  { path = "f64::log2", reason = "not used by the engine" },
+  { path = "f64::log10", reason = "not used by the engine" },
+  { path = "f64::powf", reason = "pow is not used by the engine" },
+  { path = "f64::powi", reason = "pow is not used by the engine" },
+  { path = "f64::cbrt", reason = "not used by the engine" },
+  { path = "f64::hypot", reason = "use integer isqrt" },
+  { path = "f64::mul_add", reason = "fused multiply-add is platform dependent" },
+  { path = "f32::sin", reason = "no f32 math in the engine" },
+  { path = "f32::cos", reason = "no f32 math in the engine" },
+  { path = "f32::tan", reason = "no f32 math in the engine" },
+  { path = "f32::atan2", reason = "no f32 math in the engine" },
+  { path = "f32::exp", reason = "no f32 math in the engine" },
+  { path = "f32::ln", reason = "no f32 math in the engine" },
+  { path = "f32::powf", reason = "no f32 math in the engine" },
+  { path = "f32::powi", reason = "no f32 math in the engine" },
+  { path = "f32::hypot", reason = "no f32 math in the engine" },
+  { path = "f32::mul_add", reason = "no f32 math in the engine" },
+]
+
+# E2/E3: no hash-order dependence, no clocks. (The five core crates are no_std anyway.)
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is not deterministic; use BTreeMap" },
+  { path = "std::collections::HashSet", reason = "iteration order is not deterministic; use BTreeSet" },
+  { path = "std::time::SystemTime", reason = "the engine has no clock; time is an argument" },
+  { path = "std::time::Instant", reason = "the engine has no clock; time is an argument" },
+]

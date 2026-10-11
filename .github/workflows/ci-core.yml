@@ -1,0 +1,66 @@
+name: ci-core
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: fmt
+        run: cargo fmt --manifest-path core/Cargo.toml --all -- --check
+      - name: clippy
+        run: cargo clippy --manifest-path core/Cargo.toml --workspace --all-targets --all-features -- -D warnings
+      - name: test
+        run: cargo test --manifest-path core/Cargo.toml --workspace --all-features
+      - name: tools self-tests
+        run: python3 -I tools/tests/test_tools.py
+      - name: check-no-network
+        run: python3 -I tools/check-no-network.py
+      - name: check-invariants
+        run: python3 -I tools/check-invariants.py
+      - name: check-supabase-ref
+        run: python3 -I tools/check-supabase-ref.py
+
+  golden-vectors:
+    # PLACEHOLDER: replaced by the real cross-platform golden-vector comparison
+    # once core/testdata/golden is populated. Runs the same vectors on both OSes
+    # so determinism drift between platforms fails the build.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: golden vectors (placeholder)
+        run: |
+          ls core/testdata/golden || true
+          cargo test --manifest-path core/Cargo.toml --workspace --all-features golden
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: core/Cargo.toml
+          command: check bans licenses sources advisories

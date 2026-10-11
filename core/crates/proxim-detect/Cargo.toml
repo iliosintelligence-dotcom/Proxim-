@@ -1,0 +1,15 @@
+[package]
+name = "proxim-detect"
+description = "ENTER with EXIT hysteresis and APPROACH time-to-anchor detectors (engine-spec 6)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+proxim-types = { workspace = true }
+proxim-geo = { workspace = true }
+proxim-path = { workspace = true }
+
+[lints]
+workspace = true

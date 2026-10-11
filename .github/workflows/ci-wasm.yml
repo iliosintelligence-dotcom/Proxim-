@@ -1,0 +1,35 @@
+name: ci-wasm
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["core/**", "sdks/web/**", ".github/workflows/ci-wasm.yml"]
+permissions:
+  contents: read
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: build wasm
+        run: cargo build --manifest-path core/Cargo.toml -p proxim-wasm --target wasm32-unknown-unknown --release
+      - name: install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --locked
+      - name: wasm-bindgen
+        run: |
+          wasm-bindgen --target nodejs --out-dir core/target/wasm-pkg \
+            core/target/wasm32-unknown-unknown/release/proxim_wasm.wasm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: node golden-vector test
+        run: |
+          if [ -f sdks/web/test/golden.test.mjs ]; then
+            node --test sdks/web/test/golden.test.mjs
+          else
+            echo "golden-vector node test not written yet (placeholder)"
+          fi
