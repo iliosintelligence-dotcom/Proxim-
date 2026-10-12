@@ -11,5 +11,8 @@ proxim-types = { workspace = true }
 proxim-geo = { workspace = true }
 proxim-path = { workspace = true }
 
+[dev-dependencies]
+proptest = { workspace = true }
+
 [lints]
 workspace = true

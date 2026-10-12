@@ -70,6 +70,86 @@ mod tests {
         assert_eq!(ReasonCode::NoEvent.id(), 406);
     }
 
+    /// The whole spec section 8 table (rows 0..400, implemented codes): id and wire string.
+    const SPEC_TABLE: &[(ReasonCode, u16, &str)] = &[
+        (ReasonCode::Ok, 0, "OK"),
+        (ReasonCode::Suppressed, 1, "SUPPRESSED"),
+        (ReasonCode::ConsentDenied, 100, "CONSENT_DENIED"),
+        (ReasonCode::EngineDisabled, 101, "ENGINE_DISABLED"),
+        (ReasonCode::FixInvalid, 110, "FIX_INVALID"),
+        (ReasonCode::FixMock, 111, "FIX_MOCK"),
+        (
+            ReasonCode::FixAccuracyTooCoarse,
+            112,
+            "FIX_ACCURACY_TOO_COARSE",
+        ),
+        (ReasonCode::FixFromFuture, 113, "FIX_FROM_FUTURE"),
+        (ReasonCode::FixStale, 114, "FIX_STALE"),
+        (ReasonCode::FixOutOfOrder, 115, "FIX_OUT_OF_ORDER"),
+        (ReasonCode::FixJump, 116, "FIX_JUMP"),
+        (ReasonCode::FixOutOfFrame, 117, "FIX_OUT_OF_FRAME"),
+        (ReasonCode::AccTooCoarse, 118, "ACC_TOO_COARSE"),
+        (ReasonCode::SensitiveStandoff, 120, "SENSITIVE_STANDOFF"),
+        (ReasonCode::UnsupportedEvent, 200, "UNSUPPORTED_EVENT"),
+        (ReasonCode::TriggerInvalid, 201, "TRIGGER_INVALID"),
+        (ReasonCode::NotYetLive, 202, "NOT_YET_LIVE"),
+        (ReasonCode::Expired, 203, "EXPIRED"),
+        (
+            ReasonCode::HealthConsentMissing,
+            204,
+            "HEALTH_CONSENT_MISSING",
+        ),
+        (
+            ReasonCode::PartnerCategoryBlocked,
+            205,
+            "PARTNER_CATEGORY_BLOCKED",
+        ),
+        (ReasonCode::SenderBlocked, 206, "SENDER_BLOCKED"),
+        (
+            ReasonCode::SensitivityAboveCeiling,
+            207,
+            "SENSITIVITY_ABOVE_CEILING",
+        ),
+        (ReasonCode::TriggerInStandoff, 208, "TRIGGER_IN_STANDOFF"),
+        (ReasonCode::OutOfRange, 209, "OUT_OF_RANGE"),
+        (ReasonCode::OffCorridor, 300, "OFF_CORRIDOR"),
+        (ReasonCode::SpeedOutOfBand, 301, "SPEED_OUT_OF_BAND"),
+        (ReasonCode::BearingMismatch, 302, "BEARING_MISMATCH"),
+        (ReasonCode::NotClosing, 303, "NOT_CLOSING"),
+        (ReasonCode::BeyondWindow, 304, "BEYOND_WINDOW"),
+        (ReasonCode::PathConfidenceLow, 305, "PATH_CONFIDENCE_LOW"),
+        (ReasonCode::TooLateForLead, 306, "TOO_LATE_FOR_LEAD"),
+        (ReasonCode::PathTierLow, 307, "PATH_TIER_LOW"),
+        (ReasonCode::EventTooOld, 400, "EVENT_TOO_OLD"),
+        (ReasonCode::EventTooFar, 401, "EVENT_TOO_FAR"),
+        (ReasonCode::CapSignpostDay, 402, "CAP_SIGNPOST_DAY"),
+        (ReasonCode::CapSignpostWeek, 403, "CAP_SIGNPOST_WEEK"),
+        (ReasonCode::CapAppInterval, 404, "CAP_APP_INTERVAL"),
+        (ReasonCode::LostSlot, 405, "LOST_SLOT"),
+        (ReasonCode::NoEvent, 406, "NO_EVENT"),
+    ];
+
+    #[test]
+    fn every_code_matches_the_spec_table_and_round_trips() {
+        for (code, id, name) in SPEC_TABLE {
+            assert_eq!(code.id(), *id, "{name}");
+            let wire = serde_json::to_string(code).unwrap();
+            assert_eq!(wire, alloc::format!("\"{name}\""));
+            assert_eq!(serde_json::from_str::<ReasonCode>(&wire).unwrap(), *code);
+        }
+        // Ids are unique and the table is strictly ascending.
+        for pair in SPEC_TABLE.windows(2) {
+            assert!(pair[0].1 < pair[1].1);
+        }
+    }
+
+    #[test]
+    fn unknown_or_reserved_names_do_not_parse() {
+        for bad in ["\"REVOKED\"", "\"ok\"", "\"\"", "7", "null"] {
+            assert!(serde_json::from_str::<ReasonCode>(bad).is_err(), "{bad}");
+        }
+    }
+
     #[test]
     fn wire_form_is_screaming_snake() {
         let s = serde_json::to_string(&ReasonCode::FixAccuracyTooCoarse).unwrap();

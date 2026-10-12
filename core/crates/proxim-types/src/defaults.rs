@@ -26,3 +26,15 @@ pub const MAX_TRACE: usize = 16;
 pub const MAX_DETECTORS: usize = 4096;
 pub const MAX_FRAME_MM: i64 = 150_000_000;
 pub const MAX_ABS_LAT_E7: i32 = 800_000_000;
+
+// Strict JSON parser bounds (spec 3.2: bounded sizes and depth; every input is untrusted).
+/// Largest accepted JSON text in bytes (4096 signposts of up to 1024 vertices each fit).
+pub const MAX_JSON_BYTES: usize = 33_554_432;
+/// Deepest container nesting accepted (the deepest real document is about 8).
+pub const MAX_JSON_DEPTH: usize = 32;
+/// Longest decoded string in bytes.
+pub const MAX_JSON_STRING_BYTES: usize = 8192;
+/// Most elements in one array.
+pub const MAX_JSON_ARRAY_LEN: usize = 8192;
+/// Most keys in one object.
+pub const MAX_JSON_OBJECT_KEYS: usize = 256;

@@ -13,6 +13,7 @@ pub mod defaults;
 pub mod error;
 pub mod model;
 pub mod reason;
+pub mod strict;
 
 pub use error::EngineError;
 pub use model::*;

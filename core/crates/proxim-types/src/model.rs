@@ -122,10 +122,11 @@ pub enum ConsentValue {
 
 impl<'de> Deserialize<'de> for ConsentValue {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let s = String::deserialize(d)?;
-        Ok(match s.as_str() {
-            "granted" => Self::Granted,
-            "denied" => Self::Denied,
+        // Fail closed (I4): a value of any type other than the exact strings is `Unknown`,
+        // never a parse failure that a caller might handle by guessing.
+        Ok(match serde_json::Value::deserialize(d)? {
+            serde_json::Value::String(s) if s == "granted" => Self::Granted,
+            serde_json::Value::String(s) if s == "denied" => Self::Denied,
             _ => Self::Unknown,
         })
     }
