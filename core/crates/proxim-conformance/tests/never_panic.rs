@@ -206,12 +206,7 @@ fn one(inp: &Inputs, st: &mut Stats) {
 #[test]
 fn every_leaf_of_every_argument_times_every_nasty_number_token() {
     let vals: Vec<Value> = NASTY.iter().map(|t| raw(t)).collect();
-    let st = std::thread::Builder::new()
-        .stack_size(STACK)
-        .spawn(move || sweep(vals))
-        .unwrap()
-        .join()
-        .unwrap();
+    let st = on_stack(STACK, move || sweep(vals)).unwrap();
     assert!(st.cases > 5_000, "{}", st.cases);
     assert_clean("leaf x token", &st);
 }
@@ -219,12 +214,7 @@ fn every_leaf_of_every_argument_times_every_nasty_number_token() {
 #[test]
 fn every_leaf_of_every_argument_times_every_extreme_integer() {
     let vals: Vec<Value> = INTS.iter().map(|i| json!(*i)).collect();
-    let st = std::thread::Builder::new()
-        .stack_size(STACK)
-        .spawn(move || sweep(vals))
-        .unwrap()
-        .join()
-        .unwrap();
+    let st = on_stack(STACK, move || sweep(vals)).unwrap();
     assert!(st.cases > 5_000, "{}", st.cases);
     assert_clean("leaf x int", &st);
 }
@@ -310,35 +300,31 @@ const INTS: &[i64] = &[
 
 #[test]
 fn deep_nesting_in_every_argument_on_a_small_stack() {
-    let res = std::thread::Builder::new()
-        .stack_size(256 * 1024)
-        .spawn(|| {
-            let mut stats = Stats::default();
-            for depth in [31_usize, 32, 33, 64, 256, 1000, 10_000, 100_000, 1_000_000] {
-                for open_close in [("[", "]"), ("{\"a\":", "}")] {
-                    let deep = format!(
-                        "{}1{}",
-                        open_close.0.repeat(depth),
-                        open_close.1.repeat(depth)
-                    );
-                    for slot in 0..6 {
-                        let mut inp = base_inputs();
-                        inp.args[slot] = deep.clone();
-                        one(&inp, &mut stats);
-                    }
+    let res = on_stack(256 * 1024, || {
+        let mut stats = Stats::default();
+        for depth in [31_usize, 32, 33, 64, 256, 1000, 10_000, 100_000, 1_000_000] {
+            for open_close in [("[", "]"), ("{\"a\":", "}")] {
+                let deep = format!(
+                    "{}1{}",
+                    open_close.0.repeat(depth),
+                    open_close.1.repeat(depth)
+                );
+                for slot in 0..6 {
+                    let mut inp = base_inputs();
+                    inp.args[slot] = deep.clone();
+                    one(&inp, &mut stats);
                 }
-                // and nested inside an otherwise valid argument
-                let mut w = rich_world();
-                w[2][0]["trigger"]["shape"]["vertices"] =
-                    raw(&format!("{}{}", "[".repeat(depth), "]".repeat(depth)));
-                let mut inp = base_inputs();
-                inp.args[2] = render_raw(&w[2], &mut None);
-                one(&inp, &mut stats);
             }
-            stats
-        })
-        .unwrap()
-        .join();
+            // and nested inside an otherwise valid argument
+            let mut w = rich_world();
+            w[2][0]["trigger"]["shape"]["vertices"] =
+                raw(&format!("{}{}", "[".repeat(depth), "]".repeat(depth)));
+            let mut inp = base_inputs();
+            inp.args[2] = render_raw(&w[2], &mut None);
+            one(&inp, &mut stats);
+        }
+        stats
+    });
     let st = res.expect("deep nesting must not overflow the stack or panic");
     assert_clean("deep nesting", &st);
     assert_eq!(
@@ -349,69 +335,65 @@ fn deep_nesting_in_every_argument_on_a_small_stack() {
 
 #[test]
 fn huge_strings_and_arrays_are_bounded_errors_not_crashes() {
-    let st = std::thread::Builder::new()
-        .stack_size(STACK)
-        .spawn(|| {
-            let mut stats = Stats::default();
-            // strings: 10 MB (truncated to the safe size our harness holds), in an id, a category and a free-form receipt
-            let big = "a".repeat(10 * 1024 * 1024);
-            for (arg, path) in [
-                (2_usize, "0.id"),
-                (2, "0.category"),
-                (4, "health_receipt"),
-                (3, "categories_blocked.0"),
-                (1, "t_ms"),
-            ] {
-                let mut w = rich_world();
-                let target: &mut Value = &mut w[arg];
-                let mut cur = target;
-                let parts: Vec<&str> = path.split('.').collect();
-                for (i, p) in parts.iter().enumerate() {
-                    let next: &mut Value = match p.parse::<usize>() {
-                        Ok(ix) => &mut cur[ix],
-                        Err(_) => &mut cur[*p],
-                    };
-                    if i + 1 == parts.len() {
-                        *next = json!(big.clone());
-                    }
-                    cur = next;
-                }
-                let mut inp = Inputs {
-                    args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
-                    seed: 0,
+    let st = on_stack(STACK, || {
+        let mut stats = Stats::default();
+        // strings: 10 MB (truncated to the safe size our harness holds), in an id, a category and a free-form receipt
+        let big = "a".repeat(10 * 1024 * 1024);
+        for (arg, path) in [
+            (2_usize, "0.id"),
+            (2, "0.category"),
+            (4, "health_receipt"),
+            (3, "categories_blocked.0"),
+            (1, "t_ms"),
+        ] {
+            let mut w = rich_world();
+            let target: &mut Value = &mut w[arg];
+            let mut cur = target;
+            let parts: Vec<&str> = path.split('.').collect();
+            for (i, p) in parts.iter().enumerate() {
+                let next: &mut Value = match p.parse::<usize>() {
+                    Ok(ix) => &mut cur[ix],
+                    Err(_) => &mut cur[*p],
                 };
-                inp.seed = 1;
-                one(&inp, &mut stats);
+                if i + 1 == parts.len() {
+                    *next = json!(big.clone());
+                }
+                cur = next;
             }
-            // arrays: 100k signposts, 100k trace fixes, 100k vertices
-            let mut w = rich_world();
-            w[2] = Value::Array(vec![w[2][0].clone(); 100_000]);
-            one(
-                &Inputs {
-                    args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
-                    seed: 0,
-                },
-                &mut stats,
-            );
-            let mut w = rich_world();
-            let fix = w[0]["mem"]["trace"][0].clone();
-            w[0]["mem"]["trace"] = Value::Array(vec![fix; 100_000]);
-            one(
-                &Inputs {
-                    args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
-                    seed: 0,
-                },
-                &mut stats,
-            );
-            // a single input larger than the 32 MiB bound
-            let mut inp = base_inputs();
-            inp.args[2] = format!("[{}]", vec!["{}"; 12_000_000].join(","));
+            let mut inp = Inputs {
+                args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
+                seed: 0,
+            };
+            inp.seed = 1;
             one(&inp, &mut stats);
-            stats
-        })
-        .unwrap()
-        .join()
-        .expect("huge inputs must not crash");
+        }
+        // arrays: 100k signposts, 100k trace fixes, 100k vertices
+        let mut w = rich_world();
+        w[2] = Value::Array(vec![w[2][0].clone(); 100_000]);
+        one(
+            &Inputs {
+                args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
+                seed: 0,
+            },
+            &mut stats,
+        );
+        let mut w = rich_world();
+        let fix = w[0]["mem"]["trace"][0].clone();
+        w[0]["mem"]["trace"] = Value::Array(vec![fix; 100_000]);
+        one(
+            &Inputs {
+                args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
+                seed: 0,
+            },
+            &mut stats,
+        );
+        // a single input larger than the 32 MiB bound
+        let mut inp = base_inputs();
+        inp.args[2] = format!("[{}]", vec!["{}"; 12_000_000].join(","));
+        one(&inp, &mut stats);
+        stats
+    })
+    .expect("huge inputs must not crash");
     assert_clean("huge", &st);
     assert_eq!(st.successes, 0);
 }

@@ -76,6 +76,12 @@ jobs:
             | jq -r 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null) | .executable' \
             > android-tests.txt
           wc -l android-tests.txt
+      - name: free disk space for the emulator
+        run: |
+          # The emulator needs about 1.8x its data partition free on the runner.
+          rm -rf core/target/aarch64-linux-android core/target/armv7-linux-androideabi
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h "$HOME"
       - name: enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -86,7 +92,7 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          disk-size: 4096M
+          disk-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           script: bash .github/scripts/android-test.sh android-tests.txt

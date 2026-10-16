@@ -141,14 +141,26 @@ fn the_seed_is_carried_and_has_no_effect() {
 fn threads_and_history_do_not_matter() {
     let (sps, trace) = world(31);
     let want = run_all(&sps, &trace, &policy_with_zone(), 0);
-    let handles: Vec<_> = (0..4)
-        .map(|_| {
-            let (sps, trace) = (sps.clone(), trace.clone());
-            std::thread::spawn(move || run_all(&sps, &trace, &policy_with_zone(), 0))
-        })
-        .collect();
-    for h in handles {
-        assert_eq!(h.join().unwrap(), want, "a concurrent run differs");
+    // WebAssembly (WASI) has no threads: there the four runs go one after another.
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let (sps, trace) = (sps.clone(), trace.clone());
+                std::thread::spawn(move || run_all(&sps, &trace, &policy_with_zone(), 0))
+            })
+            .collect();
+        for h in handles {
+            assert_eq!(h.join().unwrap(), want, "a concurrent run differs");
+        }
+    }
+    #[cfg(target_family = "wasm")]
+    for _ in 0..4 {
+        assert_eq!(
+            run_all(&sps, &trace, &policy_with_zone(), 0),
+            want,
+            "a repeated run differs"
+        );
     }
     // after unrelated work in between, the same call still gives the same bytes
     let mut rig = Rig::new();

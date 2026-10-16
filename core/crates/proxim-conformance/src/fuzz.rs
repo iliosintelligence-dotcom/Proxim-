@@ -848,6 +848,27 @@ pub struct Stats {
     pub failures: Vec<String>,
 }
 
+/// Run `f` on a thread with `stack_bytes` of stack. WebAssembly (WASI) has no threads: there it
+/// runs inline on the module's own stack, and a panic aborts the test binary.
+pub fn on_stack<T: Send + 'static>(
+    stack_bytes: usize,
+    f: impl FnOnce() -> T + Send + 'static,
+) -> std::thread::Result<T> {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        std::thread::Builder::new()
+            .stack_size(stack_bytes)
+            .spawn(f)
+            .expect("spawn thread")
+            .join()
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        let _ = stack_bytes;
+        Ok(f())
+    }
+}
+
 /// Run `n` cases from `first_seed`, on a thread with `stack_bytes` of stack. A watchdog aborts the
 /// process with the offending case if one call exceeds `hang_limit` (a hang cannot be caught).
 pub fn run_cases(
@@ -860,6 +881,10 @@ pub fn run_cases(
     let beat = Arc::new(AtomicU64::new(0));
     let current = Arc::new(Mutex::new(String::new()));
     let done = Arc::new(AtomicU64::new(0));
+    // WebAssembly (WASI) has no threads, so there is no watchdog there.
+    #[cfg(target_family = "wasm")]
+    let _ = hang_limit;
+    #[cfg(not(target_family = "wasm"))]
     {
         let (beat, current, done) = (beat.clone(), current.clone(), done.clone());
         std::thread::spawn(move || {
@@ -880,80 +905,76 @@ pub fn run_cases(
         });
     }
     let (beat2, current2, done2) = (beat.clone(), current.clone(), done.clone());
-    let handle = std::thread::Builder::new()
-        .stack_size(stack_bytes)
-        .spawn(move || {
-            let mut st = Stats::default();
-            for i in 0..n {
-                let seed = first_seed
-                    .wrapping_add(i)
-                    .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-                    ^ i;
-                let inp = make(seed);
-                if let Ok(mut g) = current2.lock() {
-                    *g = inp.describe();
-                }
-                beat2.fetch_add(1, Ordering::SeqCst);
-                let t0 = Instant::now();
-                let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inp.call()));
-                let ms = t0.elapsed().as_millis();
-                st.slowest_ms = st.slowest_ms.max(ms);
-                st.cases += 1;
-                match res {
-                    Err(_) => {
-                        st.panics += 1;
-                        st.failures.push(format!("PANIC\n{}", inp.describe()));
-                    }
-                    Ok(text) => match check_response(&text) {
-                        Err(why) => {
-                            st.non_canonical += 1;
-                            st.failures.push(format!(
-                                "{why}\nresponse: {}\n{}",
-                                &text[..text.len().min(300)],
-                                inp.describe()
-                            ));
-                        }
-                        Ok(Kind::Error) => st.errors += 1,
-                        Ok(Kind::Success) => {
-                            st.successes += 1;
-                            // the returned state must be re-ingestible with the same inputs
-                            let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-                            let mut again = inp.clone();
-                            again.args[0] = render(&v["state"]);
-                            let r2 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                                again.call()
-                            }));
-                            match r2 {
-                                Err(_) => {
-                                    st.panics += 1;
-                                    st.failures
-                                        .push(format!("PANIC on re-ingest\n{}", inp.describe()));
-                                }
-                                Ok(t2) => match check_response(&t2) {
-                                    Err(why) => {
-                                        st.non_canonical += 1;
-                                        st.failures
-                                            .push(format!("{why} (re-ingest)\n{}", inp.describe()));
-                                    }
-                                    Ok(Kind::Error) if t2.contains("\"input\":\"state\"") => {
-                                        st.reingest_failures += 1;
-                                        st.failures.push(format!(
-                                            "returned state not accepted back: {}\n{}",
-                                            &t2[..t2.len().min(200)],
-                                            inp.describe()
-                                        ));
-                                    }
-                                    Ok(_) => {}
-                                },
-                            }
-                        }
-                    },
-                }
+    let res = on_stack(stack_bytes, move || {
+        let mut st = Stats::default();
+        for i in 0..n {
+            let seed = first_seed
+                .wrapping_add(i)
+                .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                ^ i;
+            let inp = make(seed);
+            if let Ok(mut g) = current2.lock() {
+                *g = inp.describe();
             }
-            st
-        })
-        .expect("spawn fuzz thread");
-    let st = handle.join().unwrap_or_else(|_| {
+            beat2.fetch_add(1, Ordering::SeqCst);
+            let t0 = Instant::now();
+            let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inp.call()));
+            let ms = t0.elapsed().as_millis();
+            st.slowest_ms = st.slowest_ms.max(ms);
+            st.cases += 1;
+            match res {
+                Err(_) => {
+                    st.panics += 1;
+                    st.failures.push(format!("PANIC\n{}", inp.describe()));
+                }
+                Ok(text) => match check_response(&text) {
+                    Err(why) => {
+                        st.non_canonical += 1;
+                        st.failures.push(format!(
+                            "{why}\nresponse: {}\n{}",
+                            &text[..text.len().min(300)],
+                            inp.describe()
+                        ));
+                    }
+                    Ok(Kind::Error) => st.errors += 1,
+                    Ok(Kind::Success) => {
+                        st.successes += 1;
+                        // the returned state must be re-ingestible with the same inputs
+                        let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+                        let mut again = inp.clone();
+                        again.args[0] = render(&v["state"]);
+                        let r2 =
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| again.call()));
+                        match r2 {
+                            Err(_) => {
+                                st.panics += 1;
+                                st.failures
+                                    .push(format!("PANIC on re-ingest\n{}", inp.describe()));
+                            }
+                            Ok(t2) => match check_response(&t2) {
+                                Err(why) => {
+                                    st.non_canonical += 1;
+                                    st.failures
+                                        .push(format!("{why} (re-ingest)\n{}", inp.describe()));
+                                }
+                                Ok(Kind::Error) if t2.contains("\"input\":\"state\"") => {
+                                    st.reingest_failures += 1;
+                                    st.failures.push(format!(
+                                        "returned state not accepted back: {}\n{}",
+                                        &t2[..t2.len().min(200)],
+                                        inp.describe()
+                                    ));
+                                }
+                                Ok(_) => {}
+                            },
+                        }
+                    }
+                },
+            }
+        }
+        st
+    });
+    let st = res.unwrap_or_else(|_| {
         let mut s = Stats::default();
         s.panics += 1;
         s.failures
