@@ -246,9 +246,7 @@ pub fn truth_from_points(
         let to = to_mm(*p)?;
         if timed {
             let (Some(t0), Some(t1)) = (prev_t, *t) else {
-                return Err(SimError::new(
-                    "track points have no times: give speed_mmps",
-                ));
+                return Err(SimError::new("track points have no times: give speed_mmps"));
             };
             let dt = t1 - t0;
             if dt <= 0 {
@@ -406,9 +404,7 @@ pub fn parse_iso8601_ms(s: &str) -> SimResult<i64> {
     let (date, time) = s.split_once('T').ok_or_else(bad)?;
     let mut d = date.split('-');
     let num = |x: Option<&str>| -> SimResult<i64> {
-        x.ok_or_else(bad)?
-            .parse::<i64>()
-            .map_err(|_| bad())
+        x.ok_or_else(bad)?.parse::<i64>().map_err(|_| bad())
     };
     let (y, mo, da) = (num(d.next())?, num(d.next())?, num(d.next())?);
     let (hms, frac) = match time.split_once('.') {
@@ -500,7 +496,10 @@ mod tests {
         let t = b.build();
         assert_eq!(t.duration_ms(), 35_000);
         let s = t.at(5000).unwrap();
-        assert_eq!((s.e_mm, s.n_mm, s.along_mm, s.speed_mmps), (0, 50_000, 50_000, 10_000));
+        assert_eq!(
+            (s.e_mm, s.n_mm, s.along_mm, s.speed_mmps),
+            (0, 50_000, 50_000, 10_000)
+        );
         assert_eq!(s.course_ddeg, Some(0));
         let s = t.at(12_000).unwrap();
         assert_eq!((s.n_mm, s.speed_mmps, s.course_ddeg), (100_000, 0, None));

@@ -153,7 +153,9 @@ impl NoiseParams {
             "open_sky" => Ok(Self::open_sky()),
             "suburban" => Ok(Self::suburban()),
             "urban" => Ok(Self::urban()),
-            _ => Err(SimError::new(alloc::format!("unknown noise profile {name:?}"))),
+            _ => Err(SimError::new(alloc::format!(
+                "unknown noise profile {name:?}"
+            ))),
         }
     }
 
@@ -213,10 +215,8 @@ pub fn apply(
     let mut rng = Rng::new(seed, 0x6E6F_6973);
     let rho = rho_for_period(params.rho_milli, period_ms);
     // innovation sd = sigma x sqrt(1 - rho^2)
-    let innov_permille = i64::try_from(isqrt(
-        u128::try_from(1_000_000 - rho * rho).unwrap_or(0),
-    ))
-    .unwrap_or(0);
+    let innov_permille =
+        i64::try_from(isqrt(u128::try_from(1_000_000 - rho * rho).unwrap_or(0))).unwrap_or(0);
     let innov_sigma = params.sigma_mm * innov_permille / 1000;
     let mut ax = Ar1 {
         x: rng.gauss(params.sigma_mm),
@@ -342,7 +342,10 @@ mod tests {
         for nf in &f {
             let q = l.enu(nf.fix.position()).unwrap();
             let t = s[nf.sample];
-            assert!((i64::from(q.n_mm) - t.n_mm).abs() <= 10, "e7 grid is about 11 mm");
+            assert!(
+                (i64::from(q.n_mm) - t.n_mm).abs() <= 10,
+                "e7 grid is about 11 mm"
+            );
             assert_eq!(nf.fix.acc_mm, 5000);
             assert_eq!(nf.fix.speed_mmps, Some(t.speed_mmps));
         }
@@ -367,7 +370,10 @@ mod tests {
         // sigma 3 m -> variance 9e6 mm^2; AR(1) with rho 0.9 over 2000 s: loose bounds
         assert!((5_000_000..=14_000_000).contains(&var), "var {var}");
         // reacquisition after the dropout degrades accuracy
-        let after = f.iter().find(|nf| s[nf.sample].t_rel_ms == 200_000).unwrap();
+        let after = f
+            .iter()
+            .find(|nf| s[nf.sample].t_rel_ms == 200_000)
+            .unwrap();
         assert!(after.fix.acc_mm >= 30_000);
     }
 

@@ -149,7 +149,8 @@ pub fn parse_decimal_e7(s: &str) -> SimResult<i32> {
     if int_part.is_empty() && frac_part.is_empty() {
         return Err(bad());
     }
-    if !int_part.bytes().all(|b| b.is_ascii_digit()) || !frac_part.bytes().all(|b| b.is_ascii_digit())
+    if !int_part.bytes().all(|b| b.is_ascii_digit())
+        || !frac_part.bytes().all(|b| b.is_ascii_digit())
     {
         return Err(bad());
     }

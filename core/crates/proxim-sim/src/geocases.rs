@@ -72,7 +72,9 @@ fn case(rng: &mut Rng, kind: u64) -> SimResult<Option<Value>> {
             let a = to_pos(&f, polar(rng, r_mm)?)?;
             let b = to_pos(&f, polar(rng, r_mm)?)?;
             let d = dist_mm(f.project(a)?, f.project(b)?)?;
-            Ok(Some(json!({"k":"dist","o":pj(o),"r":r_m,"a":pj(a),"b":pj(b),"d_mm":d})))
+            Ok(Some(
+                json!({"k":"dist","o":pj(o),"r":r_m,"a":pj(a),"b":pj(b),"d_mm":d}),
+            ))
         }
         1 => {
             let n = rng.range_i64(3, 12);
@@ -95,8 +97,8 @@ fn case(rng: &mut Rng, kind: u64) -> SimResult<Option<Value>> {
                 .collect::<Result<_, _>>()?;
             // half the points near an edge (within 5 m), half anywhere
             let p_local = if rng.below(2) == 0 {
-                let i = usize::try_from(rng.below(u64::try_from(poly.len()).unwrap_or(1)))
-                    .unwrap_or(0);
+                let i =
+                    usize::try_from(rng.below(u64::try_from(poly.len()).unwrap_or(1))).unwrap_or(0);
                 let a = poly.get(i).copied().unwrap_or(Enu { e_mm: 0, n_mm: 0 });
                 let b = poly
                     .get((i + 1) % poly.len())
@@ -143,7 +145,10 @@ fn case(rng: &mut Rng, kind: u64) -> SimResult<Option<Value>> {
                     cur = polar(rng, r_mm / 2)?;
                 }
             }
-            let enu: Vec<Enu> = pts.iter().map(|v| f.project(*v)).collect::<Result<_, _>>()?;
+            let enu: Vec<Enu> = pts
+                .iter()
+                .map(|v| f.project(*v))
+                .collect::<Result<_, _>>()?;
             let Ok(line) = Polyline::new(&enu) else {
                 return Ok(None);
             };
@@ -165,9 +170,11 @@ fn case(rng: &mut Rng, kind: u64) -> SimResult<Option<Value>> {
                 second - pr.dist_mm
             };
             let lj: Vec<Value> = pts.iter().map(|v| pj(*v)).collect();
-            Ok(Some(json!({"k":"line","o":pj(o),"r":r_m,"line":lj,"p":pj(p),
+            Ok(Some(
+                json!({"k":"line","o":pj(o),"r":r_m,"line":lj,"p":pj(p),
                 "dist_mm":pr.dist_mm,"along_mm":pr.along_mm,"gap_mm":gap,
-                "len_mm":line.length_mm()})))
+                "len_mm":line.length_mm()}),
+            ))
         }
     }
 }

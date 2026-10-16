@@ -66,7 +66,10 @@ pub struct RunVerdict {
 fn dist(a: (i64, i64), b: (i64, i64)) -> i64 {
     let de = i128::from(a.0) - i128::from(b.0);
     let dn = i128::from(a.1) - i128::from(b.1);
-    i64::try_from(isqrt(u128::try_from(de * de + dn * dn).unwrap_or(u128::MAX))).unwrap_or(i64::MAX)
+    i64::try_from(isqrt(
+        u128::try_from(de * de + dn * dn).unwrap_or(u128::MAX),
+    ))
+    .unwrap_or(i64::MAX)
 }
 
 /// True signed depth (inside positive, mm) of a point in a zone geometry.
@@ -107,8 +110,8 @@ pub fn judge(sc: &Scenario, samples: &[Sample], run: &RunRec) -> SimResult<RunVe
         seed: run.seed,
         ..RunVerdict::default()
     };
-    v.engine_errors = u32::try_from(run.steps.iter().filter(|s| s.output.is_none()).count())
-        .unwrap_or(u32::MAX);
+    v.engine_errors =
+        u32::try_from(run.steps.iter().filter(|s| s.output.is_none()).count()).unwrap_or(u32::MAX);
     if v.engine_errors > 0 {
         v.global_failures.push(alloc::format!(
             "engine returned an error on {} fix(es)",
@@ -131,7 +134,9 @@ pub fn judge(sc: &Scenario, samples: &[Sample], run: &RunRec) -> SimResult<RunVe
         }
         for d in out.decisions.iter().filter(|d| d.outcome == Outcome::Fire) {
             total_fires += 1;
-            let Some(s) = samples.get(st.sample) else { continue };
+            let Some(s) = samples.get(st.sample) else {
+                continue;
+            };
             for z in &ex.no_fire_within {
                 let c = (z.center_m[0] * 1000, z.center_m[1] * 1000);
                 let dd = dist(c, pt(s));
@@ -200,12 +205,18 @@ fn judge_signpost(
             prev_naive = Some(n);
         }
         let Some(out) = &st.output else { continue };
-        for d in out.decisions.iter().filter(|d| d.signpost.as_str() == e.signpost) {
+        for d in out
+            .decisions
+            .iter()
+            .filter(|d| d.signpost.as_str() == e.signpost)
+        {
             reasons.insert(d.reason);
             if d.outcome != Outcome::Fire {
                 continue;
             }
-            let Some(s) = samples.get(st.sample) else { continue };
+            let Some(s) = samples.get(st.sample) else {
+                continue;
+            };
             let mut f = FireTruth {
                 t_rel_ms: st.fix.t_ms - sc.start_ms,
                 t_hat_ms: d.t_hat_ms,
@@ -252,7 +263,10 @@ fn judge_signpost(
     let mut failures: Vec<String> = Vec::new();
     let mut fail = |msg: String| failures.push(msg);
     if n < lo || n > hi {
-        fail(alloc::format!("{} fired {n} time(s), expected {lo}..={hi}", e.signpost));
+        fail(alloc::format!(
+            "{} fired {n} time(s), expected {lo}..={hi}",
+            e.signpost
+        ));
     }
     let mut prev_t: Option<i64> = None;
     for f in &r.fires {
@@ -260,12 +274,18 @@ fn judge_signpost(
         if let (Some(w), Some(x)) = (e.true_d_rem_m, f.d_rem_mm)
             && !in_range(x, [w[0] * 1000, w[1] * 1000])
         {
-            fail(alloc::format!("fire at t+{at} s: true d_rem {} m outside {w:?}", x / 1000));
+            fail(alloc::format!(
+                "fire at t+{at} s: true d_rem {} m outside {w:?}",
+                x / 1000
+            ));
         }
         if let (Some(w), Some(x)) = (e.true_xt_max_m, f.xt_mm)
             && x.abs() > w * 1000
         {
-            fail(alloc::format!("fire at t+{at} s: truly {} m off the route (max {w})", x / 1000));
+            fail(alloc::format!(
+                "fire at t+{at} s: truly {} m off the route (max {w})",
+                x / 1000
+            ));
         }
         if let Some(w) = e.true_depth_min_m {
             match f.depth_mm {
@@ -275,7 +295,9 @@ fn judge_signpost(
                     x,
                     w
                 )),
-                None => fail(alloc::format!("fire at t+{at} s: no zone geometry to judge depth")),
+                None => fail(alloc::format!(
+                    "fire at t+{at} s: no zone geometry to judge depth"
+                )),
             }
         }
         if let Some(w) = e.latency_s {

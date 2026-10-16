@@ -19,8 +19,8 @@ use proxim_sim::runner::{Engine, RealEngine, ScenarioResult, report_json, run_sc
 use proxim_sim::scenario::{Scenario, list_dir};
 use proxim_sim::stationary::StationaryStats;
 use proxim_types::{
-    Clock, Consent, DetEntry, DetState, Decision, EngineError, EventKind, Fix, Id, Outcome,
-    Output, Policy, ReasonCode, Signpost, State,
+    Clock, Consent, Decision, DetEntry, DetState, EngineError, EventKind, Fix, Id, Outcome, Output,
+    Policy, ReasonCode, Signpost, State,
 };
 use std::path::PathBuf;
 
@@ -50,7 +50,11 @@ fn failures(r: &ScenarioResult) -> String {
 fn every_scenario_passes_and_the_report_is_byte_identical() {
     let seeds = seeds_override();
     let files = list_dir(&core_dir().join("testdata/scenarios")).unwrap();
-    assert!(files.len() >= 30, "expected the full scenario set, found {}", files.len());
+    assert!(
+        files.len() >= 30,
+        "expected the full scenario set, found {}",
+        files.len()
+    );
     let mut results = Vec::new();
     for f in &files {
         let sc = Scenario::load(f).unwrap_or_else(|e| panic!("{}: {e}", f.display()));
@@ -62,10 +66,17 @@ fn every_scenario_passes_and_the_report_is_byte_identical() {
         .filter(|r| !r.pass)
         .map(|r| format!("{}: {}", r.id, failures(r)))
         .collect();
-    assert!(failed.is_empty(), "failing scenarios:\n{}", failed.join("\n"));
+    assert!(
+        failed.is_empty(),
+        "failing scenarios:\n{}",
+        failed.join("\n")
+    );
 
     // Stationary 25 m outside (ADDENDUM-01 M1 verify, [MODEL] targets).
-    let st = results.iter().find(|r| r.id == "stationary-outside").unwrap();
+    let st = results
+        .iter()
+        .find(|r| r.id == "stationary-outside")
+        .unwrap();
     let s = StationaryStats::from_result(st, 0);
     eprintln!(
         "[stationary-outside] seeds {} false-enter runs {} max transitions/10 min {} naive edge crossings max {} mean x1000 {}",
@@ -162,7 +173,11 @@ fn run_broken(
 fn assert_red(r: &ScenarioResult, needle: &str) {
     let text = failures(r);
     assert!(!r.pass, "{} stayed green under a broken engine", r.id);
-    assert!(text.contains(needle), "{}: expected {needle:?} in {text}", r.id);
+    assert!(
+        text.contains(needle),
+        "{}: expected {needle:?} in {text}",
+        r.id
+    );
 }
 
 #[test]
@@ -259,7 +274,10 @@ fn a_late_or_false_enter_fails_the_latency_and_depth_assertions() {
             o.decisions.push(fire(&sps[0], f.t_ms));
         }
     };
-    assert_red(&run_broken("s01-drive-in-enter", late), "after the true entry");
+    assert_red(
+        &run_broken("s01-drive-in-enter", late),
+        "after the true entry",
+    );
     // Fire on the first fix, 600 m outside the zone.
     let mut first = true;
     let early = move |f: &Fix, sps: &[Signpost], o: &mut Output, _: &mut State| {
@@ -300,15 +318,22 @@ fn a_flapping_detector_fails_the_transition_assertion() {
             });
         }
     };
-    assert_red(&run_broken("stationary-outside", flap), "detector transitions");
+    assert_red(
+        &run_broken("stationary-outside", flap),
+        "detector transitions",
+    );
 }
 
 #[test]
 fn a_missing_reason_fails_the_reason_assertion() {
     let hide = |_: &Fix, _: &[Signpost], o: &mut Output, _: &mut State| {
-        o.decisions.retain(|d| d.reason != ReasonCode::UnsupportedEvent);
+        o.decisions
+            .retain(|d| d.reason != ReasonCode::UnsupportedEvent);
     };
-    assert_red(&run_broken("signed-cross-fixture", hide), "UnsupportedEvent");
+    assert_red(
+        &run_broken("signed-cross-fixture", hide),
+        "UnsupportedEvent",
+    );
 }
 
 #[test]
@@ -323,7 +348,13 @@ fn the_cross_fixture_is_pinned_and_reserved() {
     let flipped: String = pin
         .chars()
         .enumerate()
-        .map(|(i, c)| if i == 0 { if c == '0' { '1' } else { '0' } } else { c })
+        .map(|(i, c)| {
+            if i == 0 {
+                if c == '0' { '1' } else { '0' }
+            } else {
+                c
+            }
+        })
         .collect();
     let bad = text.replace(pin.as_str(), &flipped);
     assert_ne!(bad, text);

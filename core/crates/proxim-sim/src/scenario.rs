@@ -16,7 +16,9 @@ use crate::trace::{Truth, TruthBuilder, geojson_points, gpx_points, truth_from_p
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use proxim_geo::{Polyline, project_to_polyline};
-use proxim_types::{Class, Consent, ConsentValue, Enu, EventKind, Policy, Position, ReasonCode, Signpost};
+use proxim_types::{
+    Class, Consent, ConsentValue, Enu, EventKind, Policy, Position, ReasonCode, Signpost,
+};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use std::path::{Path, PathBuf};
@@ -153,8 +155,13 @@ pub enum TraceSpec {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum Move {
-    Go { to_m: [i64; 2], speed_mmps: u32 },
-    Wait { wait_s: i64 },
+    Go {
+        to_m: [i64; 2],
+        speed_mmps: u32,
+    },
+    Wait {
+        wait_s: i64,
+    },
     Gap {
         gap_s: i64,
         #[serde(default)]
@@ -320,9 +327,18 @@ pub struct Scenario {
 /// A signpost's shape in the scenario's local plane (mm).
 #[derive(Clone, Debug)]
 pub enum Geometry {
-    Circle { center: (i64, i64), radius_mm: i64 },
-    Polygon { vertices: Vec<Enu> },
-    Route { line: Polyline, anchor_mm: i64, buffer_mm: i64 },
+    Circle {
+        center: (i64, i64),
+        radius_mm: i64,
+    },
+    Polygon {
+        vertices: Vec<Enu>,
+    },
+    Route {
+        line: Polyline,
+        anchor_mm: i64,
+        buffer_mm: i64,
+    },
     /// A fixture signpost the oracle does not model (only fire counts are judged).
     Opaque,
 }
@@ -359,9 +375,7 @@ fn point_along(line: &Polyline, along_mm: i64) -> (i64, i64) {
             };
             let span = (c1 - c0).max(1);
             let t = along_mm - c0;
-            let lerp = |x: i32, y: i32| {
-                i64::from(x) + (i64::from(y) - i64::from(x)) * t / span
-            };
+            let lerp = |x: i32, y: i32| i64::from(x) + (i64::from(y) - i64::from(x)) * t / span;
             out = (lerp(a.e_mm, b.e_mm), lerp(a.n_mm, b.n_mm));
             break;
         }
@@ -382,13 +396,16 @@ fn build_signpost(
         if got != fx.sha256 {
             return Err(SimError::new(alloc::format!(
                 "fixture {} digest {got} does not match the pinned {}",
-                fx.path, fx.sha256
+                fx.path,
+                fx.sha256
             )));
         }
         let text = core::str::from_utf8(&bytes).map_err(|_| SimError::new("fixture not UTF-8"))?;
         let sp: Signpost = serde_json::from_str(text)?;
         if sp.id.as_str() != spec.id {
-            return Err(SimError::new("fixture id differs from the scenario's signpost id"));
+            return Err(SimError::new(
+                "fixture id differs from the scenario's signpost id",
+            ));
         }
         return Ok((sp, Geometry::Opaque));
     }
@@ -448,10 +465,8 @@ fn build_signpost(
         } => {
             let mm: Vec<(i64, i64)> = vertices_m.iter().map(|v| m_to_mm(*v)).collect();
             let line = Polyline::new(&mm.iter().map(|p| enu(*p)).collect::<SimResult<Vec<_>>>()?)?;
-            let anchor_mm = anchor_along_m.map_or_else(
-                || line.length_mm(),
-                |a| i64::from(a) * 1000,
-            );
+            let anchor_mm =
+                anchor_along_m.map_or_else(|| line.length_mm(), |a| i64::from(a) * 1000);
             let ap = point_along(&line, anchor_mm);
             let origin = local.pos(ap.0, ap.1)?;
             let verts = mm
@@ -511,8 +526,10 @@ fn build_truth(t: &TraceSpec, local: &Local, dir: &Path) -> SimResult<Truth> {
         }
         TraceSpec::Geojson { file, speed_mmps } => {
             let text = read_text(&dir.join(file))?;
-            let pts: Vec<(Position, Option<i64>)> =
-                geojson_points(&text)?.into_iter().map(|p| (p, None)).collect();
+            let pts: Vec<(Position, Option<i64>)> = geojson_points(&text)?
+                .into_iter()
+                .map(|p| (p, None))
+                .collect();
             truth_from_points(local, &pts, Some(*speed_mmps))
         }
         TraceSpec::Gpx { file, speed_mmps } => {
@@ -645,7 +662,10 @@ impl Scenario {
         }
         let noise = noise_params(&file.noise)?;
         let dropouts = dropouts(&file.dropouts, &truth, file.period_ms)?;
-        let mut policy = file.policy.clone().unwrap_or_else(|| json!({"explain": true}));
+        let mut policy = file
+            .policy
+            .clone()
+            .unwrap_or_else(|| json!({"explain": true}));
         if !file.standoff_zones_m.is_empty() {
             let zones = file
                 .standoff_zones_m

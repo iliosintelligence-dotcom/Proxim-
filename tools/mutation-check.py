@@ -108,7 +108,12 @@ def tree_digest(root: Path) -> str:
 
 
 def copy_core(dst: Path) -> None:
-    shutil.copytree(CORE, dst, ignore=shutil.ignore_patterns("target", "node_modules"))
+    # shutil.copy (not copy2): every copied file gets a fresh mtime. Cargo fingerprints path
+    # crates by mtime, and with preserved mtimes it reused the previous mutation's objects from the
+    # shared target dir (observed: a decide mutation reported the detect mutation's failures).
+    shutil.copytree(
+        CORE, dst, ignore=shutil.ignore_patterns("target", "node_modules"), copy_function=shutil.copy
+    )
     toolchain = REPO_ROOT / "rust-toolchain.toml"
     if toolchain.is_file():
         shutil.copy2(toolchain, dst.parent / "rust-toolchain.toml")

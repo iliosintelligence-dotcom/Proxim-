@@ -9,9 +9,7 @@ use crate::scenario::{Scenario, default_consent};
 use alloc::string::String;
 use alloc::vec::Vec;
 use proxim_types::canon::{to_canonical_json, value_to_canonical};
-use proxim_types::{
-    Clock, Consent, DetState, EngineError, Fix, Output, Policy, Signpost, State,
-};
+use proxim_types::{Clock, Consent, DetState, EngineError, Fix, Output, Policy, Signpost, State};
 use serde_json::{Value, json};
 
 /// The decision function under test. [`RealEngine`] is `proxim_decide::decide`; tests wrap it to
@@ -139,9 +137,10 @@ pub fn run_seed(
                     .signposts
                     .iter()
                     .map(|s| {
-                        next.mem.det.iter().any(|d| {
-                            d.id == s.id && matches!(d.st, DetState::In { .. })
-                        })
+                        next.mem
+                            .det
+                            .iter()
+                            .any(|d| d.id == s.id && matches!(d.st, DetState::In { .. }))
                     })
                     .collect();
                 let mem_empty = next.mem == proxim_types::Mem::default();
@@ -219,7 +218,9 @@ pub fn run_scenario(
         let mut sum_naive = 0_u64;
         let mut failures = Vec::new();
         for v in &verdicts {
-            let Some(r) = v.signposts.get(k) else { continue };
+            let Some(r) = v.signposts.get(k) else {
+                continue;
+            };
             if r.ok {
                 runs_ok += 1;
             } else if failures.len() < 3 {

@@ -104,7 +104,11 @@ fn run(paths: &[PathBuf], opts: &std::collections::BTreeMap<String, String>) -> 
         }
     }
     let failed = results.iter().filter(|r| !r.pass).count();
-    println!("{} scenario(s), {} passed, {failed} failed", results.len(), results.len() - failed);
+    println!(
+        "{} scenario(s), {} passed, {failed} failed",
+        results.len(),
+        results.len() - failed
+    );
     if let Some(out) = opts.get("report") {
         match report_json(&results, seeds) {
             Ok(s) => {
