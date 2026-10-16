@@ -19,12 +19,18 @@ libm = "0.2.16"
 serde = { version = "1.0.229", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0.154", default-features = false, features = ["alloc"] }
 proptest = { version = "1.12.0", default-features = false, features = ["std", "bit-set"] }
+# Pack verification (M2, docs/pack-format.md). RustCrypto, no_std, no RNG: verify only in the
+# engine; deterministic RFC 6979 signing exists for test vectors (`testkit` feature).
+p256 = { version = "0.14.0", default-features = false, features = ["ecdsa"] }
+sha2 = { version = "0.11.1", default-features = false }
+miniz_oxide = { version = "0.9.1", default-features = false, features = ["with-alloc"] }
 
 proxim-types = { path = "crates/proxim-types" }
 proxim-geo = { path = "crates/proxim-geo" }
 proxim-path = { path = "crates/proxim-path" }
 proxim-detect = { path = "crates/proxim-detect" }
 proxim-decide = { path = "crates/proxim-decide" }
+proxim-pack = { path = "crates/proxim-pack" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

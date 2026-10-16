@@ -426,7 +426,7 @@ fn child_directed_disables_everything_always() {
 fn reason_codes_match_the_section_8_table() {
     use proxim_types::ReasonCode as R;
     // transcribed from engine-spec section 8: (first id, [codes])
-    let rows: [(u16, &[&str]); 7] = [
+    let rows: [(u16, &[&str]); 8] = [
         (0, &["OK", "SUPPRESSED"]),
         (100, &["CONSENT_DENIED", "ENGINE_DISABLED"]),
         (
@@ -484,6 +484,16 @@ fn reason_codes_match_the_section_8_table() {
                 "NO_EVENT",
             ],
         ),
+        (
+            500,
+            &[
+                "REVOKED",
+                "SIGNATURE_INVALID",
+                "SEQ_ROLLBACK",
+                "KID_REVOKED",
+                "PACK_EXPIRED",
+            ],
+        ),
     ];
     let mut n = 0;
     for (first, codes) in rows {
@@ -499,9 +509,9 @@ fn reason_codes_match_the_section_8_table() {
             n += 1;
         }
     }
-    assert_eq!(n, 39);
-    // reserved ids (500+) are not emitted codes in M1
-    assert!(serde_json::from_str::<R>("\"REVOKED\"").is_err());
+    assert_eq!(n, 44);
+    // the rest of row 500 (PLAN 5.6 codes, M3) is still reserved
+    assert!(serde_json::from_str::<R>("\"CAP_SENDER_DAY\"").is_err());
     assert!(
         serde_json::from_str::<R>("\"ok\"").is_err(),
         "wire form is SCREAMING_SNAKE"

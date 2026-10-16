@@ -129,6 +129,7 @@ fn reserved_policy_and_signpost_fields_are_accepted_and_ignored() {
             "cooldown_s",
             "creatives",
             "rot_days",
+            "pack_kind",
         ] {
             o.insert(k.into(), serde_json::json!({"x": [1, 2]}));
         }
