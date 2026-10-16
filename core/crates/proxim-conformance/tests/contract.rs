@@ -274,7 +274,6 @@ fn rich_world_is_stable_across_bindings_and_runs() {
 }
 
 #[test]
-#[ignore = "spec-violation: D-TRIG-HEADER"]
 fn trig_table_files_use_the_nested_header_of_spec_9() {
     // Spec 9: `trig` tables are `{header, entries: every 100th row, sha256}`; the files put the
     // header fields at top level and add `rows`/`columns`.

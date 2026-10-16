@@ -139,8 +139,11 @@ fn health_fires(consent: Consent) -> (bool, Vec<ReasonCode>) {
 
 #[test]
 fn health_class_requires_sdk_issued_receipt() {
-    // Flag and receipt: fires.
-    assert!(health_fires(granted_health()).0);
+    // Flag and receipt: the consent gate passes. An ENTER is P0 (500), below health's 700 floor
+    // (errata E-D-HEALTH), so it still never fires in M1; it is the floor, not consent, that stops it.
+    let (fired, reasons) = health_fires(granted_health());
+    assert!(!fired);
+    assert!(!reasons.contains(&ReasonCode::HealthConsentMissing));
     // Missing receipt, empty receipt, flag denied/unknown/absent, location-only consent: never.
     let cases = [
         Consent {

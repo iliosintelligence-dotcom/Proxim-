@@ -133,8 +133,7 @@ pub fn decide(
 
     // ---- accepted: filters, trace, caps buckets ----
     let (mut mem, summary) = path_update(&base_mem, fix)?;
-    let (day_idx, week_idx) = calendar::day_week(now, clock.tz_offset_min);
-    let mut book = CapsBook::load(&state.caps, day_idx, week_idx);
+    let mut book = CapsBook::load(&state.caps, now, clock.tz_offset_min);
 
     let (candidates, mut drops) = select_revisions(signposts, fix.t_ms);
     let present: BTreeSet<&str> = signposts.iter().map(|s| s.id.as_str()).collect();

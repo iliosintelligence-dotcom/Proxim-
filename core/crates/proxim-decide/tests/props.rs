@@ -334,6 +334,7 @@ fn hostile_state(rng: &mut Splitmix) -> State {
             day_n: rng.range(0, 5) as u32,
             week_idx: wild(rng),
             week_n: rng.range(0, 9) as u32,
+            tz_offset_min: None,
         })
         .collect();
     State {

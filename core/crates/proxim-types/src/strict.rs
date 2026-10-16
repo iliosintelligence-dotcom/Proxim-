@@ -50,7 +50,7 @@ impl Default for JsonLimits {
 /// # Errors
 /// [`EngineError::Parse`] for malformed or non-conforming input (including unknown fields),
 /// [`EngineError::Limit`] for oversize input.
-pub fn from_json<T: DeserializeOwned>(input: &[u8]) -> Result<T, EngineError> {
+pub fn from_json<T: DeserializeOwned + serde::Serialize>(input: &[u8]) -> Result<T, EngineError> {
     from_json_with(input, &JsonLimits::default())
 }
 
@@ -58,12 +58,12 @@ pub fn from_json<T: DeserializeOwned>(input: &[u8]) -> Result<T, EngineError> {
 ///
 /// # Errors
 /// As [`from_json`].
-pub fn from_json_with<T: DeserializeOwned>(
+pub fn from_json_with<T: DeserializeOwned + serde::Serialize>(
     input: &[u8],
     limits: &JsonLimits,
 ) -> Result<T, EngineError> {
     let tree = parse_value(input, limits)?;
-    serde_json::from_value(tree).map_err(|_| EngineError::Parse)
+    decode_tree(tree)
 }
 
 /// As [`from_json`], and the input must already be byte-for-byte canonical (no whitespace, sorted
@@ -71,7 +71,9 @@ pub fn from_json_with<T: DeserializeOwned>(
 ///
 /// # Errors
 /// [`EngineError::Parse`] if the input is valid but not canonical, otherwise as [`from_json`].
-pub fn from_canonical_json<T: DeserializeOwned>(input: &[u8]) -> Result<T, EngineError> {
+pub fn from_canonical_json<T: DeserializeOwned + serde::Serialize>(
+    input: &[u8],
+) -> Result<T, EngineError> {
     from_canonical_json_with(input, &JsonLimits::default())
 }
 
@@ -80,7 +82,7 @@ pub fn from_canonical_json<T: DeserializeOwned>(input: &[u8]) -> Result<T, Engin
 ///
 /// # Errors
 /// As [`from_canonical_json`].
-pub fn from_canonical_json_with<T: DeserializeOwned>(
+pub fn from_canonical_json_with<T: DeserializeOwned + serde::Serialize>(
     input: &[u8],
     limits: &JsonLimits,
 ) -> Result<T, EngineError> {
@@ -88,7 +90,45 @@ pub fn from_canonical_json_with<T: DeserializeOwned>(
     if value_to_canonical(&tree)?.as_bytes() != input {
         return Err(EngineError::Parse);
     }
-    serde_json::from_value(tree).map_err(|_| EngineError::Parse)
+    decode_tree(tree)
+}
+
+/// Decode a strict tree into `T`, then reject any positional encoding (errata E-D-POS).
+///
+/// Derived struct deserializers accept a JSON array as a positional struct, a spelling no other
+/// binding accepts and that the canonical form never produces. After decoding, `T` is re-encoded:
+/// wherever the input held an array, the re-encoding must hold an array too (or nothing, for
+/// reserved fields that are never re-emitted). This covers every depth, including fields inside
+/// internally tagged enums, which a wrapping deserializer would not reach.
+///
+/// # Errors
+/// [`EngineError::Parse`] if decoding fails or a struct was given as an array.
+pub fn decode_tree<T: DeserializeOwned + serde::Serialize>(tree: Value) -> Result<T, EngineError> {
+    let out: T = serde_json::from_value(tree.clone()).map_err(|_| EngineError::Parse)?;
+    let back = serde_json::to_value(&out).map_err(|_| EngineError::Parse)?;
+    if arrays_preserved(&tree, &back) {
+        Ok(out)
+    } else {
+        Err(EngineError::Parse)
+    }
+}
+
+/// False if some array in `input` became an object at the same place in `back`.
+fn arrays_preserved(input: &Value, back: &Value) -> bool {
+    match (input, back) {
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| arrays_preserved(x, y))
+        }
+        // A struct given positionally decodes and re-encodes as an object: refuse it. An array that
+        // a lenient custom type coerces to a scalar (e.g. a consent value parsed as `unknown`, spec
+        // 3.2) is not a positional struct and stays allowed.
+        (Value::Array(_), Value::Object(_)) => false,
+        (Value::Array(_), _) => true,
+        (Value::Object(a), Value::Object(b)) => a
+            .iter()
+            .all(|(k, x)| b.get(k).is_none_or(|y| arrays_preserved(x, y))),
+        _ => true,
+    }
 }
 
 /// Parse into a tree under the strict rules, without typed decoding.

@@ -242,6 +242,7 @@ fn capped_state(hwm: i64, day_idx: i64, week_idx: i64) -> State {
                 day_n: 2,
                 week_idx,
                 week_n: 2,
+                tz_offset_min: None,
             }],
         },
         mem: Default::default(),
@@ -390,6 +391,7 @@ fn caps_older_than_this_week_are_pruned_each_call() {
             day_n: 2,
             week_idx: week_idx - 2,
             week_n: 5,
+            tz_offset_min: None,
         },
         SignpostCaps {
             id: Id::new("b").unwrap(),
@@ -397,6 +399,7 @@ fn caps_older_than_this_week_are_pruned_each_call() {
             day_n: 1,
             week_idx: week_idx - 1,
             week_n: 3,
+            tz_offset_min: None,
         },
         SignpostCaps {
             id: Id::new("c").unwrap(),
@@ -404,6 +407,7 @@ fn caps_older_than_this_week_are_pruned_each_call() {
             day_n: 1,
             week_idx,
             week_n: 1,
+            tz_offset_min: None,
         },
     ];
     let (_, next) = decide(
@@ -445,6 +449,7 @@ fn invalid_caps_state_is_a_whole_call_error() {
         day_n: 1,
         week_idx: 1,
         week_n: 1,
+        tz_offset_min: None,
     };
     dup.caps.signposts = vec![e.clone(), e.clone()];
     assert_eq!(call(&dup), Err(proxim_types::EngineError::Parse));

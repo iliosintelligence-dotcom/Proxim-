@@ -64,11 +64,13 @@ fn document(id: &str, extra: Value, columns: [&str; 3], rows: &[Row]) -> String 
         .map(|(i, a, b)| json!([i, a, b]))
         .collect();
     let mut doc = json!({
-        "format": "proxim-golden/1",
-        "kind": "trig",
-        "id": id,
-        "engine_spec": 1,
-        "synthetic": true,
+        "header": {
+            "format": "proxim-golden/1",
+            "kind": "trig",
+            "id": id,
+            "engine_spec": 1,
+            "synthetic": true,
+        },
         "columns": columns,
         "entries": sample,
         "rows": as_json(rows),
@@ -162,10 +164,10 @@ fn golden_files_parse_strictly_and_every_row_agrees() {
             ..JsonLimits::default()
         };
         let v: Value = from_canonical_json_with(body, &limits).unwrap(); // canonical bytes, no null, no float
-        assert_eq!(v["format"], "proxim-golden/1");
-        assert_eq!(v["kind"], "trig");
-        assert_eq!(v["engine_spec"], 1);
-        assert_eq!(v["synthetic"], true);
+        assert_eq!(v["header"]["format"], "proxim-golden/1");
+        assert_eq!(v["header"]["kind"], "trig");
+        assert_eq!(v["header"]["engine_spec"], 1);
+        assert_eq!(v["header"]["synthetic"], true);
         let rows = v["rows"].as_array().unwrap();
         assert_eq!(rows.len(), n, "{file}");
         let entries = v["entries"].as_array().unwrap();

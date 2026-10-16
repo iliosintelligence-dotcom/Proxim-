@@ -10,7 +10,7 @@ use crate::decide;
 use alloc::string::String;
 use alloc::vec::Vec;
 use proxim_types::canon::{to_canonical_json, value_to_canonical};
-use proxim_types::strict::{JsonLimits, parse_value};
+use proxim_types::strict::{JsonLimits, decode_tree, parse_value};
 use proxim_types::{Clock, Consent, EngineError, Fix, Policy, Signpost, State};
 
 /// Names of the arguments, used in parse errors.
@@ -54,7 +54,7 @@ type Failure = (EngineError, Option<&'static str>);
 /// Parse one argument. The top-level JSON kind must be the one the canonical form has (object for
 /// every struct, array for the signpost list): derived struct deserializers also accept a
 /// positional array, which no other binding would, so it is rejected here.
-fn arg<T: serde::de::DeserializeOwned>(
+fn arg<T: serde::de::DeserializeOwned + serde::Serialize>(
     text: &str,
     name: &'static str,
     want_array: bool,
@@ -64,7 +64,7 @@ fn arg<T: serde::de::DeserializeOwned>(
     if tree.is_array() != want_array || !(tree.is_array() || tree.is_object()) {
         return Err(fail(EngineError::Parse));
     }
-    serde_json::from_value(tree).map_err(|_| fail(EngineError::Parse))
+    decode_tree(tree).map_err(fail)
 }
 
 fn run(

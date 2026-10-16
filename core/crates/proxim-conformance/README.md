@@ -41,13 +41,15 @@ cargo run --release -p proxim-conformance --bin fuzz -- one <case-seed>         
 
 ## Known spec violations kept as `#[ignore]`
 
-Each is an `#[ignore = "spec-violation: <id>"]` test that fails today and must pass once fixed.
+None open. Each violation is kept as an `#[ignore = "spec-violation: <id>"]` test that fails until fixed.
+The first run found four, all fixed on 2026-10-16 (errata in docs/engine-spec.md):
 
-| id | test | spec |
-|---|---|---|
-| `D-HEALTH-FLOOR` | `filters_signpost::health_enter_never_fires_in_m1_...`, `lifecycle::health_approach_below_700_...` | 5.3 "Health's floor 700 ... never by P0" |
-| `D-NESTED-POSITIONAL` | `lifecycle::nested_structs_are_not_accepted_as_positional_arrays` | 3.2 canonical form / E-D1 |
-| `D-TRIG-HEADER` | `contract::trig_table_files_use_the_nested_header_of_spec_9` | 9 |
+| id | fix |
+|---|---|
+| `S-TZ-CAP-BYPASS` | cap entries record their timezone (E-D-TZ); plus the east-move case |
+| `D-HEALTH-FLOOR` | health floor 700, never lowered (E-D-HEALTH) |
+| `D-NESTED-POSITIONAL` | strict decode rejects positional structs at any depth (E-D-POS) |
+| `D-TRIG-HEADER` | table files nest their header (E-G11) |
 
 ## Determinism rules
 

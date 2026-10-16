@@ -185,8 +185,11 @@ fn entry(day_idx: i64, day_n: i64, week_idx: i64, week_n: i64) -> Value {
     json!({"id": ID, "day_idx": day_idx, "day_n": day_n, "week_idx": week_idx, "week_n": week_n})
 }
 
+/// An entry as the engine writes it: indices computed under `tz`, which it records (errata E-D-TZ).
 fn cur_entry(t: i64, tz: i16, day_n: i64, week_n: i64) -> Value {
-    entry(day_idx(t, tz), day_n, week_idx(t, tz), week_n)
+    let mut e = entry(day_idx(t, tz), day_n, week_idx(t, tz), week_n);
+    e["tz_offset_min"] = json!(tz);
+    e
 }
 
 #[test]
@@ -527,7 +530,6 @@ fn negative_local_days_and_week_boundaries_use_floor_division() {
 }
 
 #[test]
-#[ignore = "spec-violation: S-TZ-CAP-BYPASS"]
 fn changing_tz_offset_min_must_not_reopen_an_exhausted_day_cap() {
     // Spec 7 says a new index resets the count, so a caller that varies `tz_offset_min` between calls
     // moves "today" and gets a fresh 2/day. The platform cap (spec 3.3: partners only narrow, 2/day)
@@ -548,6 +550,18 @@ fn changing_tz_offset_min_must_not_reopen_an_exhausted_day_cap() {
     assert!(
         !s.fired(ID),
         "a different tz_offset_min reopened the 2/day cap: {}",
+        s.text
+    );
+}
+
+#[test]
+fn moving_tz_offset_east_must_not_reopen_an_exhausted_day_cap_either() {
+    let t = BASE_T;
+    let (mut rig, _) = primed(Some(cur_entry(t + 3000, -720, 2, 2)), None, 840);
+    let s = rig.step(&fix_at(BASE_T + 3000, ORIGIN));
+    assert!(
+        !s.fired(ID),
+        "a different tz_offset_min (east) reopened the 2/day cap: {}",
         s.text
     );
 }

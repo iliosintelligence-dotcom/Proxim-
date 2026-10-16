@@ -459,7 +459,6 @@ fn f15_health_needs_nearby_health_events_granted_and_a_receipt() {
 }
 
 #[test]
-#[ignore = "spec-violation: D-HEALTH-FLOOR"]
 fn health_enter_never_fires_in_m1_because_p0_confidence_is_below_the_floor() {
     // Spec 5.3: "Health's floor 700 is reachable by P1 only ..., never by P0". ENTER is a P0 event.
     let mut sp = enter_circle("c-1", 200);

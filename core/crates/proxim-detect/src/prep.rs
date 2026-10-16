@@ -9,7 +9,8 @@ use proxim_types::defaults::{
     D_HI_M, D_HI_MAX_M, D_LO_SLOW_MM, D_LO_VEHICLE_MM, LEAD_S_DEFAULT, LEAD_S_MAX, LEAD_S_MIN,
     MAX_FOOT_MMPS, MAX_POLYGON_VERTICES, MAX_ROUTE_VERTICES, MIN_CIRCLE_RADIUS_M, REACH_MARGIN_MM,
 };
-use proxim_types::{EngineError, Enu, EventKind, Mode, ReasonCode, Shape, Signpost};
+use proxim_types::defaults::{MIN_CONF_GENERAL, MIN_CONF_HEALTH};
+use proxim_types::{Class, EngineError, Enu, EventKind, Mode, ReasonCode, Shape, Signpost};
 
 /// Parameters of an APPROACH trigger after validation.
 #[derive(Clone, Debug)]
@@ -228,7 +229,13 @@ impl Prepared {
             kind,
             reach_mm,
             min_tier: sp.min_path_tier.unwrap_or(0),
-            min_conf_milli: sp.min_path_conf_milli.unwrap_or(500),
+            min_conf_milli: match sp.class {
+                Class::Health => sp
+                    .min_path_conf_milli
+                    .unwrap_or(MIN_CONF_HEALTH)
+                    .max(MIN_CONF_HEALTH),
+                Class::General => sp.min_path_conf_milli.unwrap_or(MIN_CONF_GENERAL),
+            },
         })
     }
 

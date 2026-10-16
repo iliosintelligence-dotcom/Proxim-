@@ -227,7 +227,10 @@ fn fire_steps(v: &proxim_decide::golden::Vector) -> Vec<usize> {
 
 fn any_reason(v: &proxim_decide::golden::Vector, r: ReasonCode) -> bool {
     v.steps.iter().any(|s| {
-        s.expect.output.fix.reason == r || s.expect.output.decisions.iter().any(|d| d.reason == r)
+        let o = &s.expect.output;
+        o.fix.reason == r
+            || o.decisions.iter().any(|d| d.reason == r)
+            || o.notes.iter().flatten().any(|n| n.reason == r)
     })
 }
 
@@ -320,8 +323,11 @@ fn golden_vectors_show_the_intended_behaviour() {
         ReasonCode::HealthConsentMissing
     ));
     assert!(fire_steps(&vector("health_gates")).is_empty());
+    // With the receipt the consent gate passes, but ENTER is P0 (500) and health's floor is 700
+    // (spec 5.3, errata E-D-HEALTH): a health ENTER never fires in M1.
     let v = vector("health_with_receipt");
-    assert_eq!(fire_steps(&v), vec![3]);
+    assert!(fire_steps(&v).is_empty());
+    assert!(any_reason(&v, ReasonCode::PathConfidenceLow));
     assert!(any_reason(&v, ReasonCode::TriggerInStandoff));
     assert!(fire_steps(&vector("boundary_jitter_never_enters")).is_empty());
     let v = vector("aged_clock_event_too_old");
@@ -329,5 +335,8 @@ fn golden_vectors_show_the_intended_behaviour() {
     let v = vector("superseded_and_ambiguous_revisions");
     assert_eq!(fire_steps(&v), vec![3]);
     assert!(any_reason(&v, ReasonCode::TriggerInvalid));
-    assert!(fire_steps(&vector("world_tour")).len() >= 4);
+    // Three general fires; the health ENTER (h-1) no longer fires below its 700 floor (E-D-HEALTH).
+    let v = vector("world_tour");
+    assert_eq!(fire_steps(&v), vec![32, 63, 74]);
+    assert!(any_reason(&v, ReasonCode::PathConfidenceLow));
 }

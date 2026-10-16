@@ -60,6 +60,7 @@ fn state_with_every_detector_tag_round_trips() {
                 day_n: 1,
                 week_idx: 2_714,
                 week_n: 3,
+                tz_offset_min: None,
             }],
         },
         mem: Mem {

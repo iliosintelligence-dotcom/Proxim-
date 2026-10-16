@@ -317,7 +317,6 @@ fn health_approach_fires_with_confidence_800_and_700() {
 }
 
 #[test]
-#[ignore = "spec-violation: D-HEALTH-FLOOR"]
 fn health_approach_below_700_confidence_does_not_fire() {
     // acc_eff 55 m: 600 + 100 + 100 - 200 = 600 < 700 (spec 5.3: Health's floor 700)
     assert!(
@@ -416,7 +415,6 @@ fn duplicate_keys_are_rejected_in_every_argument() {
 }
 
 #[test]
-#[ignore = "spec-violation: D-NESTED-POSITIONAL"]
 fn nested_structs_are_not_accepted_as_positional_arrays() {
     // canonical Position is an object; an array form is a different spelling no port would accept
     let mut c = Call::base();

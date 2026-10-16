@@ -109,6 +109,11 @@ pub const P1_ACC_PENALTY2_MM: i64 = 50_000;
 pub const P1_CONF_FOOT_CAP: u16 = 600;
 /// P0 (presence) confidence, permille (5.3).
 pub const P0_CONF: u16 = 500;
+/// Default `min_path_conf_milli` for a general signpost (spec 1).
+pub const MIN_CONF_GENERAL: u16 = 500;
+/// Health floor (spec 5.3: 'Health's floor 700'; PLAN 5.5). A health signpost's
+/// `min_path_conf_milli` defaults to it and is never lowered below it (errata E-D-HEALTH).
+pub const MIN_CONF_HEALTH: u16 = 700;
 /// Fixes needed for the five-fix bonus.
 pub const P1_BONUS_FIXES: u8 = 5;
 

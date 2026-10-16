@@ -411,6 +411,11 @@ pub struct SignpostCaps {
     pub day_n: u32,
     pub week_idx: i64,
     pub week_n: u32,
+    /// Offset the indices were computed under (errata E-D-TZ). The entry's day and week are judged in
+    /// this zone, so a later call carrying a different `tz_offset_min` cannot reopen an exhausted cap.
+    /// Absent only in legacy state; such an entry is judged under the call's offset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tz_offset_min: Option<i16>,
 }
 
 /// Persistable part of the state (encrypted, no backup, I3).
