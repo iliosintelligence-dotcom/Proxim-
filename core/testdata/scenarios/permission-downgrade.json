@@ -1,0 +1,88 @@
+{
+  "id": "permission-downgrade",
+  "title": "Location consent revoked mid-route: nothing processed or kept; fires only after re-grant",
+  "source": "engine-spec 7 F01, I4",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "consent_changes": [
+    {
+      "at_s": 120,
+      "consent": {
+        "location_matching": "denied"
+      }
+    },
+    {
+      "at_s": 160,
+      "consent": {
+        "location_matching": "granted"
+      }
+    }
+  ],
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "fire_time_s": [
+          161,
+          240
+        ]
+      }
+    ],
+    "fix_reasons_include": [
+      "CONSENT_DENIED"
+    ],
+    "mem_empty_after": [
+      "CONSENT_DENIED"
+    ]
+  }
+}

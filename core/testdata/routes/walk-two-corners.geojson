@@ -1,0 +1,37 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "synthetic walk with two corners",
+    "synthetic": true
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      6.9961952,
+      44.9937012
+     ],
+     [
+      6.9961952,
+      44.9964007
+     ],
+     [
+      7.0,
+      44.9964007
+     ],
+     [
+      7.0,
+      45.0
+     ],
+     [
+      7.0,
+      45.0003599
+     ]
+    ]
+   }
+  }
+ ]
+}

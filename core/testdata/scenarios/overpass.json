@@ -1,0 +1,64 @@
+{
+  "id": "overpass",
+  "title": "Road crossing over the expressway at the fire point never fires",
+  "source": "PLAN M1",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      -3000,
+      -1200
+    ],
+    "moves": [
+      {
+        "to_m": [
+          3000,
+          -1200
+        ],
+        "speed_mmps": 25000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}

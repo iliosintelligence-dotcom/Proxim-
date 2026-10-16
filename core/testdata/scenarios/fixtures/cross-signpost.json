@@ -1,0 +1,1 @@
+{"category":"auto.parking","class":"general","event":"cross","id":"gate-cross","rev":1,"sender":"sender-1","sensitivity":0,"trigger":{"origin":{"lat_e7":450000000,"lon_e7":70000000},"shape":{"center":{"lat_e7":450000000,"lon_e7":70000000},"kind":"circle","radius_m":150}},"valid_from_ms":0,"valid_until_ms":9223372036854775807}

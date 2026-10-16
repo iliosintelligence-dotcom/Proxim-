@@ -1,0 +1,65 @@
+{
+  "id": "geojson-walk-corners",
+  "title": "Imported GeoJSON walk with two corners fires once near the shop",
+  "source": "PLAN M1 (GeoJSON import)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "shop-walk",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            -300,
+            -700
+          ],
+          [
+            -300,
+            -400
+          ],
+          [
+            0,
+            -400
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "foot"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "geojson",
+    "file": "../routes/walk-two-corners.geojson",
+    "speed_mmps": 1400
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "shop-walk",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          40,
+          200
+        ]
+      }
+    ]
+  }
+}

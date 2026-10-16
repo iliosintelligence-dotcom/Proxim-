@@ -1,0 +1,85 @@
+{
+  "id": "s04-u-turn",
+  "title": "S04 U-turn 1.5 km before the anchor (before D_fire 645 m at 15 m/s): no fire",
+  "source": "engine-spec 11 must-not-fire: U-turn",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -4000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          -1500
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "to_m": [
+          0,
+          -1480
+        ],
+        "speed_mmps": 3000
+      },
+      {
+        "to_m": [
+          0,
+          -1500
+        ],
+        "speed_mmps": 3000
+      },
+      {
+        "to_m": [
+          0,
+          -4000
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}

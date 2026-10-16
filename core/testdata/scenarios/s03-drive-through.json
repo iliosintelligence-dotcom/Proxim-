@@ -1,0 +1,59 @@
+{
+  "id": "s03-drive-through",
+  "title": "S03 drive-through: one fire, no re-fire on the way out",
+  "source": "engine-spec 6.1 EXIT hysteresis",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -600
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          2000
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "true_depth_min_m": 0,
+        "latency_s": [
+          1,
+          8
+        ]
+      }
+    ]
+  }
+}

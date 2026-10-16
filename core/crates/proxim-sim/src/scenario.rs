@@ -613,6 +613,15 @@ impl Scenario {
         Self::build(file, path.to_path_buf(), dir, &bytes)
     }
 
+    /// Build a scenario from its text; relative files resolve against `dir`.
+    ///
+    /// # Errors
+    /// As [`Scenario::load`].
+    pub fn from_text(text: &str, dir: &Path) -> SimResult<Self> {
+        let file: ScenarioFile = serde_json::from_str(text)?;
+        Self::build(file, dir.join("<memory>"), dir, text.as_bytes())
+    }
+
     fn build(file: ScenarioFile, path: PathBuf, dir: &Path, bytes: &[u8]) -> SimResult<Self> {
         let local = Local::new(file.origin)?;
         let mut signposts = Vec::new();

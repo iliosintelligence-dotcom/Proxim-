@@ -1,0 +1,74 @@
+{
+  "id": "tunnel",
+  "title": "40 s tunnel well before the fire point: still exactly one fire at the normal distance",
+  "source": "PLAN M1; ADDENDUM-01 tunnel dropouts",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "dropouts": [
+    {
+      "along_from_m": 2000,
+      "along_to_m": 3200
+    }
+  ],
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          1000,
+          1500
+        ]
+      }
+    ]
+  }
+}
