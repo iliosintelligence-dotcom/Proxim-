@@ -8,29 +8,37 @@ dev=/data/local/tmp/proxim
 
 stage=$(mktemp -d)
 tar -C core --exclude=./target -cf - . | tar -xf - -C "$stage"
-adb shell "rm -rf $dev && mkdir -p $dev/bin"
-adb push "$stage" "$dev/core" > /dev/null
-adb shell getprop ro.product.cpu.abi
-adb shell getprop ro.build.version.release
+adb shell "rm -rf $dev && mkdir -p $dev/bin" < /dev/null
+adb push "$stage" "$dev/core" > /dev/null < /dev/null
+adb shell getprop ro.product.cpu.abi < /dev/null
+adb shell getprop ro.build.version.release < /dev/null
 
 failed=()
 total=0
+ran=0
+# adb reads stdin: every adb call below gets </dev/null so it cannot eat the binary list.
 while read -r exe; do
   name=$(basename "$exe")
-  adb push "$exe" "$dev/bin/$name" > /dev/null
+  adb push "$exe" "$dev/bin/$name" > /dev/null < /dev/null
   echo "::group::$name"
   set +e
-  adb shell "cd $dev && PROXIM_CORE_DIR=$dev/core ./bin/$name" | tee out.txt
+  adb shell "cd $dev && PROXIM_CORE_DIR=$dev/core ./bin/$name" < /dev/null | tee out.txt
   rc=${PIPESTATUS[0]}
   set -e
   echo "::endgroup::"
-  n=$(sed -n 's/^test result: [A-Z]*\. \([0-9]*\) passed.*/\1/p' out.txt | tr -d '\r')
+  n=$(tr -d '\r' < out.txt | sed -n 's/^test result: [A-Za-z]*\. \([0-9]*\) passed.*/\1/p')
   total=$((total + ${n:-0}))
+  ran=$((ran + 1))
   if [ "$rc" -ne 0 ]; then failed+=("$name (exit $rc)"); fi
-  adb shell rm "$dev/bin/$name"
+  adb shell rm "$dev/bin/$name" < /dev/null
 done < "$list"
 
-echo "Android: $total tests passed across $(wc -l < "$list") binaries"
+expected=$(wc -l < "$list")
+echo "Android: $total tests passed across $ran of $expected binaries"
+if [ "$ran" -ne "$expected" ] || [ "$total" -eq 0 ]; then
+  echo "FAILED: not every test binary ran, or no test passed"
+  exit 1
+fi
 if [ ${#failed[@]} -gt 0 ]; then
   printf 'FAILED: %s\n' "${failed[@]}"
   exit 1

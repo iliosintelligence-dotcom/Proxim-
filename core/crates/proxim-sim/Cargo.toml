@@ -9,6 +9,9 @@ publish.workspace = true
 [dependencies]
 proxim-types = { workspace = true }
 proxim-decide = { workspace = true }
+proxim-geo = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

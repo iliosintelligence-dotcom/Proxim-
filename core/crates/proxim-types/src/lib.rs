@@ -14,6 +14,7 @@ pub mod error;
 pub mod model;
 pub mod reason;
 pub mod strict;
+pub mod taxonomy;
 
 pub use error::EngineError;
 pub use model::*;

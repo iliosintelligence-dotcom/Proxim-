@@ -22,6 +22,11 @@ pub const MAX_SIGNPOSTS: usize = 4096;
 pub const MAX_ROUTE_VERTICES: usize = 1024;
 pub const MAX_POLYGON_VERTICES: usize = 256;
 pub const MAX_STANDOFF_ZONES: usize = 256;
+/// Most entries in `categories_accepted` and in `category_affinity` (spec 7.1).
+pub const MAX_CATEGORY_RULES: usize = 256;
+/// Neutral and largest category weight (spec 7.1).
+pub const AFFINITY_NEUTRAL_MILLI: u16 = 1000;
+pub const AFFINITY_MAX_MILLI: u16 = 3000;
 pub const MAX_TRACE: usize = 16;
 pub const MAX_DETECTORS: usize = 4096;
 pub const MAX_FRAME_MM: i64 = 150_000_000;

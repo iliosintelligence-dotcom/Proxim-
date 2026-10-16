@@ -340,7 +340,10 @@ name = "proxim-sim"
 version = "0.1.0"
 dependencies = [
  "proxim-decide",
+ "proxim-geo",
  "proxim-types",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

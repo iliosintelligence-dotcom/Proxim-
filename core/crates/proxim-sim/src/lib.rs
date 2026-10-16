@@ -1,4 +1,11 @@
-//! proxim-sim: replay harness and golden runner stub (engine-spec 9). May use `std`.
+//! proxim-sim: replay harness and golden runner stub (engine-spec 9), and the phone simulator
+//! ([`phone`], [`town`], [`report`]; `docs/phone-simulator.md`). May use `std`.
+
+extern crate alloc;
+
+pub mod phone;
+pub mod report;
+pub mod town;
 
 use proxim_types::EngineError;
 

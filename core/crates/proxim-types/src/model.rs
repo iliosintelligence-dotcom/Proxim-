@@ -183,6 +183,13 @@ pub struct Policy {
     pub explain: Option<bool>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categories_blocked: Vec<String>,
+    /// Whole-segment prefixes (spec 7.1). Non-empty: a category matching none is
+    /// `CATEGORY_NOT_ACCEPTED`. Empty: every category not blocked is accepted.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categories_accepted: Vec<String>,
+    /// Relevance weights by category (spec 7.1); the longest matching entry applies.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category_affinity: Vec<CategoryAffinity>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub senders_blocked: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -207,6 +214,15 @@ pub struct Policy {
     pub rot_lane: Reserved,
     #[serde(default, skip_serializing)]
     pub rot_lanes: Reserved,
+}
+
+/// A partner's relevance weight for a category pattern (spec 7.1). `weight_milli` multiplies the
+/// selection score: 1000 is neutral, 2000 doubles it; values above 3000 are clamped to 3000.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CategoryAffinity {
+    pub category: String,
+    pub weight_milli: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -202,7 +202,12 @@ pub fn decide(
         let Some(ev) = d.event else { continue };
         match event_filter(&ctx, &book, state.caps.last_fire_ms, sp, &ev) {
             Some(reason) => drops.push(event_drop(sp, &ev, reason)),
-            None => survivors.push(Cand { sp, ev, pre }),
+            None => survivors.push(Cand {
+                sp,
+                ev,
+                pre,
+                affinity_milli: eff.affinity_milli(&sp.category),
+            }),
         }
     }
 
@@ -311,13 +316,17 @@ struct Cand<'a> {
     sp: &'a Signpost,
     ev: Event,
     pre: Option<DetState>,
+    affinity_milli: u16,
 }
 
 impl Cand<'_> {
-    /// `rank_milli x path_conf_milli / 1000` (spec 7).
+    /// `rank_milli x path_conf_milli x affinity_milli / 1_000_000` (spec 7, 7.1). With the neutral
+    /// affinity 1000 this is exactly the M1 score `rank x conf / 1000`. Fits u64: below 2^32 x
+    /// 2^16 x 3000.
     fn score(&self) -> u64 {
         let rank = self.sp.rank_milli.unwrap_or(RANK_DEFAULT_MILLI);
-        u64::from(rank) * u64::from(self.ev.path_conf_milli) / 1000
+        u64::from(rank) * u64::from(self.ev.path_conf_milli) * u64::from(self.affinity_milli)
+            / 1_000_000
     }
 }
 
@@ -458,8 +467,12 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
             return Ok(Err(ReasonCode::HealthConsentMissing));
         }
     }
-    if eff.categories_blocked.contains(sp.category.as_str()) {
+    // F16 (spec 7.1): blocked by the category or one of its parents, then the accept list.
+    if eff.category_blocked(&sp.category) {
         return Ok(Err(ReasonCode::PartnerCategoryBlocked));
+    }
+    if !eff.category_accepted(&sp.category) {
+        return Ok(Err(ReasonCode::CategoryNotAccepted));
     }
     if eff.senders_blocked.contains(sp.sender.as_str()) {
         return Ok(Err(ReasonCode::SenderBlocked));
@@ -724,14 +737,16 @@ mod tests {
             path_conf_milli: conf,
         };
         let mut sp = general_signpost();
-        let score = |sp: &Signpost, conf| {
+        let weighted = |sp: &Signpost, conf, affinity_milli| {
             Cand {
                 sp,
                 ev: ev(conf),
                 pre: None,
+                affinity_milli,
             }
             .score()
         };
+        let score = |sp: &Signpost, conf| weighted(sp, conf, 1000);
         assert_eq!(score(&sp, 500), 500, "default rank 1000");
         sp.rank_milli = Some(1999);
         assert_eq!(score(&sp, 500), 999, "floor division");
@@ -739,6 +754,12 @@ mod tests {
         assert_eq!(score(&sp, 800), 0);
         sp.rank_milli = Some(u32::MAX);
         assert_eq!(score(&sp, u16::MAX), 281_470_681_677);
+        // spec 7.1: the affinity multiplies; the largest product still fits u64
+        assert_eq!(weighted(&sp, u16::MAX, 3000), 844_412_045_033);
+        sp.rank_milli = None;
+        assert_eq!(weighted(&sp, 500, 2000), 1000);
+        assert_eq!(weighted(&sp, 500, 1), 0, "floor division");
+        assert_eq!(weighted(&sp, 500, 0), 0);
     }
 
     #[test]
