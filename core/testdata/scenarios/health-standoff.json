@@ -88,9 +88,10 @@
           1
         ],
         "true_d_rem_m": [
-          900,
+          400,
           1500
-        ]
+        ],
+        "t_hat_min_s": 16
       },
       {
         "signpost": "cafe-near-hospital",

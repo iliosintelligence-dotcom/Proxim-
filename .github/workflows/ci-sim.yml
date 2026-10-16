@@ -1,0 +1,95 @@
+# Scenario simulator (docs/simulator.md): the full 1,000-seed scenario sweep in release on Linux and
+# macOS (byte-identical report on both), the turf.js geometry comparison (CI-sized) and the mutation
+# check (deliberately broken engines must turn the suite red). The CI-sized suite also runs inside
+# `cargo test --workspace` in ci-core, ci-wasm and ci-mobile.
+name: ci-sim
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["core/**", "tools/turf-compare/**", "tools/mutation-check.py", "rust-toolchain.toml", ".github/workflows/ci-sim.yml"]
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  sweep:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: sim
+      - name: scenario suite, 1,000 seeds per noisy scenario
+        env:
+          PROXIM_SIM_SEEDS: "1000"
+          PROXIM_SIM_REPORT: ${{ runner.temp }}/scenario-report-1000.json
+        run: cargo test --manifest-path core/Cargo.toml --release -p proxim-sim --test scenarios -- --nocapture
+      - name: JUnit and canonical report (CI-sized seeds)
+        run: |
+          cargo run --manifest-path core/Cargo.toml --release -p proxim-sim --bin proxim-sim -- \
+            run core/testdata/scenarios --report "$RUNNER_TEMP/report.json" --junit "$RUNNER_TEMP/junit.xml"
+          cmp "$RUNNER_TEMP/report.json" core/testdata/sim/scenario-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-reports-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/scenario-report-1000.json
+            ${{ runner.temp }}/report.json
+            ${{ runner.temp }}/junit.xml
+
+  sweep-identical-across-os:
+    needs: sweep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports
+      - name: the 1,000-seed report is byte-identical on Linux and macOS
+        run: cmp reports/sim-reports-ubuntu-latest/scenario-report-1000.json reports/sim-reports-macos-latest/scenario-report-1000.json
+
+  turf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: sim
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/turf-compare/package-lock.json
+      - run: npm ci --prefix tools/turf-compare
+      - name: generate 200,000 cases (1,000,000 locally with --count 1000000)
+        run: cargo run --manifest-path core/Cargo.toml --release -p proxim-sim --bin proxim-sim -- geo-cases --count 200000 --seed 1 --out "$RUNNER_TEMP/cases.jsonl"
+      - name: Proxim vs turf.js and WGS84 within tolerance
+        run: node tools/turf-compare/compare.mjs "$RUNNER_TEMP/cases.jsonl"
+      - name: the comparison can fail (perturbed answers must be rejected)
+        run: |
+          if node tools/turf-compare/compare.mjs --perturb "$RUNNER_TEMP/cases.jsonl" > /dev/null; then
+            echo "perturbed answers passed: the comparison is not checking anything"; exit 1
+          fi
+
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: sim
+      - name: deliberately broken engines turn the scenario suite red
+        run: python3 -I tools/mutation-check.py --target-dir "$RUNNER_TEMP/mutation-target"
+      - name: the working tree is unchanged
+        run: git diff --exit-code
