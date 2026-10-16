@@ -196,6 +196,24 @@ fn the_scenarios_key_outcomes() {
 }
 
 #[test]
+fn routing_clamps_weights_like_the_engine() {
+    use proxim_types::{CategoryAffinity, Policy};
+    let policy = |w| Policy {
+        category_affinity: vec![CategoryAffinity {
+            category: "food".into(),
+            weight_milli: w,
+        }],
+        ..Policy::default()
+    };
+    assert_eq!(fit(&policy(60_000), "food.cafe"), Some(3000));
+    assert_eq!(
+        fit(&policy(60_000), "food.cafe"),
+        fit(&policy(3000), "food.cafe")
+    );
+    assert_eq!(fit(&policy(1500), "food.cafe"), Some(1500));
+}
+
+#[test]
 fn runs_are_deterministic() {
     let w = world();
     assert_eq!(runs(&w), runs(&w));

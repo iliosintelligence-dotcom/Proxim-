@@ -13,7 +13,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 use proxim_decide::decide;
-use proxim_types::defaults::AFFINITY_NEUTRAL_MILLI;
+use proxim_types::defaults::{AFFINITY_MAX_MILLI, AFFINITY_NEUTRAL_MILLI};
 use proxim_types::taxonomy::{matches, prefixes};
 use proxim_types::{
     Clock, Consent, ConsentValue, EngineError, Fix, Outcome, Policy, ReasonCode, Signpost, State,
@@ -113,7 +113,8 @@ pub fn fit(policy: &Policy, category: &str) -> Option<u16> {
                 .map(|a| a.weight_milli)
         })
         .unwrap_or(AFFINITY_NEUTRAL_MILLI);
-    Some(weight)
+    // The engine clamps weights to 3000 (spec 7.1); routing must rank them the same way.
+    Some(weight.min(AFFINITY_MAX_MILLI))
 }
 
 /// For each app, the indices of the adverts the backend sends it.
