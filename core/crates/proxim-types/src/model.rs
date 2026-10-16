@@ -462,6 +462,11 @@ pub enum DetState {
     Armed {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         confirm_t: Option<i64>,
+        /// Along-route position of the previous accepted fix, mm: the centre of the along window
+        /// of the next fix (spec 6.2). Absent only in a state not written by the detector, which
+        /// then searches the whole route once.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        a_prev_mm: Option<i64>,
         last_t: i64,
     },
     Latched {

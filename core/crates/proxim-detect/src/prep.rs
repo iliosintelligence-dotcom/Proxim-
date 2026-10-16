@@ -1,16 +1,13 @@
 //! Trigger preparation: validate a signpost's trigger once and project its geometry into the
 //! trigger's own frame (engine-spec 1.2, 3.3). A defect is a [`ReasonCode`], never an `Err`.
 
-use crate::params::{
-    BEARING_TOL_MAX_DDEG, BEARING_TOL_MIN_DDEG, BUFFER_MAX_M, BUFFER_MIN_M, D_LO_SLOW_MM,
-    D_LO_VEHICLE_MM, REACH_MARGIN_MM,
-};
 use alloc::vec::Vec;
 use proxim_geo::{Frame, Polyline, cos_tol_q30, dist_mm, frame_for};
-use proxim_path::{min_speed_mmps, params::MAX_FOOT_MMPS};
+use proxim_path::min_speed_mmps;
 use proxim_types::defaults::{
-    BEARING_TOL_DDEG, D_HI_M, D_HI_MAX_M, LEAD_S_DEFAULT, LEAD_S_MAX, LEAD_S_MIN,
-    MAX_POLYGON_VERTICES, MAX_ROUTE_VERTICES, MIN_CIRCLE_RADIUS_M,
+    BEARING_TOL_DDEG, BEARING_TOL_MAX_DDEG, BEARING_TOL_MIN_DDEG, BUFFER_MAX_M, BUFFER_MIN_M,
+    D_HI_M, D_HI_MAX_M, D_LO_SLOW_MM, D_LO_VEHICLE_MM, LEAD_S_DEFAULT, LEAD_S_MAX, LEAD_S_MIN,
+    MAX_FOOT_MMPS, MAX_POLYGON_VERTICES, MAX_ROUTE_VERTICES, MIN_CIRCLE_RADIUS_M, REACH_MARGIN_MM,
 };
 use proxim_types::{EngineError, Enu, EventKind, Mode, ReasonCode, Shape, Signpost};
 

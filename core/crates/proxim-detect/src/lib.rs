@@ -12,7 +12,6 @@ extern crate std;
 
 mod approach;
 mod enter;
-pub mod params;
 mod prep;
 
 pub use prep::Prepared;

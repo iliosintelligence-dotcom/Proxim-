@@ -747,6 +747,7 @@ fn foreign_state_variants_restart_from_idle() {
     for st in [
         DetState::Armed {
             confirm_t: Some(1),
+            a_prev_mm: Some(1),
             last_t: 1,
         },
         DetState::Latched {

@@ -281,13 +281,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "proxim-conformance"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "proxim-ffi",
+ "proxim-geo",
+ "proxim-types",
+ "proxim-wasm",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "proxim-decide"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "proxim-detect",
  "proxim-geo",
  "proxim-path",
  "proxim-types",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

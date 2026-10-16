@@ -29,7 +29,7 @@ pub fn d_rem_mm(rem_along_mm: i64, v_eff_mmps: u32, age_ms: i64) -> Result<i64, 
 /// [`EngineError::Parse`] if `d_rem_mm < 0` or `v_eff_mmps < 700` (the foot floor: the contract
 /// excludes a smaller `v_eff`, so no division by zero or absurd ETA can occur).
 pub fn t_hat_ms(d_rem_mm: i64, v_eff_mmps: u32) -> Result<i64, EngineError> {
-    if d_rem_mm < 0 || v_eff_mmps < crate::params::FLOOR_FOOT_MMPS {
+    if d_rem_mm < 0 || v_eff_mmps < proxim_types::defaults::FLOOR_FOOT_MMPS {
         return Err(EngineError::Parse);
     }
     let t = i128::from(d_rem_mm)

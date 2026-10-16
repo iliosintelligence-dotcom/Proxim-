@@ -198,6 +198,23 @@ impl Driver {
     }
 }
 
+/// Along-route position (mm) of a fix on the due-north test route: its northing in the origin frame.
+pub fn along_of(f: &Fix) -> i64 {
+    i64::from(frame().project(f.position()).unwrap().n_mm)
+}
+
+/// The `Armed` fields `(confirm_t, a_prev_mm, last_t)` of a detector state, if it is armed.
+pub fn armed_fields(st: Option<DetState>) -> Option<(Option<i64>, Option<i64>, i64)> {
+    match st {
+        Some(DetState::Armed {
+            confirm_t,
+            a_prev_mm,
+            last_t,
+        }) => Some((confirm_t, a_prev_mm, last_t)),
+        _ => None,
+    }
+}
+
 /// A vehicle driving due north along the route axis at `v_mmps`, 1 Hz fixes, accuracy 5 m,
 /// starting at `n0_mm` at `t0_ms`, `count` fixes. Doppler speed and course are reported.
 pub fn drive_north(t0_ms: i64, n0_mm: i64, v_mmps: u32, count: usize, e_mm: i32) -> Vec<Fix> {

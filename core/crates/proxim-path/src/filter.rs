@@ -3,15 +3,14 @@
 //! Everything is integer: the EWMA weight is the rational `dt / (tau + dt)` in Q16, headings are
 //! Q30 unit vectors, so no `exp`, `atan2` or float exists here. `Mem` is the only state.
 
-use crate::params::{
-    COURSE_ACC_MAX_DDEG, DT_CLAMP_MS, HEADING_DISP_MAX_AGE_MS, HEADING_DISP_MIN_AGE_MS,
-    HEADING_MIN_DISP_MM, HEADING_MIN_SPEED_MMPS, HEADING_TAU_MS, P0_CONF, P1_WINDOW_MS,
-    RESEED_GAP_MS, SPEED_ACC_MAX_MMPS, SPEED_DISP_MAX_AGE_MS, SPEED_DISP_MIN_AGE_MS, SPEED_TAU_MS,
-    STALE_HIDE_MS,
-};
 use alloc::vec::Vec;
 use proxim_geo::{acc_eff_mm, dist_mm, frame_for, isqrt, normalize_q30, rsr, unit_from_course};
-use proxim_types::defaults::{KAPPA_PERMILLE, MAX_TRACE};
+use proxim_types::defaults::{
+    CLOSING_MAX_SPAN_MS, CLOSING_MIN_SPAN_MS, COURSE_ACC_MAX_DDEG, DT_CLAMP_MS,
+    HEADING_DISP_MAX_AGE_MS, HEADING_DISP_MIN_AGE_MS, HEADING_MIN_DISP_MM, HEADING_MIN_SPEED_MMPS,
+    HEADING_TAU_MS, KAPPA_PERMILLE, MAX_TRACE, P0_CONF, P1_WINDOW_MS, RESEED_GAP_MS,
+    SPEED_ACC_MAX_MMPS, SPEED_DISP_MAX_AGE_MS, SPEED_DISP_MIN_AGE_MS, SPEED_TAU_MS, STALE_HIDE_MS,
+};
 use proxim_types::{EngineError, Enu, Fix, Mem, Mode, PathInfo, Position, TraceFix};
 
 /// Output of one `path_update` call.
@@ -34,6 +33,9 @@ pub struct PathSummary {
     /// leading `None`s. Carries what the per-signpost corridor tests need, so `detect` needs no
     /// access to `Mem`.
     pub recent: [Option<TraceFix>; 3],
+    /// CLOSING baseline (5.3, errata E-P12): the oldest retained trace fix that is at least 4 s
+    /// and at most 60 s older than this fix, `None` when no fix qualifies (CLOSING is then false).
+    pub closing_base: Option<TraceFix>,
     /// Time of the current fix, ms (the same as `recent[2].t_ms`).
     pub t_ms: i64,
 }
@@ -55,9 +57,9 @@ pub fn v_eff_for(mode: Mode, vf_mmps: Option<u32>) -> u32 {
 #[must_use]
 pub const fn floor_mmps(mode: Mode) -> u32 {
     match mode {
-        Mode::Vehicle => crate::params::FLOOR_VEHICLE_MMPS,
-        Mode::Cycle => crate::params::FLOOR_CYCLE_MMPS,
-        Mode::Foot => crate::params::FLOOR_FOOT_MMPS,
+        Mode::Vehicle => proxim_types::defaults::FLOOR_VEHICLE_MMPS,
+        Mode::Cycle => proxim_types::defaults::FLOOR_CYCLE_MMPS,
+        Mode::Foot => proxim_types::defaults::FLOOR_FOOT_MMPS,
     }
 }
 
@@ -65,9 +67,9 @@ pub const fn floor_mmps(mode: Mode) -> u32 {
 #[must_use]
 pub const fn min_speed_mmps(mode: Mode) -> u32 {
     match mode {
-        Mode::Vehicle => crate::params::MIN_VEHICLE_MMPS,
-        Mode::Cycle => crate::params::MIN_CYCLE_MMPS,
-        Mode::Foot => crate::params::MIN_FOOT_MMPS,
+        Mode::Vehicle => proxim_types::defaults::MIN_VEHICLE_MMPS,
+        Mode::Cycle => proxim_types::defaults::MIN_CYCLE_MMPS,
+        Mode::Foot => proxim_types::defaults::MIN_FOOT_MMPS,
     }
 }
 
@@ -89,6 +91,17 @@ fn newest_aged(trace: &[TraceFix], now: i64, min_age: i64, max_age: i64) -> Opti
         let age = now.saturating_sub(e.t_ms);
         (min_age..=max_age).contains(&age)
     })
+}
+
+/// The CLOSING baseline (5.3, errata E-P12): the oldest retained fix whose age relative to `now` is
+/// within `CLOSING_MIN_SPAN_MS..=CLOSING_MAX_SPAN_MS`. `trace` is oldest first and may contain the
+/// current fix (age 0, never qualifies). Public so the simulator can state the rule.
+#[must_use]
+pub fn closing_baseline(trace: &[TraceFix], now: i64) -> Option<TraceFix> {
+    trace
+        .iter()
+        .find(|e| (CLOSING_MIN_SPAN_MS..=CLOSING_MAX_SPAN_MS).contains(&now.saturating_sub(e.t_ms)))
+        .copied()
 }
 
 /// `v_meas` (5.1): Doppler if trusted, else distance over the newest 3..10 s old trace entry.
@@ -288,6 +301,7 @@ pub fn path_update(mem: &Mem, fix: &Fix) -> Result<(Mem, PathSummary), EngineErr
     for (slot, e) in recent.iter_mut().rev().zip(next.trace.iter().rev()) {
         *slot = Some(*e);
     }
+    let closing_base = closing_baseline(&next.trace, fix.t_ms);
     let summary = PathSummary {
         info: PathInfo {
             tier: 0,
@@ -300,6 +314,7 @@ pub fn path_update(mem: &Mem, fix: &Fix) -> Result<(Mem, PathSummary), EngineErr
         vf_mmps: vf_visible,
         fixes_60s,
         recent,
+        closing_base,
         t_ms: fix.t_ms,
     };
     Ok((next, summary))
@@ -432,6 +447,28 @@ mod tests {
             is_mock: false,
         };
         assert_eq!(speed_filter(&mem, &fix, None), Ok(Some(1234)));
+    }
+
+    #[test]
+    fn closing_baseline_is_the_oldest_fix_aged_4_to_60_s() {
+        let tr = [tf(0, None), tf(1000, None), tf(5000, None), tf(6000, None)];
+        // now = 6000: ages 6000, 5000, 1000, 0 -> the oldest eligible is t = 0.
+        assert_eq!(closing_baseline(&tr, 6000).map(|e| e.t_ms), Some(0));
+        // now = 5000: ages 5000, 4000, 0, -1000 -> t = 0 is still the oldest eligible.
+        assert_eq!(closing_baseline(&tr, 5000).map(|e| e.t_ms), Some(0));
+        // now = 4999: t = 0 is 4999 old (eligible); now = 3999: nothing is old enough.
+        assert_eq!(closing_baseline(&tr, 4999).map(|e| e.t_ms), Some(0));
+        assert_eq!(closing_baseline(&tr, 3999).map(|e| e.t_ms), None);
+        assert_eq!(closing_baseline(&tr, 4000).map(|e| e.t_ms), Some(0));
+        // The cap: now = 60_000 keeps t = 0 (age 60_000), now = 60_001 drops it for t = 1000.
+        assert_eq!(closing_baseline(&tr, 60_000).map(|e| e.t_ms), Some(0));
+        assert_eq!(closing_baseline(&tr, 60_001).map(|e| e.t_ms), Some(1000));
+        assert_eq!(closing_baseline(&tr, 66_000).map(|e| e.t_ms), Some(6000));
+        assert_eq!(closing_baseline(&tr, 66_001).map(|e| e.t_ms), None);
+        // Degenerate inputs never panic.
+        assert_eq!(closing_baseline(&[], 0).map(|e| e.t_ms), None);
+        assert_eq!(closing_baseline(&tr, i64::MIN).map(|e| e.t_ms), None);
+        assert_eq!(closing_baseline(&tr, i64::MAX).map(|e| e.t_ms), None);
     }
 
     #[test]

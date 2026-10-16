@@ -11,6 +11,11 @@ proxim-types = { workspace = true }
 proxim-geo = { workspace = true }
 proxim-path = { workspace = true }
 proxim-detect = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
 
 [lints]
 workspace = true

@@ -3,11 +3,6 @@
 //! idle -> `armed` when every gate holds -> `latched` after one fire (or after a late join).
 //! A latch is released only by distance (`1.2 x d_hi` from the anchor) or a new `rev`.
 
-use crate::params::{
-    BAND_HYSTERESIS_MMPS, CONFIRM_MAX_GAP_MS, CONFIRM_SPACING_MS, D_PASS_MIN_MM, D_PASS_S,
-    L_MIN_FLOOR_MS, L_MIN_MS_PER_LEAD_S, MAX_ACC_EFF_MM, MAX_FIX_AGE_MS, REARM_DEN, REARM_NUM,
-    T_COMP_MS,
-};
 use crate::prep::{Prepared, RoutePrep};
 use crate::{Detected, Event};
 use proxim_geo::{acc_eff_mm, dist_mm, rem_along_mm};
@@ -15,7 +10,11 @@ use proxim_path::{
     P1Evidence, PathSummary, closing, d_rem_mm, heading_dot, p1_confidence, project_recent,
     t_hat_ms, v_eff_for,
 };
-use proxim_types::defaults::KAPPA_PERMILLE;
+use proxim_types::defaults::{
+    BAND_HYSTERESIS_MMPS, CONFIRM_MAX_GAP_MS, CONFIRM_SPACING_MS, D_PASS_MIN_MM, D_PASS_S,
+    KAPPA_PERMILLE, L_MIN_FLOOR_MS, L_MIN_MS_PER_LEAD_S, MAX_ACC_EFF_MM, MAX_FIX_AGE_MS, REARM_DEN,
+    REARM_NUM, T_COMP_MS,
+};
 use proxim_types::{DetState, EngineError, Enu, EventKind, Fix, LatchWhy, Mode, ReasonCode};
 
 #[allow(clippy::too_many_lines)]
@@ -71,10 +70,16 @@ pub(crate) fn step_approach(
     }
 
     let armed_prev = match st {
-        Some(DetState::Armed { confirm_t, last_t }) => Some((confirm_t, last_t)),
+        Some(DetState::Armed {
+            confirm_t,
+            a_prev_mm,
+            last_t,
+        }) => Some((confirm_t, a_prev_mm, last_t)),
         _ => None,
     };
     let armed = armed_prev.is_some();
+    // Centre of the along window (6.2): the previous fix's position, exact (errata E-P13).
+    let a_prev = armed_prev.and_then(|(_, a, _)| a);
     let idle = |reason: ReasonCode| Detected {
         state: None,
         event: None,
@@ -99,7 +104,7 @@ pub(crate) fn step_approach(
         return Ok(idle(ReasonCode::FixAccuracyTooCoarse));
     }
     let v_eff = v_eff_for(r.mode, path.vf_mmps);
-    let proj = match project_recent(path, &p.frame, &r.route, armed, v_eff) {
+    let proj = match project_recent(path, &p.frame, &r.route, a_prev, v_eff) {
         Ok(x) => x,
         Err(EngineError::OutOfFrame) => return Ok(idle(ReasonCode::OutOfRange)),
         Err(e) => return Err(e),
@@ -126,7 +131,7 @@ pub(crate) fn step_approach(
     if !dot.is_some_and(|d| d >= r.cos_tol_q30) {
         return Ok(idle(ReasonCode::BearingMismatch));
     }
-    if !closing(&proj.items) {
+    if !closing(&proj.items, proj.base.as_ref()) {
         return Ok(idle(ReasonCode::NotClosing));
     }
     let rem = rem_along_mm(r.anchor_mm, proj.cur.along_mm)?;
@@ -137,6 +142,7 @@ pub(crate) fn step_approach(
     }
     let conf = p1_confidence(&P1Evidence {
         recent: &proj.items,
+        base: proj.base.as_ref(),
         fixes_60s: path.fixes_60s,
         vf_mmps: path.vf_mmps,
         mode: r.mode,
@@ -159,7 +165,7 @@ pub(crate) fn step_approach(
     .min(r.d_hi_mm);
     let lead_ms = i64::from(r.lead_s) * 1000;
 
-    let Some((confirm_t, last_t)) = armed_prev else {
+    let Some((confirm_t, _, last_t)) = armed_prev else {
         // First fix where every gate holds. Late join: too close to give the promised lead.
         let l_min = L_MIN_FLOOR_MS.max(lead_ms / 1000 * L_MIN_MS_PER_LEAD_S);
         if t_hat < l_min && d_rem > d_lo {
@@ -175,6 +181,7 @@ pub(crate) fn step_approach(
         return Ok(Detected {
             state: Some(DetState::Armed {
                 confirm_t: None,
+                a_prev_mm: Some(proj.cur.along_mm),
                 last_t: t,
             }),
             event: None,
@@ -217,6 +224,7 @@ pub(crate) fn step_approach(
     Ok(Detected {
         state: Some(DetState::Armed {
             confirm_t: next_confirm,
+            a_prev_mm: Some(proj.cur.along_mm),
             last_t: t,
         }),
         event: None,

@@ -28,8 +28,8 @@ fn arb_state() -> impl Strategy<Value = Option<DetState>> {
         1 => (any::<u32>(), prop::option::of(any::<i64>()), any::<i64>())
             .prop_map(|(xn, x_first_t, last_t)| Some(DetState::In { xn, x_first_t, last_t })),
         1 => any::<i64>().prop_map(|until_ms| Some(DetState::Cool { until_ms })),
-        1 => (prop::option::of(any::<i64>()), any::<i64>())
-            .prop_map(|(confirm_t, last_t)| Some(DetState::Armed { confirm_t, last_t })),
+        1 => (prop::option::of(any::<i64>()), prop::option::of(any::<i64>()), any::<i64>())
+            .prop_map(|(confirm_t, a_prev_mm, last_t)| Some(DetState::Armed { confirm_t, a_prev_mm, last_t })),
         1 => (why, any::<i64>()).prop_map(|(why, last_t)| Some(DetState::Latched { why, last_t })),
     ]
 }
@@ -81,23 +81,27 @@ fn arb_summary() -> impl Strategy<Value = PathSummary> {
         prop::option::of(prop::array::uniform2(any::<i32>())),
         any::<u8>(),
         prop::array::uniform3(prop::option::of(arb_trace_fix())),
+        prop::option::of(arb_trace_fix()),
         any::<i64>(),
         any::<u32>(),
     )
-        .prop_map(|(vf, h, n60, recent, t_ms, v_eff)| PathSummary {
-            info: PathInfo {
-                tier: 0,
-                conf_milli: 0,
-                speed_mmps: vf,
-                heading_valid: h.is_some(),
+        .prop_map(
+            |(vf, h, n60, recent, closing_base, t_ms, v_eff)| PathSummary {
+                info: PathInfo {
+                    tier: 0,
+                    conf_milli: 0,
+                    speed_mmps: vf,
+                    heading_valid: h.is_some(),
+                },
+                v_eff_mmps: v_eff,
+                heading_q30: h,
+                vf_mmps: vf,
+                fixes_60s: n60,
+                recent,
+                closing_base,
+                t_ms,
             },
-            v_eff_mmps: v_eff,
-            heading_q30: h,
-            vf_mmps: vf,
-            fixes_60s: n60,
-            recent,
-            t_ms,
-        })
+        )
 }
 
 fn signposts() -> Vec<Signpost> {
@@ -345,30 +349,48 @@ proptest! {
         let fixes: Vec<Fix> = drive_north(0, 0, v, n, offset).into_iter().map(|mut f| { f.acc_mm = acc; f }).collect();
         d.feed_all(&fixes);
         let ev = d.events();
-        // Closing needs the vehicle to cover tol = acc_eff/2 in two seconds; slow + inaccurate
-        // tracks legitimately never fire.
+        // CLOSING (errata E-P12) compares with the oldest of the 16 retained fixes, 15 s back at
+        // 1 Hz: at 3 m/s that is 45 m against at most acc_eff / 2 = 15 m, so every track in this
+        // domain closes (before the 1 Hz walker fix, slow + inaccurate tracks never fired).
+        prop_assert_eq!(ev.len(), 1, "v {} lead {} acc {}", v, lead, acc);
+        let v_eff = v.max(4000);
+        let d_fire = fire_distance_mm(v_eff, lead, 3000, 150_000, 3_000_000).unwrap();
+        let rem = ev[0].1.d_rem_mm.unwrap();
+        let step = i64::from(v);
+        // Arming is on the first fix within d_hi and is not itself a confirming fix, so near
+        // d_hi the fire lands two to three steps inside it.
+        let upper = (d_fire - step).min(3_000_000 - 2 * step) + 100;
+        let lower = (d_fire - 2 * step).min(3_000_000 - 3 * step) - 100;
+        prop_assert!(rem <= upper, "rem {} d_fire {} v {}", rem, d_fire, v);
+        prop_assert!(rem > lower, "rem {} d_fire {} v {}", rem, d_fire, v);
+        // Fired by the time rule, or by the crawl rule (d_rem <= d_lo = 150 m).
+        prop_assert!(ev[0].1.t_hat_ms.unwrap() <= i64::from(lead) * 1000 + 3000 || rem <= 150_000);
+    }
+
+    /// A stationary device whose fixes scatter by less than `acc_eff / 4` around one point never
+    /// gets CLOSING, never arms and never fires (errata E-P12), even when the OS claims a speed and
+    /// a course along the route so that every other gate passes and the standing point lies in
+    /// the fire zone. Irregular sampling (0.5..3 s) and any accuracy 3..65 m.
+    #[test]
+    fn stationary_jitter_never_arms_or_fires(
+        acc in 3_000_u32..=65_000,
+        v in 3_000_u32..30_000,
+        pts in prop::collection::vec((-1000_i64..=1000, -1000_i64..=1000, 500_i64..3000), 40..120),
+    ) {
         let acc_eff = i64::from(acc.max(10_000));
-        let need = (acc_eff / 2).max(5000);
-        // Positions are rounded to 11 mm (e7): stay 300 mm clear of the CLOSING threshold.
-        let closes = 2 * i64::from(v) >= need + 300;
-        let cannot = 2 * i64::from(v) + 300 < need;
-        if cannot {
-            prop_assert!(ev.is_empty());
-        } else if closes {
-            prop_assert_eq!(ev.len(), 1, "v {} lead {} acc {}", v, lead, acc);
-            let v_eff = v.max(4000);
-            let d_fire = fire_distance_mm(v_eff, lead, 3000, 150_000, 3_000_000).unwrap();
-            let rem = ev[0].1.d_rem_mm.unwrap();
-            let step = i64::from(v);
-            // Arming is on the first fix within d_hi and is not itself a confirming fix, so near
-            // d_hi the fire lands two to three steps inside it.
-            let upper = (d_fire - step).min(3_000_000 - 2 * step) + 100;
-            let lower = (d_fire - 2 * step).min(3_000_000 - 3 * step) - 100;
-            prop_assert!(rem <= upper, "rem {} d_fire {} v {}", rem, d_fire, v);
-            prop_assert!(rem > lower, "rem {} d_fire {} v {}", rem, d_fire, v);
-            // Fired by the time rule, or by the crawl rule (d_rem <= d_lo = 150 m).
-            prop_assert!(ev[0].1.t_hat_ms.unwrap() <= i64::from(lead) * 1000 + 3000 || rem <= 150_000);
+        let j = (acc_eff / 2 - 1000) / 2; // strictly below acc_eff / 4
+        let d_fire = fire_distance_mm(v.max(4000), 40, 3000, 150_000, 3_000_000).unwrap();
+        let n0 = 6_000_000 - d_fire * 8 / 10;
+        let mut d = Driver::new(&route(30));
+        let mut t = 0_i64;
+        for (fe, fn_, dt) in pts {
+            let f = fix_at(t, (fe * 25_000 / 1000) as i32, (n0 + fn_ * j / 1000) as i32, acc, Some(v), Some(0));
+            d.feed(f, 0);
+            t += dt;
         }
+        prop_assert!(d.events().is_empty());
+        let armed = d.steps.iter().any(|s| matches!(s.out.state, Some(DetState::Armed { .. })));
+        prop_assert!(!armed);
     }
 
     /// Never fire when the track stays beyond the corridor buffer, whatever the speed or heading.

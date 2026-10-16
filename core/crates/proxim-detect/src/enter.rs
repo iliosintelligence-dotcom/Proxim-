@@ -5,16 +5,15 @@
 //! circle crosses the boundary) counts for neither, so boundary jitter within the accuracy
 //! radius can neither enter nor exit.
 
-use crate::params::{
-    CIRCLE_MAX_ACC_MM, COOL_MS, ENTER_MAX_GAP_MS, ENTER_MIN_FIXES, ENTER_MIN_SPAN_MS,
-    ENTER_MIN_SPAN_SLOW_MS, ENTER_SLOW_MMPS, EXIT_FEW_FIXES, EXIT_FIXES, EXIT_SPAN_MS,
-    IN_MAX_GAP_MS, IN_SURVIVE_GAP_MS,
-};
 use crate::prep::{Kind, Prepared};
 use crate::{Detected, Event};
 use proxim_geo::{Depth, acc_eff_mm, classify, signed_depth_circle_mm, signed_depth_polygon_mm};
 use proxim_path::{PathSummary, p0_conf_milli};
-use proxim_types::defaults::{K_IN_PERMILLE, K_OUT_PERMILLE, KAPPA_PERMILLE};
+use proxim_types::defaults::{
+    CIRCLE_MAX_ACC_MM, COOL_MS, ENTER_MAX_GAP_MS, ENTER_MIN_FIXES, ENTER_MIN_SPAN_MS,
+    ENTER_MIN_SPAN_SLOW_MS, ENTER_SLOW_MMPS, EXIT_FEW_FIXES, EXIT_FIXES, EXIT_SPAN_MS,
+    IN_MAX_GAP_MS, IN_SURVIVE_GAP_MS, K_IN_PERMILLE, K_OUT_PERMILLE, KAPPA_PERMILLE,
+};
 use proxim_types::{DetState, EngineError, EventKind, Fix, ReasonCode};
 
 /// Classify a fix against the shape. A fix that cannot be evaluated is a `Straddle` (counts for

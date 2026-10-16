@@ -1,0 +1,22 @@
+[package]
+name = "proxim-conformance"
+description = "Black-box conformance suite for the Proxim engine, written from docs/engine-spec.md (publish = false)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Black-box: only public APIs (decide_json via proxim-ffi, proxim-geo, proxim-types) are used.
+[dependencies]
+proxim-types = { workspace = true }
+proxim-geo = { workspace = true }
+proxim-ffi = { path = "../proxim-ffi" }
+proxim-wasm = { path = "../proxim-wasm" }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

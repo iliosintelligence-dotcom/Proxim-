@@ -104,6 +104,7 @@ fn state_with_every_detector_tag_round_trips() {
                     rev: 1,
                     st: DetState::Armed {
                         confirm_t: Some(3),
+                        a_prev_mm: Some(1_234_567),
                         last_t: 4,
                     },
                 },
@@ -121,6 +122,10 @@ fn state_with_every_detector_tag_round_trips() {
     let j = to_canonical_json(&st).unwrap();
     assert!(
         j.contains(r#""st":{"last_t":4,"s":"latched","why":"late"}"#),
+        "{j}"
+    );
+    assert!(
+        j.contains(r#""st":{"a_prev_mm":1234567,"confirm_t":3,"last_t":4,"s":"armed"}"#),
         "{j}"
     );
     let back: State = from_canonical_json(j.as_bytes()).unwrap();
@@ -643,5 +648,111 @@ fn lexical_rejections_at_the_tree_level() {
         "  [ 1 , 2 ]\n",
     ] {
         assert!(parse_value(ok.as_bytes(), &l).is_ok(), "{ok}");
+    }
+}
+
+fn armed_json(extra: &str) -> String {
+    format!(r#"{{{extra}"last_t":4,"s":"armed"}}"#)
+}
+
+#[test]
+fn armed_a_prev_is_optional_omitted_when_absent_and_exact_when_present() {
+    // Absent fields stay absent in the canonical bytes (no null), keys sorted.
+    let none = DetState::Armed {
+        confirm_t: None,
+        a_prev_mm: None,
+        last_t: 4,
+    };
+    assert_eq!(to_canonical_json(&none).unwrap(), armed_json(""));
+    let only_a = DetState::Armed {
+        confirm_t: None,
+        a_prev_mm: Some(-5),
+        last_t: 4,
+    };
+    assert_eq!(
+        to_canonical_json(&only_a).unwrap(),
+        armed_json(r#""a_prev_mm":-5,"#)
+    );
+    let both = DetState::Armed {
+        confirm_t: Some(9),
+        a_prev_mm: Some(i64::MAX),
+        last_t: 4,
+    };
+    let j = to_canonical_json(&both).unwrap();
+    assert_eq!(
+        j,
+        armed_json(r#""a_prev_mm":9223372036854775807,"confirm_t":9,"#)
+    );
+    for st in [none, only_a, both] {
+        let j = to_canonical_json(&st).unwrap();
+        assert_eq!(from_canonical_json::<DetState>(j.as_bytes()).unwrap(), st);
+    }
+    // A state written before the field existed parses with `None` (the detector then searches the
+    // whole route once).
+    assert_eq!(
+        from_canonical_json::<DetState>(armed_json("").as_bytes()).unwrap(),
+        none
+    );
+}
+
+#[test]
+fn armed_a_prev_strict_parse_rejects_bad_shapes() {
+    let bad: &[(&str, String)] = &[
+        ("null", armed_json(r#""a_prev_mm":null,"#)),
+        ("float", armed_json(r#""a_prev_mm":1.5,"#)),
+        ("exponent", armed_json(r#""a_prev_mm":1e3,"#)),
+        ("string", armed_json(r#""a_prev_mm":"7","#)),
+        ("negative zero", armed_json(r#""a_prev_mm":-0,"#)),
+        ("leading zero", armed_json(r#""a_prev_mm":07,"#)),
+        (
+            "i64 overflow",
+            armed_json(r#""a_prev_mm":9223372036854775808,"#),
+        ),
+        ("duplicate", armed_json(r#""a_prev_mm":1,"a_prev_mm":2,"#)),
+        ("misspelled", armed_json(r#""a_prev":1,"#)),
+        ("unit-less twin", armed_json(r#""a_prev_m":1,"#)),
+    ];
+    for (name, j) in bad {
+        assert_eq!(
+            from_json::<DetState>(j.as_bytes()).unwrap_err(),
+            EngineError::Parse,
+            "{name}: {j}"
+        );
+    }
+    // The field belongs to `armed` only.
+    assert_eq!(
+        from_json::<DetState>(br#"{"a_prev_mm":1,"last_t":4,"s":"latched","why":"fired"}"#)
+            .unwrap_err(),
+        EngineError::Parse
+    );
+    assert_eq!(
+        from_json::<DetState>(br#"{"a_prev_mm":1,"n":1,"first_t":1,"last_t":4,"s":"cand"}"#)
+            .unwrap_err(),
+        EngineError::Parse
+    );
+    // Non-canonical but valid JSON is accepted by `from_json`, refused by `from_canonical_json`.
+    let spaced = r#"{ "a_prev_mm": 7, "last_t": 4, "s": "armed" }"#;
+    assert!(from_json::<DetState>(spaced.as_bytes()).is_ok());
+    assert_eq!(
+        from_canonical_json::<DetState>(spaced.as_bytes()).unwrap_err(),
+        EngineError::Parse
+    );
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// Any `armed` state survives write, strict parse and write again, byte for byte.
+    #[test]
+    fn armed_state_round_trips(
+        confirm_t in prop::option::of(any::<i64>()),
+        a_prev_mm in prop::option::of(any::<i64>()),
+        last_t in any::<i64>(),
+    ) {
+        let st = DetState::Armed { confirm_t, a_prev_mm, last_t };
+        let j = to_canonical_json(&st).unwrap();
+        let back: DetState = from_canonical_json(j.as_bytes()).unwrap();
+        prop_assert_eq!(back, st);
+        prop_assert_eq!(to_canonical_json(&back).unwrap(), j);
     }
 }

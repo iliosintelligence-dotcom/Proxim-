@@ -11,7 +11,8 @@
 mod common;
 
 use common::{
-    Driver, ORIGIN, ROUTE_M, drive_north, fix_at, pos, route, signpost, trigger, with_mode,
+    Driver, ORIGIN, ROUTE_M, along_of, armed_fields, drive_north, fix_at, pos, route, signpost,
+    trigger, with_mode,
 };
 use proxim_detect::Prepared;
 use proxim_path::{PathSummary, fire_distance_mm, path_update};
@@ -147,12 +148,12 @@ fn arming_happens_at_d_hi_and_never_earlier() {
         .unwrap();
     let rem = d_rem_of(&d, first_armed, 20_000);
     assert!((2_980_000..=3_000_000).contains(&rem), "armed at {rem}");
-    // Before that the reason is BEYOND_WINDOW (after the first fixes that cannot be closing yet).
+    // Before that the reason is BEYOND_WINDOW, after the first four fixes: CLOSING needs a
+    // baseline fix at least 4 s old (errata E-P12), so fixes 0..=3 at 1 Hz are NOT_CLOSING.
     let r = reasons(&d);
-    assert_eq!(r[0], Some(ReasonCode::NotClosing));
-    assert_eq!(r[1], Some(ReasonCode::NotClosing));
+    assert!(r[..4].iter().all(|x| *x == Some(ReasonCode::NotClosing)));
     assert!(
-        r[2..first_armed]
+        r[4..first_armed]
             .iter()
             .all(|x| *x == Some(ReasonCode::BeyondWindow))
     );
@@ -191,7 +192,7 @@ fn crawl_rule_fires_at_d_lo_when_the_time_rule_would_fire_closer() {
 fn d_pass_blocks_arming_too_close_to_the_anchor() {
     // 29 m/s: d_pass = 5 s x 29 = 145 m. Starting at 140 m: BEYOND_WINDOW, no arming, no fire.
     let mut d = Driver::new(&route(30));
-    d.feed_all(&drive_north(0, ANCHOR_MM - 140_000, 29_000, 4, 0));
+    d.feed_all(&drive_north(0, ANCHOR_MM - 140_000, 29_000, 5, 0));
     assert!(d.events().is_empty());
     assert_eq!(states(&d).last().unwrap(), &None);
     assert_eq!(reasons(&d).last().unwrap(), &Some(ReasonCode::BeyondWindow));
@@ -322,8 +323,9 @@ fn u_turn_then_second_approach_fires_once_at_the_normal_distance() {
 #[test]
 fn gps_gap_then_late_join_is_dropped_not_fired() {
     // 20 m/s, armed since 3000 m, last good fix 2000 m out. A 90 s gap puts the vehicle ~200 m
-    // from the anchor. The first fixes after the gap fail the 3-fixes-in-60-s rule; when the
-    // third post-gap fix passes every gate, t_hat is about 11 s < L_min 16 s and d_rem > d_lo:
+    // from the anchor. The first fixes after the gap fail the 3-fixes-in-60-s rule and CLOSING
+    // (the pre-gap fixes are older than 60 s, so no baseline is 4 s old until the fifth post-gap
+    // fix); when that fix passes every gate, t_hat is about 9 s < L_min 16 s and d_rem > d_lo:
     // latched{late} and TOO_LATE_FOR_LEAD, no event.
     let mut fixes = drive_north(0, 0, 20_000, 201, 0); // n = 4000 m at i = 200 (2000 m left)
     let t0 = 200_000 + 90_000;
@@ -347,7 +349,7 @@ fn gps_gap_then_late_join_is_dropped_not_fired() {
             .iter()
             .position(|s| s.out.reason == Some(ReasonCode::TooLateForLead))
             .expect("TOO_LATE_FOR_LEAD is terminal and always reported");
-        assert!(late >= 201 + 2, "needs three post-gap fixes: {late}");
+        assert_eq!(late, 201 + 4, "needs a post-gap baseline 4 s old");
         assert_eq!(
             d.steps[late].out.state,
             Some(DetState::Latched {
@@ -392,22 +394,17 @@ fn gps_gap_then_late_join_is_dropped_not_fired() {
 
 #[test]
 fn l_min_boundary_decides_between_arm_and_late_join() {
-    // lead 40 s -> L_min = 16 s. Build three fixes at 20 m/s ending at a given distance from the
+    // lead 40 s -> L_min = 16 s. Build five fixes at 20 m/s ending at a given distance from the
     // anchor and look at the arming decision.
     let outcome = |rem_mm: i64| {
         let n_last = ANCHOR_MM - rem_mm;
-        let fixes = [
-            fix_at(0, 0, (n_last - 40_000) as i32, 5000, Some(20_000), Some(0)),
-            fix_at(
-                1000,
-                0,
-                (n_last - 20_000) as i32,
-                5000,
-                Some(20_000),
-                Some(0),
-            ),
-            fix_at(2000, 0, n_last as i32, 5000, Some(20_000), Some(0)),
-        ];
+        // Five fixes: the first four cannot be CLOSING (no 4 s old baseline yet), the fifth arms.
+        let fixes: Vec<Fix> = (0..5_i64)
+            .map(|k| {
+                let n = n_last - 20_000 * (4 - k);
+                fix_at(k * 1000, 0, n as i32, 5000, Some(20_000), Some(0))
+            })
+            .collect();
         let mut d = Driver::new(&route(30));
         d.feed_all(&fixes);
         d.steps.last().unwrap().out
@@ -479,12 +476,11 @@ fn confirmation_needs_two_fixes_a_second_apart_and_a_gap_clears_it() {
         0,
     );
     assert!(o.event.is_none(), "{o:?}");
-    assert_eq!(
-        o.state,
-        Some(DetState::Armed {
-            confirm_t: Some(170_000),
-            last_t: 170_000
-        })
+    let (c, a, l) = armed_fields(o.state).unwrap();
+    assert_eq!((c, l), (Some(170_000), 170_000));
+    assert!(
+        (a.unwrap() - 29_000 * 170).abs() <= 25,
+        "a_prev is this fix's along: {a:?}"
     );
     let o = d.feed(
         fix_at(171_000, 0, 29_000 * 171, 5000, Some(29_000), Some(0)),
@@ -505,6 +501,7 @@ fn a_non_confirming_armed_fix_clears_the_confirmation() {
         .step(
             Some(DetState::Armed {
                 confirm_t: Some(163_000),
+                a_prev_mm: None,
                 last_t: 163_000,
             }),
             &summary,
@@ -529,6 +526,7 @@ fn a_non_confirming_armed_fix_clears_the_confirmation() {
         .step(
             Some(DetState::Armed {
                 confirm_t: Some(last.t_ms - 1000),
+                a_prev_mm: None,
                 last_t: last.t_ms - 1000,
             }),
             &s2,
@@ -538,13 +536,9 @@ fn a_non_confirming_armed_fix_clears_the_confirmation() {
         )
         .unwrap();
     assert!(o.event.is_none());
-    assert_eq!(
-        o.state,
-        Some(DetState::Armed {
-            confirm_t: None,
-            last_t: last.t_ms
-        })
-    );
+    let (c, a, l) = armed_fields(o.state).unwrap();
+    assert_eq!((c, l), (None, last.t_ms));
+    assert!((a.unwrap() - along_of(&last)).abs() <= 25, "{a:?}");
 }
 
 #[test]
@@ -682,7 +676,7 @@ fn stale_fixes_and_dead_reckoning() {
 
 #[test]
 fn accuracy_gate_and_confidence_ladder() {
-    // 29 m/s so that CLOSING holds even at 65 m accuracy (net 58 m over 3 fixes vs tol 32.5 m).
+    // 29 m/s so that CLOSING holds even at 65 m accuracy (net advance over the 4 s+ baseline far above tol 32.5 m).
     let run = |acc: u32| {
         let fixes: Vec<Fix> = (0..210)
             .map(|i| fix_at(i * 1000, 0, (29_000 * i) as i32, acc, Some(29_000), Some(0)))
@@ -890,6 +884,7 @@ fn speed_band_hysteresis_lower_edge_is_exact() {
         let f = *fixes.last().unwrap();
         let armed = Some(DetState::Armed {
             confirm_t: None,
+            a_prev_mm: None,
             last_t: f.t_ms - 1000,
         });
         let a = prep.step(armed, &s, &f, f.t_ms, true).unwrap();
@@ -914,8 +909,8 @@ fn speed_band_hysteresis_lower_edge_is_exact() {
 
 #[test]
 fn foot_mode_fires_at_d_lo_with_capped_confidence() {
-    // 1.4 m/s sampled every 4 s (closing needs 5 m over the last three fixes: 11.2 m). Foot:
-    // v_eff 1.4 m/s, D_fire = 60 m < d_lo = max(100 m, 3 x 10 m) -> fires at about 100 m.
+    // 1.4 m/s sampled every 4 s. Foot: v_eff 1.4 m/s, D_fire = 60 m < d_lo = max(100 m, 3 x 10 m)
+    // -> fires at about 100 m.
     let sp = with_mode(route(30), Mode::Foot);
     let fixes: Vec<Fix> = (0..1300)
         .map(|i| {
@@ -940,25 +935,27 @@ fn foot_mode_fires_at_d_lo_with_capped_confidence() {
         e.d_rem_mm
     );
     assert_eq!(e.path_conf_milli, 600, "foot is capped at 600");
-    // At 1 Hz a walker never satisfies CLOSING (3 fixes cover only 2.8 m < 5 m): spec issue.
+    // At 1 Hz the walker fires too (errata E-P12): the time-span CLOSING rule sees the 15 s of
+    // walking in the trace, not 2.8 m over three fixes.
     let fixes: Vec<Fix> = (0..4500)
         .map(|i| fix_at(i * 1000, 0, (1400 * i) as i32, 5000, Some(1400), Some(0)))
         .collect();
     let mut d = Driver::new(&sp);
     d.feed_all(&fixes);
-    assert!(d.events().is_empty());
-    assert!(
-        reasons(&d)
-            .iter()
-            .all(|r| matches!(r, Some(ReasonCode::NotClosing | ReasonCode::OffCorridor)))
+    let ev = d.events();
+    assert_eq!(
+        ev.len(),
+        1,
+        "{:?}",
+        reasons(&d).iter().rev().take(5).collect::<Vec<_>>()
     );
+    let e = ev[0].1;
     assert!(
-        reasons(&d)
-            .iter()
-            .filter(|r| **r == Some(ReasonCode::NotClosing))
-            .count()
-            > 4000
+        (90_000..=100_000).contains(&e.d_rem_mm.unwrap()),
+        "{:?}",
+        e.d_rem_mm
     );
+    assert_eq!((e.path_tier, e.path_conf_milli), (1, 600));
     // Foot band 0.5..2.5 m/s: 3 m/s is out of band.
     let fixes: Vec<Fix> = (0..1500)
         .map(|i| {
@@ -988,6 +985,7 @@ fn out_of_order_and_foreign_states() {
     for st in [
         DetState::Armed {
             confirm_t: Some(1),
+            a_prev_mm: Some(7),
             last_t: f.t_ms,
         },
         DetState::Latched {
@@ -1343,9 +1341,9 @@ fn sender_band_cannot_go_below_the_mode_minimum() {
 #[test]
 fn armed_window_keeps_a_fix_on_its_own_leg_of_a_hairpin() {
     // Hairpin: 3 km north, 40 m east, 3 km back south; anchor at the end of the first leg;
-    // buffer 50 m. The current fix is 22 m east, nearer to the return leg (18 m) than to the
-    // outbound leg (22 m). Idle projects it onto the return leg and drops on the bearing; armed,
-    // the window around the previous fix keeps it on the outbound leg.
+    // buffer 50 m. The last fix is 22 m east, nearer to the return leg (18 m) than to the
+    // outbound leg (22 m). Idle projects it onto the return leg and drops on the bearing; armed
+    // with the exact previous along (errata E-P13) the window keeps it on the outbound leg.
     let v = vec![
         ORIGIN,
         pos(0, 3_000_000),
@@ -1361,34 +1359,51 @@ fn armed_window_keeps_a_fix_on_its_own_leg_of_a_hairpin() {
         }),
     );
     let prep = Prepared::new(&sp).unwrap();
-    let fixes = [
-        fix_at(0, 10_000, 1_000_000, 5000, Some(20_000), Some(0)),
-        fix_at(1000, 10_000, 1_020_000, 5000, Some(20_000), Some(0)),
-        fix_at(2000, 22_000, 1_040_000, 5000, Some(20_000), Some(0)),
-    ];
+    let fixes: Vec<Fix> = (0..5_i64)
+        .map(|k| {
+            let e = if k == 4 { 22_000 } else { 10_000 };
+            fix_at(
+                k * 1000,
+                e,
+                (1_000_000 + 20_000 * k) as i32,
+                5000,
+                Some(20_000),
+                Some(0),
+            )
+        })
+        .collect();
     let (_, s) = summary_after(&fixes);
-    let f = fixes[2];
-    let armed = prep
-        .step(
+    let f = fixes[4];
+    let step = |a_prev_mm| {
+        prep.step(
             Some(DetState::Armed {
                 confirm_t: None,
-                last_t: 1000,
+                a_prev_mm,
+                last_t: 3000,
             }),
             &s,
             &f,
             f.t_ms,
             true,
         )
-        .unwrap();
-    assert_eq!(
-        armed.state,
-        Some(DetState::Armed {
-            confirm_t: None,
-            last_t: 2000
-        }),
-        "{:?}",
-        armed.reason
+        .unwrap()
+    };
+    // The previous fix (k = 3) was at along 1_060_000 on the outbound leg.
+    let exact = step(Some(1_060_000));
+    let (c, a, l) = armed_fields(exact.state).unwrap_or_else(|| panic!("{:?}", exact.reason));
+    assert_eq!((c, l), (None, 4000));
+    assert!(
+        (a.unwrap() - 1_080_000).abs() <= 25,
+        "a_prev follows the fix: {a:?}"
     );
+    // The window is authoritative: with an a_prev on the return leg the same fix is held there.
+    let wrong = step(Some(4_000_000));
+    assert_eq!(wrong.state, None);
+    assert_eq!(wrong.reason, Some(ReasonCode::BearingMismatch));
+    // A legacy state without a_prev, and the idle detector, search the whole route.
+    let legacy = step(None);
+    assert_eq!(legacy.state, None);
+    assert_eq!(legacy.reason, Some(ReasonCode::BearingMismatch));
     let idle = prep.step(None, &s, &f, f.t_ms, true).unwrap();
     assert_eq!(idle.state, None);
     assert_eq!(idle.reason, Some(ReasonCode::BearingMismatch));
