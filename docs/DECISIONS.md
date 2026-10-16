@@ -4,7 +4,7 @@ Decisions made by the owner, with the date and the exact words that made them. R
 
 ## Addendum 02 (sender product) - ACCEPTED 2026-10-11
 
-Owner message: *"accept all five and start M0 and M1"*. All five decisions below were accepted as recommended. Consequences that engineering relies on: v1 sender scope is text + icon only; billing is per campaign-week with a 20-view minimum and no waiver (COUNSEL to review charging the minimum before G-V); the billboard-principle loosening and the other labelled loosenings are accepted; the LLM-vendor flow carries sender-authored wording only, with placeholders for facts (counsel sign-off on the vendor DPA before G-AI); pilot is invite-only.
+Owner message: *"accept all five and start M0 and M1"*. All five decisions below were accepted as recommended. Consequences that engineering relies on: v1 sender scope is text + icon only; billing is per campaign-week with a 20-view minimum (100 views for `health_adjacent`, flat fee for `health_facility`; Addendum 02 7.7) and no waiver (COUNSEL to review charging the minimum before G-V); the billboard-principle loosening and the other labelled loosenings are accepted; the LLM-vendor flow carries sender-authored wording only, with placeholders for facts (counsel sign-off on the vendor DPA before G-AI); pilot is invite-only.
 
 ### A02-D1. ACCEPTED
 
@@ -16,7 +16,7 @@ Accept the labelled loosenings and removals: billboard principle (the wording sh
 
 ### A02-D3. ACCEPTED
 
-Send the sender's own screened ad wording to the LLM vendor (base wording and up to 3 highlights after placeholder substitution; never brand name, facts, targeting, pages or documents) as a disclosed processor flow. RECOMMENDED: accept for v1 (needed for 'make variants of my own copy'), counsel sign-off on the vendor DPA before G-AI, and let the pilot run on the manual editor if G-AI slips (G-AI is a per-org gate). The strict alternative (closed lists only) cannot vary your own text.
+Send the sender's own screened ad wording to the LLM vendor (base wording and up to 3 highlights with fact values replaced by placeholders; never brand name, facts, targeting, pages or documents) as a disclosed processor flow. RECOMMENDED: accept for v1 (needed for 'make variants of my own copy'), counsel sign-off on the vendor DPA before G-AI, and let the pilot run on the manual editor if G-AI slips (G-AI is a per-org gate). The strict alternative (closed lists only) cannot vary your own text.
 
 ### A02-D4. ACCEPTED
 

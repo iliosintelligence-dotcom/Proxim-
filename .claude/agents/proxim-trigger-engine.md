@@ -18,7 +18,7 @@ OS location APIs and background wake-ups (proxim-sdk-engineer), the database (pr
 
 ## Design rules
 - Pure functions. Time, location and randomness are passed in as arguments; no clocks, network or global state inside the engine. This is what makes it replayable and portable across TypeScript, Swift and Kotlin.
-- Keep the algorithm small and specification-driven. Write the spec (inputs, outputs, edge cases) in `docs/engine-spec.md` before or alongside the code so native ports can match it exactly.
+- Keep the algorithm small and specification-driven. Write the spec (inputs, outputs, edge cases) in `docs/engine-spec.md` before or alongside the code so every binding (UniFFI, WASM) and, only under the PLAN.md M0 fallback, a native port can be checked against it exactly.
 - Be honest about uncertainty. Location has accuracy radii; headings are noisy at low speed. Take accuracy as an input, and never fire on a fix whose accuracy circle straddles the boundary unless the spec says so.
 - "In the user's path" must be defined precisely: state the signals used (heading, speed, recent track, partner-supplied route or destination), the corridor geometry and the confidence threshold. Document false-positive and false-negative behaviour.
 - Relevance uses only the inputs the plan allows (partner category, declared interests, consent flags). Never infer sensitive attributes, especially health status, from location history.

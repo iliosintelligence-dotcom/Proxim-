@@ -24,6 +24,9 @@ pub const EVENT_AGE_APPROACH_S: u32 = 10;
 pub const EVENT_DIST_M: u32 = 5000;
 /// Default `rank_milli` (1000 = 1.0).
 pub const RANK_DEFAULT_MILLI: u32 = 1000;
+/// Largest `rank_milli` the engine honours (E-D-RANK): PLAN 5.6 caps the paid value factor at
+/// 3x the category floor so money cannot buy unlimited relevance; the device enforces it too.
+pub const RANK_MAX_MILLI: u32 = 3000;
 /// Ceiling of one zone's standoff, m (keeps the test inside the 150 km frame).
 pub const STANDOFF_MAX_M: u32 = 100_000;
 /// Largest accepted `tz_offset_min` magnitude (UTC-12 .. UTC+14 fits).

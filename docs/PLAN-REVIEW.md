@@ -205,7 +205,7 @@ Cut or defer:
 - Keep the event enum, field reservations and signed envelope v2.
 - Implement ENTER, APPROACH and internal hysteresis only; the other events arrive with Stage 1.1 or 2.
 - v1 picks: POI, area/neighbourhood, road corridor and custom shapes. Building, junction, car park, transit, brand and import come once they compile to those shapes.
-- Move the claim ladder, G1/G2 reporting, notification models and the benefit engine to Stage 1.1/2.
+- Move the claim ladder, G1 reporting, notification models and the benefit engine to Stage 1.1/2. G2 reporting (campaign-wide totals only, no daily counts, no `partner_app` breakdown) stays in v1, because road corridors, which are G2 shapes, stay in v1; deferring it would allow road reports the addendum forbids.
 - Keep I13-I20 as design constraints and write each test with its feature. Only I17, I18, the I2 lint scope and I8' need v1 tests.
 - Run the ODbL open-extract process only after counsel has advised.
 - Make the design-partner letter and a Play/Apple review outcome an explicit entry gate to M15-M18.

@@ -37,7 +37,7 @@ use eff::Eff;
 use params::{
     DET_PRUNE_MS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M, FIX_FUTURE_SLACK_MS,
     FIX_MAX_AGE_MS, JUMP_MARGIN_MM, JUMP_MAX_SPEED_MMPS, JUMP_RESET_AT, JUMP_WINDOW_MS,
-    RANK_DEFAULT_MILLI,
+    RANK_DEFAULT_MILLI, RANK_MAX_MILLI,
 };
 use proxim_detect::{Event, Prepared};
 use proxim_geo::{acc_eff_mm, dist_mm, frame_for};
@@ -331,7 +331,11 @@ impl Cand<'_> {
     /// affinity 1000 this is exactly the M1 score `rank x conf / 1000`. Fits u64: below 2^32 x
     /// 2^16 x 3000.
     fn score(&self) -> u64 {
-        let rank = self.sp.rank_milli.unwrap_or(RANK_DEFAULT_MILLI);
+        let rank = self
+            .sp
+            .rank_milli
+            .unwrap_or(RANK_DEFAULT_MILLI)
+            .min(RANK_MAX_MILLI);
         u64::from(rank) * u64::from(self.ev.path_conf_milli) * u64::from(self.affinity_milli)
             / 1_000_000
     }
@@ -759,10 +763,14 @@ mod tests {
         assert_eq!(score(&sp, 500), 999, "floor division");
         sp.rank_milli = Some(0);
         assert_eq!(score(&sp, 800), 0);
+        // E-D-RANK: a rank above 3000 is clamped, so u32::MAX scores like 3000.
         sp.rank_milli = Some(u32::MAX);
-        assert_eq!(score(&sp, u16::MAX), 281_470_681_677);
-        // spec 7.1: the affinity multiplies; the largest product still fits u64
-        assert_eq!(weighted(&sp, u16::MAX, 3000), 844_412_045_033);
+        assert_eq!(score(&sp, u16::MAX), 196_605);
+        sp.rank_milli = Some(3000);
+        assert_eq!(score(&sp, u16::MAX), 196_605);
+        sp.rank_milli = Some(u32::MAX);
+        // spec 7.1: the affinity multiplies; the largest product fits u64 easily
+        assert_eq!(weighted(&sp, u16::MAX, 3000), 589_815);
         sp.rank_milli = None;
         assert_eq!(weighted(&sp, 500, 2000), 1000);
         assert_eq!(weighted(&sp, 500, 1), 0, "floor division");
