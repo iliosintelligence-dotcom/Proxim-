@@ -1,0 +1,51 @@
+{
+  "id": "stationary-outside",
+  "title": "Stationary 25 m outside for 10 minutes: no false enter, <= 4 transitions",
+  "source": "ADDENDUM-01 M1 verify (0% over 1,000 seeds, <= 4 transitions per 10 min) [MODEL]",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 50,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -175
+    ],
+    "moves": [
+      {
+        "wait_s": 600
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          0,
+          0
+        ],
+        "max_transitions_per_10min": 4
+      }
+    ]
+  }
+}

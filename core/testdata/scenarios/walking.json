@@ -1,0 +1,69 @@
+{
+  "id": "walking",
+  "title": "Walker at 1.4 m/s fires once about 100 m before the shop (crawl rule)",
+  "source": "PLAN M1; errata E-P12 (walker fires at d_rem 90..100 m)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "shop-walk",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -800
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "foot"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -900
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          50
+        ],
+        "speed_mmps": 1400
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "shop-walk",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          40,
+          200
+        ],
+        "true_xt_max_m": 30
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "signed-cross-fixture",
+  "title": "A pinned event=cross signpost (reserved in v1) never fires: UNSUPPORTED_EVENT",
+  "source": "ADDENDUM-01 M1 verify; engine-spec 10 (cross fails closed)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 5,
+  "signposts": [
+    {
+      "id": "gate-cross",
+      "fixture": {
+        "path": "fixtures/cross-signpost.json",
+        "sha256": "ab8b25190853dbebc83f4c7df3018616dbfdda1e888a30236a2a0bf127b500ed"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -600
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          600
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "wait_s": 20
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "gate-cross",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "UNSUPPORTED_EVENT"
+        ]
+      }
+    ]
+  }
+}

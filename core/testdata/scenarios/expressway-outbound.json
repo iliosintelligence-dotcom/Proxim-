@@ -1,0 +1,69 @@
+{
+  "id": "expressway-outbound",
+  "title": "Outbound carriageway signpost fires once for a southbound car",
+  "source": "PLAN M1",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "outbound-diner",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            -25,
+            5000
+          ],
+          [
+            -25,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      -25,
+      6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          -25,
+          -500
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "outbound-diner",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          1000,
+          1500
+        ],
+        "true_xt_max_m": 30
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "s02-walk-in-enter",
+  "title": "S02 walk-in: slow movers need the 10 s dwell, still one fire",
+  "source": "engine-spec 6.1 (10 s span below 1.5 m/s)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -400
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          0
+        ],
+        "speed_mmps": 1400
+      },
+      {
+        "wait_s": 30
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "true_depth_min_m": 0,
+        "latency_s": [
+          5,
+          30
+        ]
+      }
+    ]
+  }
+}

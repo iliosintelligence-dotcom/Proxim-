@@ -1,0 +1,209 @@
+{
+  "id": "overlapping-signposts",
+  "title": "Eleven nested circles: one slot, one fire, the rest lose the slot or wait",
+  "source": "engine-spec 7 selection, F24, F25",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "ov-150",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    },
+    {
+      "id": "ov-175",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 175
+      }
+    },
+    {
+      "id": "ov-200",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 200
+      }
+    },
+    {
+      "id": "ov-225",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 225
+      }
+    },
+    {
+      "id": "ov-250",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 250
+      }
+    },
+    {
+      "id": "ov-275",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 275
+      }
+    },
+    {
+      "id": "ov-300",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 300
+      }
+    },
+    {
+      "id": "ov-325",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 325
+      }
+    },
+    {
+      "id": "ov-350",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 350
+      }
+    },
+    {
+      "id": "ov-375",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 375
+      }
+    },
+    {
+      "id": "ov-400",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 400
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -900
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          0
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "wait_s": 120
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "ov-400",
+        "fires": [
+          1,
+          1
+        ],
+        "true_depth_min_m": 0
+      },
+      {
+        "signpost": "ov-150",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "CAP_APP_INTERVAL"
+        ]
+      },
+      {
+        "signpost": "ov-200",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "CAP_APP_INTERVAL"
+        ]
+      },
+      {
+        "signpost": "ov-300",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "CAP_APP_INTERVAL"
+        ]
+      }
+    ],
+    "max_total_fires": 1
+  }
+}

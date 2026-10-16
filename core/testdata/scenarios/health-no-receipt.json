@@ -1,0 +1,73 @@
+{
+  "id": "health-no-receipt",
+  "title": "Health approach without the health receipt never fires",
+  "source": "engine-spec 7 F15, I12",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 5,
+  "consent": {
+    "location_matching": "granted",
+    "nearby_health_events": "granted"
+  },
+  "signposts": [
+    {
+      "id": "hosp-approach",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            300,
+            -5500
+          ],
+          [
+            300,
+            -2500
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      },
+      "class": "health",
+      "category": "health.hospital"
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      300,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          300,
+          -2000
+        ],
+        "speed_mmps": 25000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "hosp-approach",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "HEALTH_CONSENT_MISSING"
+        ]
+      }
+    ]
+  }
+}

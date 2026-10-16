@@ -1,0 +1,56 @@
+{
+  "id": "gpx-expressway-inbound",
+  "title": "Imported GPX track (own timestamps) fires like the synthetic inbound drive",
+  "source": "PLAN M1 (GPX import)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "gpx",
+    "file": "../routes/expressway-inbound.gpx"
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          1000,
+          1500
+        ]
+      }
+    ]
+  }
+}
