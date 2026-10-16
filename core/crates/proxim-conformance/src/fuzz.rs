@@ -28,7 +28,22 @@ pub fn raw(tok: &str) -> Value {
 #[derive(Clone, Debug)]
 pub struct Inputs {
     pub args: [String; 6],
+    /// The engine's `seed` argument.
     pub seed: u64,
+    /// The seed that generated these inputs, when a generator built them: `fuzz one <case_seed>`
+    /// replays exactly this case.
+    pub case_seed: Option<u64>,
+}
+
+/// The longest prefix of `s` that is at most `max_bytes` long and ends on a character boundary
+/// (a plain byte slice would panic inside a multi-byte character).
+#[must_use]
+pub fn prefix(s: &str, max_bytes: usize) -> &str {
+    let mut end = s.len().min(max_bytes);
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    s.get(..end).unwrap_or_default()
 }
 
 pub const ARG_NAMES: [&str; 6] = ["state", "fix", "signposts", "policy", "consent", "clock"];
@@ -54,7 +69,13 @@ impl Inputs {
         )
     }
     pub fn describe(&self) -> String {
-        let mut s = format!("seed={}\n", self.seed);
+        let mut s = match self.case_seed {
+            Some(c) => format!(
+                "case_seed={c} (replay: cargo run -p proxim-conformance --bin fuzz -- one {c}) engine_seed={}\n",
+                self.seed
+            ),
+            None => format!("engine_seed={}\n", self.seed),
+        };
         for (n, a) in ARG_NAMES.iter().zip(&self.args) {
             let cut: String = a.chars().take(300).collect();
             s.push_str(&format!("  {n} ({} bytes): {cut:?}\n", a.len()));
@@ -161,6 +182,7 @@ pub fn base_inputs() -> Inputs {
     Inputs {
         args: [0, 1, 2, 3, 4, 5].map(|i| render(&w[i])),
         seed: 0,
+        case_seed: None,
     }
 }
 
@@ -766,6 +788,7 @@ pub fn make_case(seed: u64) -> Inputs {
     Inputs {
         args,
         seed: rng.next_u64(),
+        case_seed: Some(seed),
     }
 }
 
@@ -932,7 +955,7 @@ pub fn run_cases(
                         st.non_canonical += 1;
                         st.failures.push(format!(
                             "{why}\nresponse: {}\n{}",
-                            &text[..text.len().min(300)],
+                            prefix(&text, 300),
                             inp.describe()
                         ));
                     }
@@ -961,7 +984,7 @@ pub fn run_cases(
                                     st.reingest_failures += 1;
                                     st.failures.push(format!(
                                         "returned state not accepted back: {}\n{}",
-                                        &t2[..t2.len().min(200)],
+                                        prefix(&t2, 200),
                                         inp.describe()
                                     ));
                                 }

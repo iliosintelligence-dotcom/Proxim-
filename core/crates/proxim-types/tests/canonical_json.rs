@@ -9,7 +9,8 @@
 use proptest::prelude::*;
 use proxim_types::canon::{to_canonical_json, value_to_canonical};
 use proxim_types::strict::{
-    JsonLimits, from_canonical_json, from_json, from_json_with, parse_value,
+    JsonLimits, from_canonical_json, from_canonical_json_with, from_json, from_json_with,
+    parse_value,
 };
 use proxim_types::{
     Caps, Consent, ConsentValue, DetEntry, DetState, EngineError, Fix, Id, LatchWhy, Mem, Policy,
@@ -370,6 +371,24 @@ fn from_canonical_demands_exact_bytes() {
         "uppercase hex"
     );
     assert!(from_canonical_json::<Value>(br#"{"a":"x\u000ay"}"#).is_ok());
+}
+
+#[test]
+fn canonical_reader_honours_a_raised_depth_limit() {
+    // 33 nested arrays: above the default 32, within a raised limit of 40. The canonical
+    // reader must accept what the plain reader accepts under the same limits.
+    let doc = format!("{}0{}", "[".repeat(33), "]".repeat(33));
+    let raised = JsonLimits {
+        max_depth: 40,
+        ..JsonLimits::default()
+    };
+    assert!(from_json_with::<Value>(doc.as_bytes(), &raised).is_ok());
+    assert!(from_canonical_json_with::<Value>(doc.as_bytes(), &raised).is_ok());
+    // ...and the default limit still refuses it in both.
+    assert_eq!(
+        from_canonical_json::<Value>(doc.as_bytes()),
+        Err(EngineError::Limit)
+    );
 }
 
 #[test]

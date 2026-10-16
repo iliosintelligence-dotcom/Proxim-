@@ -143,6 +143,12 @@ pub fn decide(
             det.insert(String::from(e.id.as_str()), e.clone());
         }
     }
+    // E-D7: an id present only as ambiguous copies is not processed and its detector entry is
+    // removed, so a half-confirmed state cannot resume when a single copy returns.
+    let kept: BTreeSet<&str> = candidates.iter().map(|s| s.id.as_str()).collect();
+    for id in present.difference(&kept) {
+        det.remove(*id);
+    }
 
     let ctx = Ctx {
         eff: &eff,

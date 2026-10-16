@@ -9,7 +9,7 @@
     clippy::disallowed_types
 )]
 
-use proxim_conformance::fuzz::{Inputs, make_case, run_cases};
+use proxim_conformance::fuzz::{Inputs, make_case, prefix, run_cases};
 use std::time::Duration;
 
 fn verbose_case(seed: u64) -> Inputs {
@@ -30,7 +30,7 @@ fn main() {
             "response ({} bytes, {:?}): {}",
             out.len(),
             t0.elapsed(),
-            &out[..out.len().min(300)]
+            prefix(&out, 300)
         );
         return;
     }

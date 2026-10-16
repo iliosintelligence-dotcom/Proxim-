@@ -744,10 +744,29 @@ fn revisions_and_duplicates() {
     // A new revision replaces the detector entry: progress of the old one is not inherited.
     let mut sim = Sim::new(vec![v1]);
     sim.run(&visit(T0, 0, 0, 3, 0)); // candidate n = 3 on rev 1
-    sim.signposts = vec![v2];
+    sim.signposts = vec![v2.clone()];
     let o = sim.step(&still(T0 + 12_000, 0, 0));
     assert!(fires(&o).is_empty(), "rev 2 starts from idle");
     assert_eq!(sim.state.mem.det[0].rev, 2);
+    // E-D7: an id that is ambiguous for one call loses its detector entry, so a half-confirmed
+    // candidate cannot fire on its old confirmation when a single copy returns.
+    let mut sim = Sim::new(vec![v2.clone()]);
+    // Fixes at 0, 4 and 8 s: candidate n = 3, but a still walker needs 10 s, so not yet confirmed.
+    sim.run(&visit(T0, 0, 0, 3, 0));
+    assert_eq!(sim.state.mem.det.len(), 1);
+    sim.signposts = vec![v2.clone(), v2.clone()];
+    let o = sim.step(&still(T0 + 9_000, 0, 0));
+    assert!(fires(&o).is_empty());
+    assert!(
+        sim.state.mem.det.is_empty(),
+        "ambiguous id: detector removed"
+    );
+    sim.signposts = vec![v2];
+    let o = sim.step(&still(T0 + 11_000, 0, 0));
+    assert!(
+        fires(&o).is_empty(),
+        "restarts from idle, no inherited confirmation"
+    );
 }
 
 // ---- event filters F20 / F21 with an aged clock ----
