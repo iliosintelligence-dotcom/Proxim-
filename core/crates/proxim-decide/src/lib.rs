@@ -211,10 +211,11 @@ pub fn decide(
         }
     }
 
-    // ---- selection: score desc, t_hat asc (absent last), id asc ----
+    // ---- selection: affinity 0 last (7.1), score desc, t_hat asc (absent last), id asc ----
     survivors.sort_by(|a, b| {
-        b.score()
-            .cmp(&a.score())
+        (b.affinity_milli > 0)
+            .cmp(&(a.affinity_milli > 0))
+            .then_with(|| b.score().cmp(&a.score()))
             .then_with(|| cmp_t_hat(a.ev.t_hat_ms, b.ev.t_hat_ms))
             .then_with(|| a.sp.id.cmp(&b.sp.id))
     });

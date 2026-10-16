@@ -158,4 +158,14 @@ fn affinity_decides_the_slot_between_simultaneous_adverts() {
         {"category": "entertainment", "weight_milli": 60000}
     ]}));
     assert_eq!(fired, vec!["a-cafe".to_string()]);
+    // Weight 0 is a last resort even when floor division makes a small positive weight
+    // score 0 too: the weight-1 cinema still beats the weight-0 cafe on the lower id.
+    let (fired, lost) = contest(&json!({"category_affinity": [
+        {"category": "food.cafe", "weight_milli": 0},
+        {"category": "entertainment", "weight_milli": 1}
+    ]}));
+    assert_eq!(
+        (fired, lost),
+        (vec!["b-cinema".into()], vec!["a-cafe".into()])
+    );
 }
