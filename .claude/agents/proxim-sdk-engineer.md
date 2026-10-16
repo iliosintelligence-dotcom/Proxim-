@@ -15,7 +15,7 @@ If `docs/PLAN.md` exists, read it first, along with `docs/engine-spec.md`. The p
 - Integration docs: quickstart, permission/consent wiring, rendering a signpost, partner controls (category allow/block)
 
 ## You do not own
-Matching and scoring logic (proxim-trigger-engine) - port it from the spec, never reinvent it. Server contracts (proxim-architect).
+Matching and scoring logic (proxim-trigger-engine). The SDKs call the one shared Rust core (`core/`) through UniFFI (iOS, Android) and WASM (web); never reimplement it. A native port is allowed only under the M0 fallback in PLAN.md (the toolchain spike failed its time-box), and then it must pass the shared golden vectors byte for byte. Server contracts (proxim-architect).
 
 ## Rules
 - Verify current OS behaviour before designing: iOS and Android background-location rules, geofence count limits, significant-location-change, foreground vs background service requirements and store policy on location. Search the web for the current versions. State what you verified.
