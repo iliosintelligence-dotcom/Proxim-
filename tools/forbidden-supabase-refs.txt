@@ -1,0 +1,8 @@
+# Supabase project refs that must NEVER appear in this repository's config.
+# One ref per line, '#' comments allowed. Matched case-insensitively as a plain
+# substring in config-like files (see tools/check-supabase-ref.py).
+#
+# wjsjkemamttsuilhihip = the existing "ilios Healthcare" project. Ad-tech data
+# must never commingle with healthcare data (docs/PLAN.md section 2, Database
+# row; docs/DECISIONS.md "Other standing instructions").
+wjsjkemamttsuilhihip

@@ -1,0 +1,62 @@
+{
+  "id": "s01-drive-in-enter",
+  "title": "S01 drive-in: ENTER declared a few seconds after the true boundary",
+  "source": "ADDENDUM-01 4.2 (ENTER about 3-5 s after the boundary)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -600
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          0
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "wait_s": 30
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          1,
+          1
+        ],
+        "true_depth_min_m": 0,
+        "latency_s": [
+          1,
+          8
+        ]
+      }
+    ]
+  }
+}

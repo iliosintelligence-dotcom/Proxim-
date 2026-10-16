@@ -1,0 +1,61 @@
+# Proxim decision core: Cargo workspace shared by every client (see docs/engine-spec.md, docs/adr/001-*).
+# Invariant I1: no network crate may appear anywhere in this workspace (enforced by deny.toml).
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+
+# Versions verified on crates.io 2026-10-11 with `cargo info` (see ADR-001).
+[workspace.dependencies]
+# default-features = false: h3o then routes its math through the `libm` crate (src/math/functions-libm.rs)
+# and avoids the `ahash` compile-time-rng hasher. With `std` it would call std f64 trig.
+h3o = { version = "0.11.0", default-features = false }
+libm = "0.2.16"
+serde = { version = "1.0.229", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "1.0.154", default-features = false, features = ["alloc"] }
+proptest = { version = "1.12.0", default-features = false, features = ["std", "bit-set"] }
+
+proxim-types = { path = "crates/proxim-types" }
+proxim-geo = { path = "crates/proxim-geo" }
+proxim-path = { path = "crates/proxim-path" }
+proxim-detect = { path = "crates/proxim-detect" }
+proxim-decide = { path = "crates/proxim-decide" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+# Determinism: float arithmetic is denied everywhere; the single permitted module is
+# proxim-geo::trig, which carries an explicit #[allow] and routes through libm.
+float_arithmetic = "deny"
+float_cmp = "deny"
+disallowed_methods = "deny"
+disallowed_types = "deny"
+# Never panic across the FFI boundary: fallible code returns EngineError.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+# No I/O inside the engine.
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+
+[profile.dev]
+overflow-checks = true
+
+# Release keeps overflow checks ON: the engine's behaviour must equal what the tests ran.
+[profile.release]
+overflow-checks = true
+lto = "thin"
+codegen-units = 1

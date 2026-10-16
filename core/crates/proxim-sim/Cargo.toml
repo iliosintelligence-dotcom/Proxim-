@@ -1,0 +1,21 @@
+[package]
+name = "proxim-sim"
+description = "Scenario simulator (trace generators, noise, omniscient oracle, reports, CLI) and the phone simulator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+proxim-types = { workspace = true }
+proxim-decide = { workspace = true }
+proxim-geo = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[[bin]]
+name = "proxim-sim"
+path = "src/bin/proxim-sim.rs"
+
+[lints]
+workspace = true

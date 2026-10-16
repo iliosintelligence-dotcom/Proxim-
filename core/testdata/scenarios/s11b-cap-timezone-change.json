@@ -1,0 +1,103 @@
+{
+  "id": "s11b-cap-timezone-change",
+  "title": "S11b the phone changes time zone before the third commute: still 2/day",
+  "source": "errata E-D-TZ",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 5,
+  "clock": {
+    "events": [
+      {
+        "at_s": 5000,
+        "tz_offset_min": 840
+      }
+    ]
+  },
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      },
+      {
+        "gap_s": 2400,
+        "then_at_m": [
+          0,
+          -6000
+        ]
+      },
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      },
+      {
+        "gap_s": 2400,
+        "then_at_m": [
+          0,
+          -6000
+        ]
+      },
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          2,
+          2
+        ],
+        "reasons_include": [
+          "CAP_SIGNPOST_DAY"
+        ]
+      }
+    ]
+  }
+}

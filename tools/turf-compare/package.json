@@ -1,0 +1,15 @@
+{
+  "name": "@proxim/turf-compare",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Checks Proxim's integer geometry against turf.js and an exact WGS84 tangent-plane reference (docs/simulator.md).",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "compare": "node compare.mjs"
+  },
+  "dependencies": {
+    "@turf/turf": "7.4.0"
+  }
+}

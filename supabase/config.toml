@@ -1,0 +1,7 @@
+# Proxim Supabase configuration.
+#
+# NO project id is configured on purpose. No Proxim Supabase project exists yet.
+# Creating one needs explicit owner confirmation (cost, organisation, region).
+# NEVER reuse the existing healthcare project; its ref is in
+# tools/forbidden-supabase-refs.txt and tools/check-supabase-ref.py fails CI on it.
+# When a project exists, add its ref to tools/allowed-supabase-refs.txt in the same change.

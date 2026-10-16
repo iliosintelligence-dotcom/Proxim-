@@ -1,0 +1,75 @@
+{
+  "id": "tunnel-over-fire-point",
+  "title": "Tunnel spanning the fire point: at most one fire after it, never late",
+  "source": "PLAN M1; engine-spec 11 (no fire with t_hat < L_min unless crawl)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "dropouts": [
+    {
+      "along_from_m": 4400,
+      "along_to_m": 5400
+    }
+  ],
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          500
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          0,
+          1
+        ],
+        "t_hat_min_s": 10,
+        "true_d_rem_m": [
+          150,
+          1500
+        ]
+      }
+    ]
+  }
+}

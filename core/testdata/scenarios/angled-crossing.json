@@ -1,0 +1,67 @@
+{
+  "id": "angled-crossing",
+  "title": "Road crossing the corridor at 40 degrees near the fire point (outside the 30 degree tolerance) never fires",
+  "source": "engine-spec 6.2 BEARING_MISMATCH (bearing_tol 30 degrees); mutation target: bearing gate",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      -386,
+      -760
+    ],
+    "moves": [
+      {
+        "to_m": [
+          386,
+          160
+        ],
+        "speed_mmps": 8000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "BEARING_MISMATCH"
+        ]
+      }
+    ]
+  }
+}

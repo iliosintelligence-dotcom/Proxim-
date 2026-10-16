@@ -1,0 +1,18 @@
+# Rust
+target/
+# Python
+**/__pycache__/
+*.pyc
+# Node
+node_modules/
+# Secrets and env
+.env
+.env.*
+!.env.example
+# Logs, scratch, OS
+*.log
+scratch/
+.DS_Store
+# Supabase CLI local state (holds the linked project ref)
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,8 @@
+{
+  "name": "proxim-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Proxim monorepo root. No dependencies at the root; packages declare their own.",
+  "packageManager": "pnpm@10.0.0",
+  "engines": { "node": ">=22" }
+}

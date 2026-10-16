@@ -1,0 +1,56 @@
+# cargo-deny configuration. Mirrors tools/network-denylist.txt (invariant I1).
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "CC0-1.0",
+]
+confidence-threshold = 0.9
+
+# Our own crates are publish = false; they carry no licence field.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace path dependencies between our own unpublished crates are fine.
+allow-wildcard-paths = true
+deny = [
+  { name = "reqwest" },
+  { name = "hyper" },
+  { name = "h2" },
+  { name = "ureq" },
+  { name = "curl" },
+  { name = "curl-sys" },
+  { name = "isahc" },
+  { name = "surf" },
+  { name = "attohttpc" },
+  { name = "openssl" },
+  { name = "openssl-sys" },
+  { name = "native-tls" },
+  { name = "rustls" },
+  { name = "tungstenite" },
+  { name = "socket2" },
+  { name = "mio" },
+  { name = "tokio" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

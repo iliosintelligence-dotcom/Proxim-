@@ -1,0 +1,98 @@
+# Runs the whole engine test suite on an iPhone simulator and on an Android
+# emulator, and builds it for real iPhone and Android phone CPUs. The SDK
+# packaging (XCFramework, AAR) is not here yet: proxim-ffi is still a stub.
+name: ci-mobile
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["core/**", "rust-toolchain.toml", ".github/workflows/ci-mobile.yml", ".github/scripts/android-test.sh"]
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+  # Test binaries without debug info: far smaller to copy onto a device.
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  ios-simulator:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show && rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: ios
+      - name: build for iPhone hardware (aarch64-apple-ios)
+        run: cargo test --manifest-path core/Cargo.toml --workspace --target aarch64-apple-ios --no-run
+      - name: boot an iPhone simulator
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -I -c '
+          import json, sys
+          devs = json.load(sys.stdin)["devices"]
+          phones = [(rt, d) for rt, ds in devs.items() if ".iOS-" in rt for d in ds if d["name"].startswith("iPhone")]
+          rt, d = max(phones, key=lambda p: [int(x) for x in p[0].rsplit(".iOS-", 1)[1].split("-")])
+          print(d["udid"]); print(rt, d["name"], file=sys.stderr)')
+          xcrun simctl bootstatus "$udid" -b
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - name: full test suite inside the iPhone simulator
+        env:
+          CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUNNER: xcrun simctl spawn ${{ steps.sim.outputs.udid }}
+        run: cargo test --manifest-path core/Cargo.toml --workspace --target aarch64-apple-ios-sim --no-fail-fast
+
+  android-emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show && rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: android
+      - uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r27c
+      - name: point cargo at the NDK linkers (API 24)
+        run: |
+          bin=${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin
+          {
+            echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$bin/x86_64-linux-android24-clang"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$bin/aarch64-linux-android24-clang"
+            echo "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$bin/armv7a-linux-androideabi24-clang"
+          } >> "$GITHUB_ENV"
+      - name: build for Android phones (arm64-v8a, armeabi-v7a)
+        run: |
+          for t in aarch64-linux-android armv7-linux-androideabi; do
+            cargo test --manifest-path core/Cargo.toml --workspace --target $t --no-run
+          done
+      - name: build test binaries for the emulator (x86_64)
+        run: |
+          cargo test --manifest-path core/Cargo.toml --workspace --target x86_64-linux-android \
+            --no-run --message-format=json \
+            | jq -r 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null) | .executable' \
+            > android-tests.txt
+          wc -l android-tests.txt
+      - name: free disk space for the emulator
+        run: |
+          # The emulator needs about 1.8x its data partition free on the runner.
+          rm -rf core/target/aarch64-linux-android core/target/armv7-linux-androideabi
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h "$HOME"
+      - name: enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: full test suite inside the Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          disk-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash .github/scripts/android-test.sh android-tests.txt

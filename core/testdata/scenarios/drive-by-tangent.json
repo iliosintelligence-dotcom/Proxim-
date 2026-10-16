@@ -1,0 +1,55 @@
+{
+  "id": "drive-by-tangent",
+  "title": "Tangential drive-by at 0 m clearance: false enters at most 2.8% (open sky)",
+  "source": "ADDENDUM-01 4.2 (2.8% open sky at 0 m clearance) [MODEL]",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 50,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      150,
+      -1000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          150,
+          1000
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          0,
+          0
+        ],
+        "min_runs_ok_permille": 972
+      }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "id": "drive-by",
+  "title": "Drive-by 50 m outside the circle never fires",
+  "source": "ADDENDUM-01 4.2 (<= 1.4% at 50 m clearance)",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      200,
+      -1000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          200,
+          1000
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}

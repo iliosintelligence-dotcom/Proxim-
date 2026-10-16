@@ -1,0 +1,67 @@
+{
+  "id": "opposite-carriageway",
+  "title": "Car on the opposite carriageway 25 m away (inside the buffer) never fires",
+  "source": "PLAN M1; engine-spec 11 must-not-fire",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 20,
+  "signposts": [
+    {
+      "id": "exit-cafe",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            0,
+            -5000
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      -25,
+      1000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          -25,
+          -6000
+        ],
+        "speed_mmps": 29000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "exit-cafe",
+        "fires": [
+          0,
+          0
+        ],
+        "reasons_include": [
+          "BEARING_MISMATCH"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "id": "health-standoff",
+  "title": "Hospital standoff: health approach fires far out; nothing fires, logs or remembers inside 1 km",
+  "source": "PLAN M1/M3 R1; engine-spec 7 F10, I6",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "consent": {
+    "location_matching": "granted",
+    "nearby_health_events": "granted",
+    "health_receipt": "receipt-synthetic-1"
+  },
+  "policy": {},
+  "standoff_zones_m": [
+    {
+      "id": "hospital-1",
+      "center_m": [
+        0,
+        0
+      ]
+    }
+  ],
+  "signposts": [
+    {
+      "id": "hosp-approach",
+      "event": "approach",
+      "shape": {
+        "kind": "route",
+        "vertices_m": [
+          [
+            300,
+            -5500
+          ],
+          [
+            300,
+            -2500
+          ]
+        ],
+        "buffer_m": 30
+      },
+      "trigger": {
+        "lead_s": 40,
+        "mode": "vehicle"
+      },
+      "class": "health",
+      "category": "health.hospital"
+    },
+    {
+      "id": "cafe-near-hospital",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          300,
+          -300
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      300,
+      -6000
+    ],
+    "moves": [
+      {
+        "to_m": [
+          300,
+          3000
+        ],
+        "speed_mmps": 25000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "hosp-approach",
+        "fires": [
+          1,
+          1
+        ],
+        "true_d_rem_m": [
+          400,
+          1500
+        ],
+        "t_hat_min_s": 16
+      },
+      {
+        "signpost": "cafe-near-hospital",
+        "fires": [
+          0,
+          0
+        ]
+      }
+    ],
+    "no_fire_within": [
+      {
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 1100
+      }
+    ],
+    "fix_reasons_include": [
+      "SUPPRESSED"
+    ],
+    "mem_empty_after": [
+      "SUPPRESSED"
+    ]
+  }
+}

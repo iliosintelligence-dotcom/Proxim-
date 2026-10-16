@@ -1,0 +1,79 @@
+{
+  "id": "clock-set-back",
+  "title": "Host clock set back an hour before a second visit: fixes are refused, caps cannot reopen",
+  "source": "engine-spec 7 (now = max(clock, hwm)), errata E-D5",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "clock": {
+    "events": [
+      {
+        "at_s": 1000,
+        "shift_ms": -3600000
+      }
+    ]
+  },
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -600
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          1500
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "gap_s": 2400,
+        "then_at_m": [
+          0,
+          -600
+        ]
+      },
+      {
+        "to_m": [
+          0,
+          1500
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          1,
+          1
+        ]
+      }
+    ],
+    "fix_reasons_include": [
+      "FIX_FROM_FUTURE"
+    ]
+  }
+}

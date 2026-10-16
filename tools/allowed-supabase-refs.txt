@@ -1,0 +1,13 @@
+# Supabase project refs / project_id values that MAY be configured in this repo.
+# One per line, '#' comments allowed.
+#
+# EMPTY ON PURPOSE. No Proxim Supabase project exists yet. Creating one needs
+# explicit owner confirmation (cost, organisation, region); see
+# docs/DECISIONS.md. When the owner confirms and the project is created, add
+# its ref here in the same change that first references it, and cite the
+# decision in the commit message.
+#
+# Note: `project_id` in supabase/config.toml is a LOCAL docker-namespace name
+# for the Supabase CLI, not a remote ref. If you add one (for example
+# `proxim-local`) to run the local stack, list it here too: the guard treats
+# every configured project_id as a project reference until allowlisted.

@@ -1,0 +1,84 @@
+{
+  "id": "re-arm",
+  "title": "Re-arm: a return inside the 30 min cool-down is quiet, a return after it fires",
+  "source": "engine-spec 6.1 (cool 30 min), 7 F24",
+  "origin": {
+    "lat_e7": 450000000,
+    "lon_e7": 70000000
+  },
+  "noise": {
+    "profile": "open_sky"
+  },
+  "seeds": 10,
+  "signposts": [
+    {
+      "id": "cafe",
+      "event": "enter",
+      "shape": {
+        "kind": "circle",
+        "center_m": [
+          0,
+          0
+        ],
+        "radius_m": 150
+      }
+    }
+  ],
+  "trace": {
+    "kind": "path",
+    "start_m": [
+      0,
+      -600
+    ],
+    "moves": [
+      {
+        "to_m": [
+          0,
+          1500
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "gap_s": 480,
+        "then_at_m": [
+          0,
+          -600
+        ]
+      },
+      {
+        "to_m": [
+          0,
+          1500
+        ],
+        "speed_mmps": 15000
+      },
+      {
+        "gap_s": 1800,
+        "then_at_m": [
+          0,
+          -600
+        ]
+      },
+      {
+        "to_m": [
+          0,
+          1500
+        ],
+        "speed_mmps": 15000
+      }
+    ]
+  },
+  "expect": {
+    "signposts": [
+      {
+        "signpost": "cafe",
+        "fires": [
+          2,
+          2
+        ],
+        "min_gap_s": 1800,
+        "true_depth_min_m": 0
+      }
+    ]
+  }
+}
