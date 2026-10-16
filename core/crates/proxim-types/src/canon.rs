@@ -35,12 +35,29 @@ pub fn to_canonical_json<T: Serialize>(value: &T) -> Result<String, EngineError>
 /// # Errors
 /// As [`to_canonical_json`].
 pub fn value_to_canonical(value: &Value) -> Result<String, EngineError> {
+    value_to_canonical_with_depth(value, MAX_JSON_DEPTH)
+}
+
+/// As [`value_to_canonical`] with an explicit nesting limit, so a reader that accepted a deeper
+/// document under raised [`crate::strict::JsonLimits`] can also check its canonical form.
+///
+/// # Errors
+/// As [`to_canonical_json`], with `max_depth` in place of [`MAX_JSON_DEPTH`].
+pub fn value_to_canonical_with_depth(
+    value: &Value,
+    max_depth: usize,
+) -> Result<String, EngineError> {
     let mut out = String::new();
-    write_value(&mut out, value, 0)?;
+    write_value(&mut out, value, 0, max_depth)?;
     Ok(out)
 }
 
-fn write_value(out: &mut String, value: &Value, depth: usize) -> Result<(), EngineError> {
+fn write_value(
+    out: &mut String,
+    value: &Value,
+    depth: usize,
+    max_depth: usize,
+) -> Result<(), EngineError> {
     match value {
         // spec 3.2: no null anywhere; an absent optional is omitted by the type, never nulled.
         Value::Null => return Err(EngineError::Parse),
@@ -49,7 +66,7 @@ fn write_value(out: &mut String, value: &Value, depth: usize) -> Result<(), Engi
         Value::String(s) => write_string(out, s),
         Value::Array(items) => {
             let inner = depth.checked_add(1).ok_or(EngineError::Limit)?;
-            if inner > MAX_JSON_DEPTH {
+            if inner > max_depth {
                 return Err(EngineError::Limit);
             }
             out.push('[');
@@ -57,13 +74,13 @@ fn write_value(out: &mut String, value: &Value, depth: usize) -> Result<(), Engi
                 if i > 0 {
                     out.push(',');
                 }
-                write_value(out, item, inner)?;
+                write_value(out, item, inner, max_depth)?;
             }
             out.push(']');
         }
         Value::Object(map) => {
             let inner = depth.checked_add(1).ok_or(EngineError::Limit)?;
-            if inner > MAX_JSON_DEPTH {
+            if inner > max_depth {
                 return Err(EngineError::Limit);
             }
             let mut entries: Vec<(&String, &Value)> = map.iter().collect();
@@ -75,7 +92,7 @@ fn write_value(out: &mut String, value: &Value, depth: usize) -> Result<(), Engi
                 }
                 write_string(out, key);
                 out.push(':');
-                write_value(out, item, inner)?;
+                write_value(out, item, inner, max_depth)?;
             }
             out.push('}');
         }

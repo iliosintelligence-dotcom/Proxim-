@@ -95,6 +95,7 @@ fn soup_case(seed: u64) -> Inputs {
     let mut rng = Rng::new(seed);
     let mut inp = base_inputs();
     inp.seed = rng.next_u64();
+    inp.case_seed = Some(seed);
     match rng.below(3) {
         0 => {
             // one slot gets soup
@@ -173,6 +174,7 @@ fn sweep(values: Vec<Value>) -> Stats {
                 let mut inp = Inputs {
                     args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
                     seed: 0,
+                    case_seed: None,
                 };
                 inp.seed = 0;
                 one(&inp, &mut all);
@@ -201,6 +203,21 @@ fn one(inp: &Inputs, st: &mut Stats) {
             Ok(Kind::Success) => st.successes += 1,
         },
     }
+}
+
+#[test]
+fn a_reported_case_seed_replays_the_same_case() {
+    // The failure report prints `case_seed`; `fuzz one <case_seed>` must rebuild the same inputs.
+    for seed in [1_u64, 42, 0x9E37_79B9_7F4A_7C15] {
+        let a = make_case(seed);
+        assert_eq!(a.case_seed, Some(seed));
+        assert!(a.describe().contains(&format!("case_seed={seed} ")));
+        let b = make_case(a.case_seed.unwrap());
+        assert_eq!(a.args, b.args);
+        assert_eq!(a.seed, b.seed);
+    }
+    assert_eq!(prefix("ab\u{e9}cd", 3), "ab", "never splits a character");
+    assert_eq!(prefix("abc", 10), "abc");
 }
 
 #[test]
@@ -363,6 +380,7 @@ fn huge_strings_and_arrays_are_bounded_errors_not_crashes() {
             let mut inp = Inputs {
                 args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
                 seed: 0,
+                case_seed: None,
             };
             inp.seed = 1;
             one(&inp, &mut stats);
@@ -374,6 +392,7 @@ fn huge_strings_and_arrays_are_bounded_errors_not_crashes() {
             &Inputs {
                 args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
                 seed: 0,
+                case_seed: None,
             },
             &mut stats,
         );
@@ -384,6 +403,7 @@ fn huge_strings_and_arrays_are_bounded_errors_not_crashes() {
             &Inputs {
                 args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)),
                 seed: 0,
+                case_seed: None,
             },
             &mut stats,
         );
@@ -488,7 +508,7 @@ proptest! {
         }).collect();
         let path = &nums[which % nums.len()];
         set_path(&mut w[arg], path, json!(v));
-        let inp = Inputs { args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)), seed: 0 };
+        let inp = Inputs { args: [0, 1, 2, 3, 4, 5].map(|i| render_raw(&w[i], &mut None)), seed: 0, case_seed: None };
         let text = inp.call();
         prop_assert!(check_response(&text).is_ok());
     }

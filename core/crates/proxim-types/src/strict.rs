@@ -13,7 +13,7 @@
 //! Typed decoding goes through `serde_json::from_value` so the types' `deny_unknown_fields`
 //! applies: an unknown field is [`EngineError::Parse`] (reserved fields excepted, spec 10).
 
-use crate::canon::value_to_canonical;
+use crate::canon::value_to_canonical_with_depth;
 use crate::defaults::{
     MAX_JSON_ARRAY_LEN, MAX_JSON_BYTES, MAX_JSON_DEPTH, MAX_JSON_OBJECT_KEYS, MAX_JSON_STRING_BYTES,
 };
@@ -87,7 +87,7 @@ pub fn from_canonical_json_with<T: DeserializeOwned + serde::Serialize>(
     limits: &JsonLimits,
 ) -> Result<T, EngineError> {
     let tree = parse_value(input, limits)?;
-    if value_to_canonical(&tree)?.as_bytes() != input {
+    if value_to_canonical_with_depth(&tree, limits.max_depth)?.as_bytes() != input {
         return Err(EngineError::Parse);
     }
     decode_tree(tree)
