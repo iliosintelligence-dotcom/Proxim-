@@ -169,12 +169,29 @@ fn the_scenarios_key_outcomes() {
         // Drive-past adverts fire in the direction of travel only: nothing on the way home.
         let south = w.journeys.iter().position(|j| j.key == "a1-south").unwrap();
         assert!(r.deliveries.iter().all(|d| d.journey != south));
-        // M1 limit (spec E-D-HEALTH): a health advert never fires on ENTER, even with consent.
-        let flu = advert(&w, "flu-clinic");
-        assert!(r.deliveries.iter().all(|d| d.advert != flu));
-        assert!(r.misses.iter().any(|m| m.phone == phone(&w, "Gus")
-            && m.advert == flu
+        // Health on foot (E-P-FOOT): the lawful walking signpost 1.5 km before the clinic reaches
+        // Gus through CareWell, where he shares health interests, at the health floor of 700.
+        let walk = advert(&w, "flu-clinic-walk");
+        let gus = r
+            .deliveries
+            .iter()
+            .find(|d| d.advert == walk)
+            .expect("the walking flu-jab signpost is delivered");
+        assert_eq!(
+            (gus.phone, gus.app, gus.conf_milli),
+            (phone(&w, "Gus"), app(&w, "carewell"), 700)
+        );
+        assert_eq!(r.deliveries.iter().filter(|d| d.advert == walk).count(), 1);
+        // The same walk on 25 m GPS is not strong evidence: capped at 600, no health advert.
+        assert!(r.misses.iter().any(|m| m.phone == phone(&w, "Hana")
+            && m.advert == walk
             && m.kind == MissKind::Path(ReasonCode::PathConfidenceLow)));
+        // The advert at the clinic door is what the law and PLAN 6.5 forbid: dropped by F19.
+        let door = advert(&w, "flu-clinic-door");
+        assert!(r.deliveries.iter().all(|d| d.advert != door));
+        assert!(r.misses.iter().any(|m| m.phone == phone(&w, "Gus")
+            && m.advert == door
+            && m.kind == MissKind::Policy(ReasonCode::TriggerInStandoff)));
     }
     // Same mall, same moment, each app picks the advert its users care about most.
     let dev = shown(&best, &w, "Dev");
@@ -193,6 +210,38 @@ fn the_scenarios_key_outcomes() {
     assert!(best.misses.iter().any(|m| m.phone == phone(&w, "Ada")
         && m.advert == advert(&w, "ev-a1")
         && m.kind == MissKind::Paced(ReasonCode::CapAppInterval)));
+}
+
+/// No advert of any class is shown within a health facility's 1,000 m standoff (F10), and every
+/// health advert's trigger lies outside it (F19).
+#[test]
+fn nothing_fires_within_a_facility_standoff() {
+    let w = world();
+    let zones = town::FACILITIES;
+    let dist_m = |a: (i32, i32), b: (i64, i64)| {
+        let (lat, lon) = town::at(b.0, b.1).unwrap();
+        // Planar metres near the town (latitude 45): 1e-7 deg is 1.11 cm north, 0.79 cm east.
+        let dn = i64::from(a.0 - lat) * 111_195 / 10_000_000;
+        let de = i64::from(a.1 - lon) * 78_626 / 10_000_000;
+        (dn * dn + de * de).isqrt()
+    };
+    for r in runs(&w) {
+        for d in &r.deliveries {
+            let fix = w.journeys[d.journey]
+                .fixes
+                .iter()
+                .find(|f| f.t_ms == d.t_ms)
+                .unwrap();
+            for (id, _, centre) in zones {
+                let m = dist_m((fix.lat_e7, fix.lon_e7), *centre);
+                assert!(m > 1000, "{id}: delivery {m} m away");
+            }
+        }
+    }
+    // Every policy carries the facility zones (the SDK adds them).
+    for a in &w.apps {
+        assert_eq!(a.policy.standoff_zones.len(), zones.len(), "{}", a.name);
+    }
 }
 
 #[test]

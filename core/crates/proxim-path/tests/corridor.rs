@@ -135,12 +135,36 @@ fn p1_accuracy_penalties_and_cap() {
 }
 
 #[test]
-fn p1_foot_is_capped_at_600() {
+fn p1_foot_is_capped_at_600_or_700_with_strong_evidence() {
     let g = good();
     let gb = base_of(&g);
     let foot = |n60, dot| p1_confidence(&ev(&g, &gb, n60, Mode::Foot, dot, Some(1_500))).unwrap();
-    assert_eq!(foot(8, Some(ONE)), Some(600));
+    // E-P-FOOT: both bonuses and good accuracy lift the foot cap to the health floor, 700.
+    assert_eq!(foot(8, Some(ONE)), Some(700));
+    assert_eq!(
+        foot(8, Some(cos(150))),
+        Some(700),
+        "15 degrees is still the bonus"
+    );
+    // One bonus missing: the plain cap.
+    assert_eq!(foot(4, Some(ONE)), Some(600));
+    assert_eq!(foot(8, Some(cos(151))), Some(600));
     assert_eq!(foot(3, Some(cos(300))), Some(600));
+    // Accuracy: 20 m is strong, anything worse is not.
+    for (acc, want) in [(20_000, 700), (20_001, 600), (30_000, 600)] {
+        let r = spaced([acc; 3]);
+        let b = base_of(&r);
+        assert_eq!(
+            p1_confidence(&ev(&r, &b, 8, Mode::Foot, Some(ONE), Some(1_500))).unwrap(),
+            Some(want),
+            "acc {acc}"
+        );
+    }
+    // Vehicles are unchanged: still up to 800.
+    assert_eq!(
+        p1_confidence(&ev(&g, &gb, 8, Mode::Vehicle, Some(ONE), Some(10_000))).unwrap(),
+        Some(800)
+    );
     let r = spaced([40_000; 3]);
     let b = base_of(&r);
     // The cap applies after the penalty: 600 - 100 stays 500.
@@ -687,7 +711,13 @@ proptest! {
         let b = base_of(&r);
         if let Some(c) = p1_confidence(&ev(&r, &b, n60, mode, Some(dot), vf)).unwrap() {
             prop_assert!((400..=800).contains(&c));
-            if mode == Mode::Foot { prop_assert!(c <= 600); }
+            if mode == Mode::Foot {
+                // E-P-FOOT: 700 needs both bonuses and acc_eff <= 20 m on the last three fixes
+                // (`spaced` sets acc_eff directly).
+                let strong = n60 >= 5 && dot >= cos(150) && acc.iter().all(|a| *a <= 20_000);
+                let cap = if strong { 700 } else { 600 };
+                prop_assert!(c <= cap);
+            }
         }
     }
 }

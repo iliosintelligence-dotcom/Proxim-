@@ -342,27 +342,46 @@ fn v_eff_floors_by_mode() {
 
 #[test]
 fn walker_confidence_is_capped_at_600_and_fires_at_d_lo() {
-    let len = 600;
-    let mut sp = approach_route("r-1", len);
-    set(&mut sp, "trigger.mode", json!("foot"));
-    let mut d = Drive::new(len, 1_400);
-    d.start_along_mm = 100_000;
-    let mut rig = Rig::new().with_signpost(sp);
-    let mut fire = None;
-    for k in 0..600 {
-        let s = rig.step(&d.fix(k));
-        if let Some(f) = s.fires().into_iter().next() {
-            fire = Some(f);
-            break;
+    // E-P-FOOT: the walker cap is 600 unless the evidence is strong (both bonuses and
+    // acc_eff <= 20 m), when it is 700. A 25 m fix accuracy is never strong.
+    let fire_of = |acc_mm: u32, class: &str| {
+        let len = 600;
+        let mut sp = approach_route("r-1", len);
+        set(&mut sp, "trigger.mode", json!("foot"));
+        set(&mut sp, "class", json!(class));
+        let mut d = Drive::new(len, 1_400);
+        d.start_along_mm = 100_000;
+        d.acc_mm = acc_mm;
+        let mut rig = Rig::new().with_signpost(sp);
+        rig.consent["nearby_health_events"] = json!("granted");
+        rig.consent["health_receipt"] = json!("receipt-1");
+        for k in 0..600 {
+            let s = rig.step(&d.fix(k));
+            if let Some(f) = s.fires().into_iter().next() {
+                return Some(f);
+            }
         }
-    }
-    let f = fire.expect("a walker fires");
-    assert_eq!(f["path_conf_milli"], 600, "foot is capped at 600");
-    let d_rem = f["d_rem_mm"].as_i64().unwrap();
+        None
+    };
+    let weak = fire_of(25_000, "general").expect("a walker fires");
+    assert_eq!(weak["path_conf_milli"], 600, "foot is capped at 600");
+    let strong = fire_of(5_000, "general").expect("a walker fires");
+    assert_eq!(
+        strong["path_conf_milli"], 700,
+        "strong foot evidence reaches 700"
+    );
+    let d_rem = strong["d_rem_mm"].as_i64().unwrap();
     // d_lo for foot = max(100 m, 3 acc_eff = 30 m) = 100 m; D_fire = clamp(1.4 x 43 = 60 m, d_lo, d_hi)
     assert!(
         (90_000..=101_000).contains(&d_rem),
         "walker fire distance {d_rem}"
+    );
+    // Health (floor 700): a walker receives it only on strong evidence.
+    let h = fire_of(5_000, "health").expect("strong evidence reaches the health floor");
+    assert_eq!(h["path_conf_milli"], 700);
+    assert!(
+        fire_of(25_000, "health").is_none(),
+        "600 never meets the health floor"
     );
 }
 

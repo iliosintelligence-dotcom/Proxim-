@@ -1,5 +1,5 @@
-//! "Riverton", the simulator's fictional town: six partner apps, 17 adverts from ten industries,
-//! seven phones and six journeys. Coordinates are metres east and north of the town centre
+//! "Riverton", the simulator's fictional town: six partner apps, 18 adverts from ten industries,
+//! two health facilities, eight phones and eight journeys. Coordinates are metres east and north of the town centre
 //! (latitude 45.0, longitude 7.0); every road is straight and runs north-south or east-west.
 //!
 //! ```text
@@ -7,15 +7,20 @@
 //!   8000 |  A1 expressway (x = -3000), northbound adverts: outreach, fuel, hotel, EV, casino
 //!   2000 |  Riverside Park path (y = 2000): gym, sportswear, smoothie bar
 //!      0 |  Main Street (y = 0), eastbound adverts: drive-through, supermarket
-//!        |  High Street (x = 500), on foot: cafe, bar, bank, mall, pharmacy
+//!        |  High Street (x = 500), on foot: cafe, bar, bank, mall, pharmacy, flu-jab signpost
+//!  -1500 |  St Mary's Hospital (x = -1500); -3000: Riverton Walk-in Clinic (x = 500)
 //!  -8000 |
+//!
+//! Both facilities carry the 1,000 m standoff zone the SDK hands every app (engine spec F10 and
+//! F19): no health advert may be placed or fire within it (PLAN 1 and 6.5; state laws restrict
+//! health messaging within 1,750 to 2,000 ft of a facility).
 //! ```
 
 use crate::phone::{Advert, Installed, Journey, PartnerApp, Phone, World};
 use alloc::string::String;
 use alloc::vec::Vec;
 use proxim_geo::trig::scale_for_lat_q;
-use proxim_types::{CategoryAffinity, EngineError, Fix, Policy, Signpost};
+use proxim_types::{CategoryAffinity, EngineError, Fix, Mode, Policy, Signpost, StandoffZone};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -70,13 +75,43 @@ fn base(ad: &Ad, event: &str, trigger: Value) -> Value {
 /// A drive-past advert: an APPROACH route along a road, firing about `lead_s` before the anchor
 /// (the last vertex), in the direction of travel only.
 fn approach(ad: &Ad, from: (i64, i64), anchor: (i64, i64)) -> Result<Advert, EngineError> {
+    approach_by(ad, from, anchor, Mode::Vehicle)
+}
+
+/// [`approach`] for a given travel mode (a walking signpost fires about 100 m before its anchor).
+fn approach_by(
+    ad: &Ad,
+    from: (i64, i64),
+    anchor: (i64, i64),
+    mode: Mode,
+) -> Result<Advert, EngineError> {
     let trigger = json!({
         "origin": pos(anchor.0, anchor.1)?,
         "shape": {"kind": "route", "buffer_m": 30,
                   "vertices": [pos(from.0, from.1)?, pos(anchor.0, anchor.1)?]},
-        "lead_s": 40, "mode": "vehicle"
+        "lead_s": 40, "mode": mode
     });
     advert(ad, &base(ad, "approach", trigger))
+}
+
+/// The health facilities: `(id, name, position)`. Each gets the default 1,000 m standoff zone.
+pub const FACILITIES: &[(&str, &str, (i64, i64))] = &[
+    ("st-marys", "St Mary's Hospital", (-1500, -1500)),
+    ("walk-in-clinic", "Riverton Walk-in Clinic", (500, -3000)),
+];
+
+/// The standoff zones of [`FACILITIES`], as the SDK supplies them to every app's policy.
+///
+/// # Errors
+/// From the geometry helpers (never for the built-in town).
+pub fn standoff_zones() -> Result<Vec<StandoffZone>, EngineError> {
+    FACILITIES
+        .iter()
+        .map(|(id, _, (e, n))| {
+            StandoffZone::deserialize(&json!({"id": id, "center": pos(*e, *n)?}))
+                .map_err(|_| EngineError::Parse)
+        })
+        .collect()
 }
 
 /// A walk-in advert: an ENTER circle of `radius_m` around a place.
@@ -284,15 +319,32 @@ pub fn adverts() -> Result<Vec<Advert>, EngineError> {
             (HIGH, 1200),
             150,
         )?,
+        // The version PLAN 1 and 6.5 permit (pending counsel): a walking signpost whose route
+        // ends 1.5 km before the clinic, outside its 1,000 m standoff.
+        approach_by(
+            &health_ad(
+                "flu-clinic-walk",
+                "Riverton Walk-in Clinic",
+                "health.clinic",
+                "Walk-in flu jabs, 1.5 km ahead on the High Street",
+                "High Street south, walking",
+            ),
+            (HIGH, 0),
+            (HIGH, -1500),
+            Mode::Foot,
+        )?,
+        // The version PLAN 1 and 6.5 rule out (and state health-geofence laws restrict, per
+        // counsel): an advert at the clinic door. The sender backend rejects it; the engine
+        // drops it too (F19 TRIGGER_IN_STANDOFF).
         enter(
             &health_ad(
-                "flu-clinic",
-                "CityChem",
+                "flu-clinic-door",
+                "Riverton Walk-in Clinic",
                 "health.clinic",
                 "Walk-in flu jabs today",
-                "High Street north",
+                "At the clinic door",
             ),
-            (HIGH, 1200),
+            (HIGH, -3000),
             150,
         )?,
         enter(
@@ -342,11 +394,15 @@ fn strings(v: &[&str]) -> Vec<String> {
     v.iter().map(|s| String::from(*s)).collect()
 }
 
-/// The partner apps and the category policy each publishes.
-#[must_use]
-pub fn apps() -> Vec<PartnerApp> {
+/// The partner apps and the category policy each publishes, plus the facility standoff zones
+/// the SDK adds to every app's policy.
+///
+/// # Errors
+/// From the geometry helpers (never for the built-in town).
+pub fn apps() -> Result<Vec<PartnerApp>, EngineError> {
     let restricted = strings(&["alcohol", "gambling"]);
-    Vec::from([
+    let zones = standoff_zones()?;
+    let mut apps = Vec::from([
         PartnerApp {
             key: "carewell",
             name: "CareWell",
@@ -426,7 +482,11 @@ pub fn apps() -> Vec<PartnerApp> {
                 ..Policy::default()
             },
         },
-    ])
+    ]);
+    for a in &mut apps {
+        a.policy.standoff_zones.clone_from(&zones);
+    }
+    Ok(apps)
 }
 
 /// Fixes one second apart along an axis-aligned polyline, `speed_mmps` on every leg.
@@ -555,6 +615,27 @@ pub fn journeys() -> Result<Vec<Journey>, EngineError> {
                 8000,
             )?,
         },
+        // Continues into the clinic's standoff and to its door: nothing may fire inside it.
+        Journey {
+            key: "clinic-walk",
+            name: "19:30 walk down the High Street to the walk-in clinic",
+            fixes: walk(
+                at_time(19, 30),
+                &[(500, 1500), (500, -2950)],
+                WALK_MMPS,
+                8000,
+            )?,
+        },
+        Journey {
+            key: "clinic-walk-poor-gps",
+            name: "19:30 the same walk with 25 m GPS accuracy",
+            fixes: walk(
+                at_time(19, 30),
+                &[(500, 1500), (500, -2950)],
+                WALK_MMPS,
+                25_000,
+            )?,
+        },
     ]))
 }
 
@@ -570,7 +651,7 @@ pub fn world() -> Result<World, EngineError> {
             .map(|k| j(k).ok_or(EngineError::Parse))
             .collect()
     };
-    let apps = apps();
+    let apps = apps()?;
     let a = |key: &str| apps.iter().position(|x| x.key == key);
     let inst = |key: &str, location: bool, health: bool| -> Result<Installed, EngineError> {
         Ok(Installed {
@@ -592,7 +673,7 @@ pub fn world() -> Result<World, EngineError> {
         },
         Phone {
             name: "Ben",
-            persona: "drives past the hospital; shares health interests with CareWell",
+            persona: "drives past the hospital; granted nearby health events in CareWell",
             apps: Vec::from([
                 inst("carewell", true, true)?,
                 inst("roadmate", true, false)?,
@@ -601,7 +682,7 @@ pub fn world() -> Result<World, EngineError> {
         },
         Phone {
             name: "Cara",
-            persona: "runner; said no to health notifications",
+            persona: "runner; did not grant nearby health events",
             apps: Vec::from([
                 inst("fitstride", true, false)?,
                 inst("carewell", true, false)?,
@@ -627,9 +708,15 @@ pub fn world() -> Result<World, EngineError> {
         },
         Phone {
             name: "Gus",
-            persona: "walks past the flu clinic; shares health interests with CareWell",
+            persona: "walks all the way to the walk-in clinic; granted nearby health events in CareWell",
             apps: Vec::from([inst("carewell", true, true)?, inst("citygo", true, false)?]),
-            journeys: js(&["high-street"])?,
+            journeys: js(&["high-street", "clinic-walk"])?,
+        },
+        Phone {
+            name: "Hana",
+            persona: "same walk to the clinic on poor GPS (25 m); granted nearby health events in CareWell",
+            apps: Vec::from([inst("carewell", true, true)?]),
+            journeys: js(&["clinic-walk-poor-gps"])?,
         },
         Phone {
             name: "Finn",

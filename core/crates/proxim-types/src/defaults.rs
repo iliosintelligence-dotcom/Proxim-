@@ -112,6 +112,12 @@ pub const P1_ACC_PENALTY1_MM: i64 = 30_000;
 pub const P1_ACC_PENALTY2_MM: i64 = 50_000;
 /// Confidence cap for the foot mode (5.3).
 pub const P1_CONF_FOOT_CAP: u16 = 600;
+/// Foot cap with strong evidence (5.3, errata E-P-FOOT): both bonuses earned and the worst
+/// `acc_eff` of the last three fixes at most [`P1_FOOT_STRONG_ACC_MM`]. Equals the health floor
+/// [`MIN_CONF_HEALTH`], so a walker can receive a health approach only on strong evidence.
+pub const P1_CONF_FOOT_STRONG_CAP: u16 = 700;
+/// See [`P1_CONF_FOOT_STRONG_CAP`].
+pub const P1_FOOT_STRONG_ACC_MM: i64 = 20_000;
 /// P0 (presence) confidence, permille (5.3).
 pub const P0_CONF: u16 = 500;
 /// Default `min_path_conf_milli` for a general signpost (spec 1).

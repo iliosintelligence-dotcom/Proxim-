@@ -934,7 +934,12 @@ fn foot_mode_fires_at_d_lo_with_capped_confidence() {
         "{:?}",
         e.d_rem_mm
     );
-    assert_eq!(e.path_conf_milli, 600, "foot is capped at 600");
+    // 5 m fixes, 15 a minute, heading on the route: strong foot evidence (E-P-FOOT) lifts the
+    // cap from 600 to 700.
+    assert_eq!(
+        e.path_conf_milli, 700,
+        "strong foot evidence is capped at 700"
+    );
     // At 1 Hz the walker fires too (errata E-P12): the time-span CLOSING rule sees the 15 s of
     // walking in the trace, not 2.8 m over three fixes.
     let fixes: Vec<Fix> = (0..4500)
@@ -955,7 +960,11 @@ fn foot_mode_fires_at_d_lo_with_capped_confidence() {
         "{:?}",
         e.d_rem_mm
     );
-    assert_eq!((e.path_tier, e.path_conf_milli), (1, 600));
+    assert_eq!(
+        (e.path_tier, e.path_conf_milli),
+        (1, 700),
+        "strong foot evidence"
+    );
     // Foot band 0.5..2.5 m/s: 3 m/s is out of band.
     let fixes: Vec<Fix> = (0..1500)
         .map(|i| {

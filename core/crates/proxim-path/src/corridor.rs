@@ -9,9 +9,9 @@ use proxim_geo::{
 use proxim_types::defaults::{
     CLOSING_MAX_SPAN_MS, CLOSING_MIN_ADVANCE_MM, CLOSING_MIN_SPAN_MS, KAPPA_PERMILLE, P0_CONF,
     P1_ACC_EFF_MAX_MM, P1_ACC_PENALTY1_MM, P1_ACC_PENALTY2_MM, P1_BONUS_FIXES,
-    P1_BONUS_HEADING_TOL_DDEG, P1_CONF_BASE, P1_CONF_BONUS, P1_CONF_FOOT_CAP, P1_CONF_PENALTY1,
-    P1_CONF_PENALTY2, P1_HEADING_TOL_DDEG, P1_MIN_FIXES, WINDOW_AHEAD_MM, WINDOW_AHEAD_S,
-    WINDOW_BACK_MM,
+    P1_BONUS_HEADING_TOL_DDEG, P1_CONF_BASE, P1_CONF_BONUS, P1_CONF_FOOT_CAP,
+    P1_CONF_FOOT_STRONG_CAP, P1_CONF_PENALTY1, P1_CONF_PENALTY2, P1_FOOT_STRONG_ACC_MM,
+    P1_HEADING_TOL_DDEG, P1_MIN_FIXES, WINDOW_AHEAD_MM, WINDOW_AHEAD_S, WINDOW_BACK_MM,
 };
 use proxim_types::{Copy as AdCopy, EngineError, Mode, Position, TraceFix};
 
@@ -173,7 +173,8 @@ pub struct P1Evidence<'a> {
 /// and `|xt| <= buffer` on the last three fixes, at least three fixes within 60 s, `vf` at least
 /// the mode minimum, heading valid and within 45 degrees of the tangent, and CLOSING.
 /// `600 + 100 [>= 5 fixes in 60 s] + 100 [within 15 degrees] - 100 [worst acc_eff > 30 m]
-/// - 200 [> 50 m]`, capped at 600 for foot.
+/// - 200 [> 50 m]`, capped at 600 for foot, or at 700 for foot with strong evidence: both
+/// bonuses and the worst `acc_eff` at most 20 m (errata E-P-FOOT).
 ///
 /// # Errors
 /// Only if a tolerance table lookup fails (unreachable for the constants used).
@@ -207,10 +208,12 @@ pub fn p1_confidence(ev: &P1Evidence<'_>) -> Result<Option<u16>, EngineError> {
         return Ok(None);
     }
     let mut conf = P1_CONF_BASE;
-    if ev.fixes_60s >= P1_BONUS_FIXES {
+    let many_fixes = ev.fixes_60s >= P1_BONUS_FIXES;
+    let tight_heading = dot >= i64::from(cos_tol_q30(P1_BONUS_HEADING_TOL_DDEG)?);
+    if many_fixes {
         conf += P1_CONF_BONUS;
     }
-    if dot >= i64::from(cos_tol_q30(P1_BONUS_HEADING_TOL_DDEG)?) {
+    if tight_heading {
         conf += P1_CONF_BONUS;
     }
     if worst > P1_ACC_PENALTY2_MM {
@@ -219,7 +222,12 @@ pub fn p1_confidence(ev: &P1Evidence<'_>) -> Result<Option<u16>, EngineError> {
         conf -= P1_CONF_PENALTY1;
     }
     if ev.mode == Mode::Foot {
-        conf = conf.min(P1_CONF_FOOT_CAP);
+        let strong = many_fixes && tight_heading && worst <= P1_FOOT_STRONG_ACC_MM;
+        conf = conf.min(if strong {
+            P1_CONF_FOOT_STRONG_CAP
+        } else {
+            P1_CONF_FOOT_CAP
+        });
     }
     Ok(Some(conf))
 }

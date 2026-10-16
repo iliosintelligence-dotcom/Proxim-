@@ -270,8 +270,18 @@ pub fn run(world: &World, routing: Routing) -> Result<RunResult, EngineError> {
                         if (300..400).contains(&n.reason.id())
                             && !matches!(n.reason, ReasonCode::OffCorridor | ReasonCode::OutOfRange)
                         {
+                            // Keep a confidence or tier shortfall once seen: it says why an
+                            // advert that was in reach did not fire better than later notes.
                             let e = seen.entry(ai).or_insert(MissKind::Path(n.reason));
-                            if matches!(e, MissKind::Path(_)) {
+                            let decisive = |k: &MissKind| {
+                                matches!(
+                                    k,
+                                    MissKind::Path(
+                                        ReasonCode::PathConfidenceLow | ReasonCode::PathTierLow
+                                    )
+                                )
+                            };
+                            if matches!(e, MissKind::Path(_)) && !decisive(e) {
                                 *e = MissKind::Path(n.reason);
                             }
                         }

@@ -105,8 +105,15 @@ fn a_walker_fires_at_1_hz_and_a_stopped_walker_does_not() {
     let ev = d.events();
     assert_eq!(ev.len(), 1);
     let e = ev[0].1;
-    assert_eq!((e.path_tier, e.path_conf_milli), (1, 600));
+    // 5 m fixes at 1 Hz on the route: strong foot evidence (E-P-FOOT), 700 rather than 600.
+    assert_eq!((e.path_tier, e.path_conf_milli), (1, 700));
     assert!((90_000..=100_000).contains(&e.d_rem_mm.unwrap()), "{e:?}");
+    // The same walk with 25 m fixes is not strong: capped at 600.
+    let mut d = Driver::new(&sp);
+    d.feed_all(&walk(ANCHOR_MM - 400_000, 1400, 400, 25_000));
+    let ev = d.events();
+    assert_eq!(ev.len(), 1);
+    assert_eq!(ev[0].1.path_conf_milli, 600);
     // The same walker standing still 300 m out (Doppler says 0): never armed.
     let mut d = Driver::new(&sp);
     let fixes: Vec<Fix> = (0..200)
