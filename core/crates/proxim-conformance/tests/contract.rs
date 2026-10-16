@@ -21,10 +21,7 @@ use serde_json::{Value, json};
 use std::path::PathBuf;
 
 fn golden_dir() -> PathBuf {
-    PathBuf::from(format!(
-        "{}/../../testdata/golden",
-        env!("CARGO_MANIFEST_DIR")
-    ))
+    core_dir().join("testdata/golden")
 }
 
 fn all_json_files(dir: &std::path::Path, out: &mut Vec<PathBuf>) {
@@ -286,4 +283,13 @@ fn trig_table_files_use_the_nested_header_of_spec_9() {
         );
         assert_eq!(v["header"]["kind"], "trig");
     }
+}
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
 }

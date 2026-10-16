@@ -35,10 +35,18 @@ pub const fn engine_spec() -> u32 {
 mod tests {
     use super::*;
     use proxim_decide::golden::verify_json;
-    use std::path::PathBuf;
+
+    /// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+    /// when the tests run on a device (Android emulator) with the tree copied over.
+    fn core_dir() -> std::path::PathBuf {
+        std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+            || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+            std::path::PathBuf::from,
+        )
+    }
 
     fn vectors() -> Vec<(String, Vec<u8>)> {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/golden/decide");
+        let dir = core_dir().join("testdata/golden/decide");
         let mut out: Vec<_> = std::fs::read_dir(dir)
             .unwrap()
             .map(|e| e.unwrap().path())

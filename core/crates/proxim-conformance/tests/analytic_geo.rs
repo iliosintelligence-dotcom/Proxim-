@@ -173,11 +173,11 @@ fn scale_values_agree_with_published_degree_lengths() {
 }
 
 fn load_table(name: &str) -> serde_json::Value {
-    let path = format!(
-        "{}/../../testdata/golden/{name}",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    serde_json::from_slice(&std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"))).unwrap()
+    let path = core_dir().join("testdata/golden").join(name);
+    serde_json::from_slice(
+        &std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display())),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -916,4 +916,13 @@ fn rem_along_and_normalize() {
     // extremes never panic
     let _ = normalize_q30(i64::MAX, i64::MAX);
     let _ = normalize_q30(i64::MIN, i64::MIN);
+}
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
 }

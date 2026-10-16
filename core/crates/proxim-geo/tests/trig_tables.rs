@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use std::path::PathBuf;
 
 fn golden_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/golden")
+    core_dir().join("testdata/golden")
 }
 
 type Row = (usize, i64, i64);
@@ -214,3 +214,12 @@ const PINNED_SCALE_SHA256: &str =
     "539ff5182206bb12baf90cc21bddeb4f0306746e3e9209d7ecf62ccef947771a";
 const PINNED_SINCOS_SHA256: &str =
     "79bcdda582a121931729d908ee2782154ad3a67a7ad1cca9ef27f7f5d24b73e1";
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
+}

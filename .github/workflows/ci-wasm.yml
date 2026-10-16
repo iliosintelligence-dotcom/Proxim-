@@ -1,35 +1,31 @@
+# Runs the whole engine test suite compiled to WebAssembly (wasm32-wasip1 on
+# Wasmtime), and checks the browser target (wasm32-unknown-unknown) builds.
 name: ci-wasm
 on:
   push:
     branches: [main]
   pull_request:
-    paths: ["core/**", "sdks/web/**", ".github/workflows/ci-wasm.yml"]
+    paths: ["core/**", "sdks/web/**", "rust-toolchain.toml", ".github/workflows/ci-wasm.yml"]
 permissions:
   contents: read
+env:
+  CARGO_TERM_COLOR: always
 jobs:
   wasm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup show && rustup target add wasm32-unknown-unknown
+      - run: rustup show && rustup target add wasm32-wasip1 wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
-      - name: build wasm
+          key: wasm
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+      - run: wasmtime --version
+      - name: build for the browser (wasm32-unknown-unknown)
         run: cargo build --manifest-path core/Cargo.toml -p proxim-wasm --target wasm32-unknown-unknown --release
-      - name: install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --locked
-      - name: wasm-bindgen
-        run: |
-          wasm-bindgen --target nodejs --out-dir core/target/wasm-pkg \
-            core/target/wasm32-unknown-unknown/release/proxim_wasm.wasm
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: node golden-vector test
-        run: |
-          if [ -f sdks/web/test/golden.test.mjs ]; then
-            node --test sdks/web/test/golden.test.mjs
-          else
-            echo "golden-vector node test not written yet (placeholder)"
-          fi
+      - name: full test suite on WebAssembly (wasm32-wasip1 on Wasmtime)
+        env:
+          # Preopen / so the tests can read core/testdata at its host path.
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime run --dir=/::/ -S inherit-env
+        run: cargo test --manifest-path core/Cargo.toml --workspace --target wasm32-wasip1 --no-fail-fast

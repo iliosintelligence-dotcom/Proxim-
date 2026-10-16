@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 fn golden_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/golden")
+    core_dir().join("testdata/golden")
 }
 
 fn decide_files() -> Vec<(String, Vec<u8>)> {
@@ -339,4 +339,13 @@ fn golden_vectors_show_the_intended_behaviour() {
     let v = vector("world_tour");
     assert_eq!(fire_steps(&v), vec![32, 63, 74]);
     assert!(any_reason(&v, ReasonCode::PathConfidenceLow));
+}
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
 }

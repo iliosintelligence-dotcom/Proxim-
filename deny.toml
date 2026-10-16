@@ -21,9 +21,15 @@ allow = [
 ]
 confidence-threshold = 0.9
 
+# Our own crates are publish = false; they carry no licence field.
+[licenses.private]
+ignore = true
+
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Workspace path dependencies between our own unpublished crates are fine.
+allow-wildcard-paths = true
 deny = [
   { name = "reqwest" },
   { name = "hyper" },

@@ -92,9 +92,18 @@ fn new_closing_constants_are_the_spec_values() {
 #[test]
 fn the_per_crate_params_modules_are_gone() {
     // Spec 1: [P] values live in `proxim-types::defaults` and nowhere else.
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let root = core_dir().join("crates");
     for krate in ["proxim-path", "proxim-detect"] {
         let p = root.join(krate).join("src").join("params.rs");
         assert!(!p.exists(), "{} must not exist", p.display());
     }
+}
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
 }

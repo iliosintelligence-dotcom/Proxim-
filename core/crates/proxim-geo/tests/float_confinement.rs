@@ -133,7 +133,7 @@ fn violations(code: &str) -> Vec<String> {
 
 #[test]
 fn floats_exist_only_in_trig_and_h3() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let root = core_dir().join("crates");
     let mut files = Vec::new();
     rust_files(&root.join("proxim-types/src"), &mut files);
     rust_files(&root.join("proxim-geo/src"), &mut files);
@@ -188,4 +188,13 @@ fn scanner_catches_what_it_should() {
     );
     assert!(violations(&code_only("let c = '\"'; let n = 12; let t = a.0;")).is_empty());
     assert!(violations(&code_only("let m = u64::MAX; let i = is_f64;")).is_empty());
+}
+
+/// The `core/` directory. `PROXIM_CORE_DIR` overrides the build machine's path
+/// when the tests run on a device (Android emulator) with the tree copied over.
+fn core_dir() -> std::path::PathBuf {
+    std::env::var_os("PROXIM_CORE_DIR").map_or_else(
+        || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        std::path::PathBuf::from,
+    )
 }
