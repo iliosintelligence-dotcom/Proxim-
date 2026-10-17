@@ -19,7 +19,7 @@ The living record across sessions. Update it at the end of every session that ch
 |---|---|---|
 | 1 | Per-sender cap (3/day), per-app cap (4/day, up to 8), dismiss / hide / report | **Done** (E-D-CAPS, E-SPEC2) |
 | 2 | Wording rotation wired into `decide` (step 7b), with the chosen wording in the output | Next |
-| 3 | Health classes: `health_adjacent`, `health_facility` (I7, no device record), `prohibited_anchor` (R4); R3 destination suppression | Needs the owner decision below |
+| 3 | Health classes: `health_adjacent`, `health_facility` (I7, no device record; caps in memory only, owner decision Option A), `prohibited_anchor` (R4); R3 destination suppression | Planned |
 | 4 | Scoring V x Q x R x P, pacing draw (`PACED_OUT`), slots above one, small-sender quota | Planned |
 | 5 | Driving-safe format, daypart and quiet hours | Planned |
 | 6 | Policy matrix as data with exhaustive tests | Planned |
@@ -39,12 +39,11 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
 - An agent-ready sender API.
 
 **Health, before any live health traffic**
-- **Decision needed for M3 slice 3:** how `health_facility` adverts are frequency-capped.
-  - The conflict: PLAN 6.5 says such an advert leaves no record on the phone ("no pacing row"), but the "at most 2 a day" cap needs a stored count.
-  - Option A (recommended): count `health_facility` showings in memory only, never in the persisted state. The cap then holds within one app session, a restart resets it, and nothing on disk records a walk towards a clinic.
-  - Option B: persist an anonymous count per day with no advert id.
-  - Option C: no device cap at all; frequency comes from the flat-fee schedule.
-  - The Addendum 01 5.3 ledger row applies only to owner-mode notifications, which may not carry health classes (Addendum 01 R6), so that part is not a real conflict.
+- **Decided 2026-10-17 (owner): Option A** for `health_facility` frequency caps.
+  - Showings are counted in memory only and never written to the persisted state.
+  - The cap holds within one app session, and a restart resets it.
+  - Nothing on disk records a walk towards a clinic.
+  - The Addendum 01 5.3 ledger row applies only to owner-mode notifications, which may not carry health classes (Addendum 01 R6), so there is no conflict. Built in M3 slice 3.
 - Standoff measured from the facility perimeter (needs the M5 registry), not the centre.
 - Pharmacies as `health_adjacent`.
 - Counsel on foot routes that end on a clinic's street.
