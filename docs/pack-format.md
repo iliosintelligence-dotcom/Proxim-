@@ -108,9 +108,11 @@ offset  size  field
 u16 core_len (1..16,384), core   canonical JSON of the Signpost (engine spec 3), including "pack_kind"
 u8  n (1..8)                     declared creatives (v1 compiler: n <= 6)
 u8  ship_mask                    bit i = creative i shipped; bit 0 set; bits >= n clear
-for i in 0..n:  shipped -> u16 body_len (1..1,024) + body
-                else    -> 32-byte digest d_i
+for i in 0..n, not shipped:  32-byte digest d_i          (withheld digests first, index order)
+for i in 0..n, shipped:      u16 body_len (1..1,024) + body   (then shipped bodies, index order)
 ```
+
+This is the envelope layout of the normative vectors `core/testdata/golden/rotation/golden_v2.json` (OI-ROT-1). Their wire form is this entry followed by its 64-byte signature, which in a pack sits in the signature table instead. Body bytes are the canonical creative encoding of `tools/rotation-ref/envelope.py` (`canon_creative`); the verifier treats them as opaque.
 
 - **Creative digest:** `d_i = SHA-256("PROXIM-CREATIVE-V2" 0x00 || body_i)`.
 - **Variant id:** `vid_i` is the first 4 bytes of `d_i`.

@@ -5,10 +5,9 @@
 //! and sorted vectors only). Every input is untrusted: no `unwrap`, no unchecked indexing, time
 //! arithmetic saturates and geometry arithmetic is `i128` or checked, so overflow is impossible.
 //!
-//! M1 scope of the pack checks (spec 8, 10): the engine receives already-decoded signposts, so
-//! signature, pack expiry and revocation (reason ids 500 and above: `REVOKED`, `SIGNATURE_INVALID`,
-//! `SEQ_ROLLBACK`, `KID_REVOKED`, `PACK_EXPIRED`) are placeholders owned by `proxim-pack` (M2) and
-//! are not decided here; what M1 does check is the signpost's own validity window (F13, F14), the
+//! Pack checks (spec 8, 10; errata E-PACK): the engine receives signposts that `proxim-pack` has
+//! already verified, so signature, pack expiry and revocation (reason ids 500 to 504) are decided
+//! there, never here; what `decide` does check is the signpost's own validity window (F13, F14), the
 //! reserved-event fail-closed rule (F11), consent (F01, F15) and the policy filters (F16 to F18).
 //!
 //! Module map: [`json`] is the cross-binding conformance entry (`decide_json`), [`golden`] runs and
@@ -25,6 +24,7 @@ mod eff;
 pub mod golden;
 pub mod json;
 pub mod params;
+pub mod rotation;
 pub mod sha256;
 mod standoff;
 mod validate;

@@ -34,7 +34,16 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
 - Counsel on foot routes that end on a clinic's street.
 
 **M2 open items**
-- OI-ROT-1 (Addendum 02, 13): the rotation reference kernel and `golden_v2.json` need a named owner and a reviewer who is not the author. It blocks M2 exit and M3 entry.
+- OI-ROT-1 (Addendum 02, 13), the rotation reference: **the technical work is done.** The file was recovered and committed unchanged, the Rust port reproduces every vector, and the edge cases were added. **Still needed from the owner:** name the rotation-kernel lead and an approver who is not the author. Until then the item stays open, and it blocks M2 exit and M3 entry.
+  - **Approver: please decide these before M3 wiring.** The independent automated review of 2026-10-17 approved with fixes; the fixes are in. It found two places where the reference kernel disagrees with Addendum 02 5.3:
+    - (a) `emit` after the window has expired, with no `tick` in between, replaces the open decision without committing it, so a host that re-asks without ticking could skip caps.
+    - (b) `markShown` on a decision still open past its window commits and bills at any delay, whereas 5.3 says "inside the window".
+
+    The Rust port copies the reference exactly. Either the reference or the text must change, and that is the approver's call. Smaller gaps in the 5.1 text are also for the approver:
+    - `cn` before `last_day`;
+    - `lanes = 0`;
+    - that dismiss resets the day;
+    - that eviction never removes the row just written.
 - Signature-check timing on a real iPhone and a real Android phone. The host baseline is about 0.2 ms per entry. The numbers come with the device runs.
 - Production keys: the offline root key ceremony and KMS signing keys (M5) are owner and ops tasks. The test keys in the code are public and must never be trusted.
 - Not yet built: `open_pack` exposed to the iOS, Android and web SDKs through `proxim-ffi` and `proxim-wasm`; the database columns for signed revisions (M5).
@@ -44,6 +53,9 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
 
 ## Session log
 
+- **2026-10-17:**
+  - Pull request 4 merged (M2 core).
+  - OI-ROT-1 committed: `golden_v2.json` (unchanged), `tools/rotation-ref/`, the `new_count` supplement, the Rust rotation port, and the M2 entry layout aligned to the vectors.
 - **2026-10-16 (later):**
   - Pull request 3 merged (plan fixes, strategy, project memory).
   - M2 core built: signed packs end to end in Rust and TypeScript, checked against each other, on Linux and WebAssembly.

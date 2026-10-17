@@ -48,8 +48,8 @@ pub fn signed_message(core: &[u8], digests: &[[u8; 32]]) -> PackResult<Vec<u8>> 
     Ok(m)
 }
 
-/// Entry bytes (pack-format 4.1). Bodies whose bit is clear in `ship_mask` are replaced by their
-/// digest. No validation: tests use this to build malformed entries too.
+/// Entry bytes (pack-format 4.1): core, n, mask, the digests of withheld creatives, then the
+/// shipped bodies, each group in index order. No validation: tests use this to build malformed entries too.
 ///
 /// # Errors
 /// `SIGNATURE_INVALID` if a length does not fit its field.
@@ -59,12 +59,16 @@ pub fn entry(core: &[u8], bodies: &[&[u8]], ship_mask: u8) -> PackResult<Vec<u8>
     e.extend_from_slice(core);
     e.push(u8::try_from(bodies.len()).map_err(|_| ReasonCode::SignatureInvalid)?);
     e.push(ship_mask);
+    let shipped = |i: usize| i < 8 && ship_mask & (1 << i) != 0;
     for (i, body) in bodies.iter().enumerate() {
-        if i < 8 && ship_mask & (1 << i) != 0 {
+        if !shipped(i) {
+            e.extend_from_slice(&creative_digest(body));
+        }
+    }
+    for (i, body) in bodies.iter().enumerate() {
+        if shipped(i) {
             e.extend_from_slice(&u16_len(body.len())?);
             e.extend_from_slice(body);
-        } else {
-            e.extend_from_slice(&creative_digest(body));
         }
     }
     Ok(e)

@@ -128,6 +128,13 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
             .get(&rel)
             .unwrap_or_else(|| panic!("{rel} is not in MANIFEST.json"));
         assert_eq!(&sha256_hex(&bytes), want, "{rel}: manifest hash differs");
+        // OI-ROT-1 (Addendum 02 13): golden_v2.json is committed unchanged from the reference
+        // kernel's output (indented, no header) and is never regenerated, so only its listing and
+        // hash are checked here; `proxim-decide/tests/rotation_golden.rs` pins its exact bytes.
+        if rel == "rotation/golden_v2.json" {
+            seen += 1;
+            continue;
+        }
         let text = std::str::from_utf8(&bytes).unwrap();
         let body = text
             .strip_suffix('\n')

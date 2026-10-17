@@ -52,10 +52,14 @@ export function signedMessage(core: Uint8Array, digests: Uint8Array[]): Buffer {
 }
 
 export function encodeEntry(core: Uint8Array, bodies: Uint8Array[], shipMask: number): Buffer {
+  // Withheld digests first, then shipped bodies, each in index order (golden_v2 envelope layout).
+  const shipped = (i: number) => (shipMask & (1 << i)) !== 0;
   const parts: Uint8Array[] = [u16(core.length), core, Buffer.from([bodies.length, shipMask])];
   bodies.forEach((b, i) => {
-    if (shipMask & (1 << i)) parts.push(u16(b.length), b);
-    else parts.push(creativeDigest(b));
+    if (!shipped(i)) parts.push(creativeDigest(b));
+  });
+  bodies.forEach((b, i) => {
+    if (shipped(i)) parts.push(u16(b.length), b);
   });
   return Buffer.concat(parts);
 }
