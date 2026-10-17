@@ -128,6 +128,7 @@ fn reserved_signpost_and_policy_fields_are_accepted_and_ignored() {
         ("cooldown_s", json!(60)),
         ("creatives", json!(["a"])),
         ("rot_days", json!(3)),
+        ("pack_kind", json!("hosted_tile")),
     ] {
         with.signposts[0][k] = v;
     }

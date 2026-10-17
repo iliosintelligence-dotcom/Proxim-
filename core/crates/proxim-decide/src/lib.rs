@@ -624,6 +624,7 @@ pub(crate) mod tests_support {
             cooldown_s: Reserved::default(),
             creatives: Reserved::default(),
             rot_days: Reserved::default(),
+            pack_kind: Reserved::default(),
         }
     }
 }

@@ -32,6 +32,7 @@ fn reserved_fields_are_ignored_whatever_json_value_they_hold() {
         "cooldown_s",
         "creatives",
         "rot_days",
+        "pack_kind",
     ];
     let values: [Value; 7] = [
         json!(1),

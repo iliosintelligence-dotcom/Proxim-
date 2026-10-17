@@ -1,0 +1,18 @@
+{
+  "name": "@proxim/pack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Signed pack compiler and second verifier (docs/pack-format.md). No dependencies: node:crypto and node:zlib only.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22.18" },
+  "exports": {
+    "./canon": "./src/canon.ts",
+    "./format": "./src/format.ts",
+    "./compile": "./src/compile.ts",
+    "./verify": "./src/verify.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  }
+}

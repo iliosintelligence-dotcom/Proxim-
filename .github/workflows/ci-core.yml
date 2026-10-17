@@ -56,6 +56,19 @@ jobs:
           ls core/testdata/golden || true
           cargo test --manifest-path core/Cargo.toml --workspace --all-features golden
 
+  pack-ts:
+    # packages/pack: the TypeScript pack compiler and second verifier (docs/pack-format.md).
+    # Replays the Rust golden vectors, checks the compiled fixture Rust opens, measures tier 0.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.0"
+      - name: pack tests
+        working-directory: packages/pack
+        run: node --test test/*.test.ts
+
   cargo-deny:
     runs-on: ubuntu-latest
     steps:

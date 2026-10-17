@@ -47,6 +47,12 @@ pub enum ReasonCode {
     CapAppInterval = 404,
     LostSlot = 405,
     NoEvent = 406,
+    // Pack verification (M2, engine spec 8 row 500; `proxim-pack`). Never emitted by `decide`.
+    Revoked = 500,
+    SignatureInvalid = 501,
+    SeqRollback = 502,
+    KidRevoked = 503,
+    PackExpired = 504,
 }
 
 impl ReasonCode {
@@ -71,7 +77,7 @@ mod tests {
         assert_eq!(ReasonCode::NoEvent.id(), 406);
     }
 
-    /// The whole spec section 8 table (rows 0..400, implemented codes): id and wire string.
+    /// The whole spec section 8 table (rows 0..400 and the M2 pack codes of row 500): id and wire string.
     const SPEC_TABLE: &[(ReasonCode, u16, &str)] = &[
         (ReasonCode::Ok, 0, "OK"),
         (ReasonCode::Suppressed, 1, "SUPPRESSED"),
@@ -133,6 +139,11 @@ mod tests {
         (ReasonCode::CapAppInterval, 404, "CAP_APP_INTERVAL"),
         (ReasonCode::LostSlot, 405, "LOST_SLOT"),
         (ReasonCode::NoEvent, 406, "NO_EVENT"),
+        (ReasonCode::Revoked, 500, "REVOKED"),
+        (ReasonCode::SignatureInvalid, 501, "SIGNATURE_INVALID"),
+        (ReasonCode::SeqRollback, 502, "SEQ_ROLLBACK"),
+        (ReasonCode::KidRevoked, 503, "KID_REVOKED"),
+        (ReasonCode::PackExpired, 504, "PACK_EXPIRED"),
     ];
 
     #[test]
@@ -151,7 +162,7 @@ mod tests {
 
     #[test]
     fn unknown_or_reserved_names_do_not_parse() {
-        for bad in ["\"REVOKED\"", "\"ok\"", "\"\"", "7", "null"] {
+        for bad in ["\"CAP_SENDER_DAY\"", "\"ok\"", "\"\"", "7", "null"] {
             assert!(serde_json::from_str::<ReasonCode>(bad).is_err(), "{bad}");
         }
     }

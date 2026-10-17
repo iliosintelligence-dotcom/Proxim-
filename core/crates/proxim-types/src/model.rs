@@ -347,6 +347,9 @@ pub struct Signpost {
     pub creatives: Reserved,
     #[serde(default, skip_serializing)]
     pub rot_days: Reserved,
+    /// Signed by the pack layer (I17, `docs/pack-format.md`); ignored by `decide`.
+    #[serde(default, skip_serializing)]
+    pub pack_kind: Reserved,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
