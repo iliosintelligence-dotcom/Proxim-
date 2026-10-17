@@ -139,6 +139,7 @@ fn fire(sp: &Signpost, t_ms: i64) -> Decision {
         copy: proxim_types::Copy::NearYou,
         d_rem_mm: None,
         t_hat_ms: Some(60_000),
+        wording: None,
     }
 }
 

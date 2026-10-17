@@ -124,6 +124,7 @@ pub fn run_seed(
                 caps: state.caps.clone(),
                 mem: proxim_types::Mem::default(),
                 controls: state.controls.clone(),
+                rotation: state.rotation.clone(),
             };
             next_restart += 1;
         }

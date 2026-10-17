@@ -166,7 +166,7 @@ pub fn rich_world() -> [Value; 6] {
         "simulator_mode": false, "child_directed": false, "explain": true,
         "categories_blocked": ["bar"], "senders_blocked": ["sender-9"], "sensitivity_ceiling": 2,
         "lead_s_min": 20, "lead_s_max": 100, "cap_signpost_day": 2, "cap_signpost_week": 5,
-        "app_min_interval_s": 1800, "slots": 1, "max_acc_mm": 100_000, "rot_lane": 1,
+        "app_min_interval_s": 1800, "slots": 1, "max_acc_mm": 100_000, "rot_lane": 1, "rot_lanes": 2,
         "standoff_zones": [{"id": "z-1", "center": pos(offset(ORIGIN, 8_000_000, 8_000_000)), "standoff_m": 1500}]
     });
     let consent = json!({

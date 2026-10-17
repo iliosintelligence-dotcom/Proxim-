@@ -184,7 +184,10 @@ pub fn verify_envelope<'a>(
 fn core_fields(core: &[u8], pack_kind: &str) -> PackResult<Option<i64>> {
     let bad = ReasonCode::SignatureInvalid;
     let tree = parse_value(core, &JsonLimits::default()).map_err(|_| bad)?;
-    if tree.get("pack_kind").and_then(Value::as_str) != Some(pack_kind) {
+    // `wordings` is filled in by this layer from the verified entry, never taken from a core.
+    if tree.get("pack_kind").and_then(Value::as_str) != Some(pack_kind)
+        || tree.get("wordings").is_some()
+    {
         return Err(bad);
     }
     match tree.get("live_at_ms") {
@@ -331,7 +334,7 @@ fn verify_entry<'a>(
 /// Steps e and f.
 fn finish_entry(
     index: u32,
-    signpost: Signpost,
+    mut signpost: Signpost,
     kid: &str,
     live_at_ms: Option<i64>,
     slots: Vec<Slot<'_>>,
@@ -343,6 +346,9 @@ fn finish_entry(
         return Err(ReasonCode::Revoked);
     }
     let mut creatives = Vec::new();
+    let digests: Vec<alloc::string::String> =
+        slots.iter().map(|s| crypto::hex(&s.digest)).collect();
+    let mut avail_mask = 0u8;
     for (i, slot) in (0u8..).zip(slots) {
         let vid: [u8; 4] = slot
             .digest
@@ -356,6 +362,7 @@ fn finish_entry(
             continue;
         }
         if let Some(body) = slot.body {
+            avail_mask |= 1 << i;
             creatives.push(Creative {
                 index: i,
                 vid,
@@ -366,6 +373,12 @@ fn finish_entry(
     if live_at_ms.is_some_and(|t| now_ms < t) {
         return Err(ReasonCode::NotYetLive);
     }
+    // Rotation inputs for `decide` (engine spec 7.3): every declared digest, and which wordings
+    // shipped and are not variant-revoked. Locale filtering, if any, is the SDK's.
+    signpost.wordings = Some(proxim_types::Wordings {
+        digests,
+        avail_mask,
+    });
     Ok(VerifiedEntry {
         index,
         signpost,

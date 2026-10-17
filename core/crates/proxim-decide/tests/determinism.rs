@@ -217,7 +217,7 @@ fn a_known_trace_fires_the_same_decisions_every_run() {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 48, failure_persistence: None, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 48, failure_persistence: None, rng_algorithm: proptest::test_runner::RngAlgorithm::ChaCha, rng_seed: proptest::test_runner::RngSeed::Fixed(0x5eed202b), ..ProptestConfig::default() })]
 
     #[test]
     fn prop_pure_over_random_walks(seed in any::<u64>(), n in 20usize..90) {

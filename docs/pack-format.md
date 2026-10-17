@@ -122,6 +122,8 @@ This is the envelope layout of the normative vectors `core/testdata/golden/rotat
 
 The core must contain `"pack_kind":"hosted_tile"`, so signed content cannot be moved into another pipe. It may contain `"live_at_ms":i64`; before that time the entry is refused with `NOT_YET_LIVE`. The rest of the Signpost is checked again by `decide` (expiry, triggers, consent and so on).
 
+The pack layer fills in the Signpost's `wordings` for `decide` (engine spec 7.3): every declared digest in index order, and an `avail_mask` of the creatives that shipped and are not variant-revoked. A core that carries `wordings` itself is refused (`SIGNATURE_INVALID`), so the signer cannot set availability.
+
 ## 5. Opening a pack
 
 Inputs:

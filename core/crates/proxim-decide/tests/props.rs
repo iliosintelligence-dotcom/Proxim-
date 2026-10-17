@@ -167,7 +167,7 @@ fn fire_total(r: &Run) -> usize {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 24, failure_persistence: None, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 24, failure_persistence: None, rng_algorithm: proptest::test_runner::RngAlgorithm::ChaCha, rng_seed: proptest::test_runner::RngSeed::Fixed(0x5EED_2026), ..ProptestConfig::default() })]
 
     #[test]
     fn prop_caps_pacing_and_state_invariants_hold_on_multi_day_traces(
@@ -365,6 +365,7 @@ fn hostile_state(rng: &mut Splitmix) -> State {
             det,
         },
         controls: Default::default(),
+        rotation: Default::default(),
     }
 }
 
@@ -400,7 +401,7 @@ fn hostile_fix(rng: &mut Splitmix) -> Fix {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 600, failure_persistence: None, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 600, failure_persistence: None, rng_algorithm: proptest::test_runner::RngAlgorithm::ChaCha, rng_seed: proptest::test_runner::RngSeed::Fixed(0x5EED_2027), ..ProptestConfig::default() })]
 
     /// Hostile but structurally valid state, fix and clock: never a panic, only Ok or a typed
     /// error, and an Ok state is itself acceptable input again.

@@ -82,7 +82,19 @@ fn accepted_is_original(p: &OpenedPack, revs: &[Rev]) {
             .expect("accepted entry was signed");
         let orig_sp: proxim_types::Signpost =
             proxim_types::strict::from_canonical_json(&orig.core).unwrap();
-        assert_eq!(e.signpost, orig_sp);
+        let mut signed = e.signpost.clone();
+        let w = signed
+            .wordings
+            .take()
+            .expect("the pack layer fills in the wordings");
+        assert_eq!(signed, orig_sp);
+        // The wordings are the signed digests of the original bodies, nothing else.
+        let want: Vec<String> = orig
+            .bodies
+            .iter()
+            .map(|b| proxim_pack::crypto::hex(&encode::creative_digest(b)))
+            .collect();
+        assert_eq!(w.digests, want);
         for c in &e.creatives {
             assert_eq!(c.body, orig.bodies[usize::from(c.index)]);
         }

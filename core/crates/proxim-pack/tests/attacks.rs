@@ -442,3 +442,78 @@ fn guard_type_is_shared() {
         Err(ReasonCode::SeqRollback)
     );
 }
+
+/// Pack to decide (engine spec 7.3): a verified entry carries its wordings, a withheld or
+/// variant-revoked wording is unavailable, and the fire names the wording to show.
+#[test]
+fn verified_wordings_flow_into_decide() {
+    let a = approve();
+    let rev = sign_rev(&signpost("w-1", 1, &[]), &["One", "Two", "Three"], &a);
+    let p = open_rows(&[row(&rev, 0b011)]).unwrap();
+    let sp = &p.entries[0].signpost;
+    let w = sp.wordings.as_ref().unwrap();
+    assert_eq!(w.digests.len(), 3);
+    assert_eq!(w.avail_mask, 0b011, "the withheld wording is not available");
+    let fix: proxim_types::Fix = serde_json::from_value(json!({
+        "t_ms": NOW, "lat_e7": 450000000, "lon_e7": 70000000, "acc_mm": 5000
+    }))
+    .unwrap();
+    let policy: proxim_types::Policy = serde_json::from_value(json!({"explain": true})).unwrap();
+    let consent: proxim_types::Consent =
+        serde_json::from_value(json!({"location_matching": "granted"})).unwrap();
+    let mut state = proxim_types::State::empty();
+    let mut wordings = vec![];
+    // Walk in from 400 m south (about 3,600 e-7 degrees of latitude) at 2 m/s, one fix a second.
+    for k in 0..300i64 {
+        let t = NOW + k * 1000;
+        let lat = 449_996_400 + i32::try_from((k * 18).min(3_600)).unwrap();
+        let fix = proxim_types::Fix {
+            t_ms: t,
+            lat_e7: lat,
+            ..fix
+        };
+        let clock = proxim_types::Clock {
+            now_ms: t,
+            tz_offset_min: 0,
+        };
+        let (out, next) = proxim_decide::decide(
+            &state,
+            &fix,
+            std::slice::from_ref(sp),
+            &policy,
+            &consent,
+            &clock,
+            0,
+        )
+        .unwrap();
+        state = next;
+        wordings.extend(
+            out.decisions
+                .iter()
+                .filter(|d| d.outcome == proxim_types::Outcome::Fire)
+                .map(|d| d.wording),
+        );
+    }
+    assert_eq!(wordings.len(), 1, "one enter fires");
+    assert!(matches!(wordings[0], Some(0 | 1)), "{wordings:?}");
+    assert_eq!(state.rotation.rows.len(), 1);
+}
+
+#[test]
+fn a_core_that_carries_its_own_wordings_is_refused() {
+    let a = approve();
+    let forged = sign_rev(
+        &signpost(
+            "w-2",
+            1,
+            &[(
+                "wordings",
+                json!({"digests": ["00".repeat(32)], "avail_mask": 1}),
+            )],
+        ),
+        &["Hi"],
+        &a,
+    );
+    let p = open_rows(&[all_shipped(&forged)]).unwrap();
+    assert_eq!(reasons(&p), [(0, ReasonCode::SignatureInvalid)]);
+}

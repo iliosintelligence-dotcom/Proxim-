@@ -248,6 +248,7 @@ fn capped_state(hwm: i64, day_idx: i64, week_idx: i64) -> State {
         },
         mem: Default::default(),
         controls: Default::default(),
+        rotation: Default::default(),
     }
 }
 

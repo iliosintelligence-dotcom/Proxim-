@@ -85,10 +85,15 @@ pub fn decide(
 
     // ---- global filters F01-F10 (first failure ends the call) ----
     if consent.location_matching != ConsentValue::Granted {
-        return Ok(stop(state, now, ReasonCode::ConsentDenied, true));
+        // I4 and Addendum 02 5.2: withdrawal also wipes the wording ledger.
+        let (out, mut next) = stop(state, now, ReasonCode::ConsentDenied, true);
+        next.rotation = proxim_types::Rotation::default();
+        return Ok((out, next));
     }
     if eff.child_directed {
-        return Ok(stop(state, now, ReasonCode::EngineDisabled, true));
+        let (out, mut next) = stop(state, now, ReasonCode::EngineDisabled, true);
+        next.rotation = proxim_types::Rotation::default();
+        return Ok((out, next));
     }
     if validate::fix_is_invalid(fix) {
         return Ok(stop(state, now, ReasonCode::FixInvalid, false));
@@ -135,6 +140,8 @@ pub fn decide(
     // ---- accepted: filters, trace, caps buckets ----
     let (mut mem, summary) = path_update(&base_mem, fix)?;
     let mut book = CapsBook::load(&state.caps, now, clock.tz_offset_min);
+    let rday = rotation::rot_day(calendar::day_week(now, clock.tz_offset_min).0);
+    let mut rbook = rotation::Book::load(&state.rotation, rday);
 
     let (candidates, mut drops) = select_revisions(signposts, fix.t_ms);
     let present: BTreeSet<&str> = signposts.iter().map(|s| s.id.as_str()).collect();
@@ -257,7 +264,36 @@ pub fn decide(
                 conf_milli: c.ev.path_conf_milli,
                 ..summary.info
             };
-            fires.push(fire_decision(c.sp, &c.ev));
+            // Step 7b (Addendum 02 5.1): the wording, chosen and committed with the fire.
+            let wording = match &c.sp.wordings {
+                Some(w) => {
+                    let fam = rotation::family_of(c.sp.id.as_str(), w)?;
+                    let mut led = rbook.view(c.sp.id.as_str());
+                    let pick = rotation::select(
+                        &led,
+                        rday,
+                        &fam,
+                        w.avail_mask,
+                        c.sp.rot_days.unwrap_or(0),
+                        eff.rot_lane,
+                        eff.rot_lanes,
+                    );
+                    match pick {
+                        Some(s) => {
+                            let vid = fam.vids.get(s.idx).copied().ok_or(EngineError::Parse)?;
+                            rotation::commit(&mut led, vid, rday, s.new_count);
+                            rbook.store(&c.sp.id, &led, Some(vid));
+                            u8::try_from(s.idx).ok()
+                        }
+                        None => None,
+                    }
+                }
+                None => None,
+            };
+            fires.push(Decision {
+                wording,
+                ..fire_decision(c.sp, &c.ev)
+            });
         } else {
             // The loser reverts to its pre-event detector state: it may fire at a later fix.
             match c.pre {
@@ -295,6 +331,7 @@ pub fn decide(
         },
         mem,
         controls,
+        rotation: rbook.into_rotation()?,
     };
     sort_decisions(&mut fires);
     sort_decisions(&mut drops);
@@ -467,6 +504,12 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
     if sp.valid_until_ms <= sp.valid_from_ms {
         return Ok(Err(ReasonCode::TriggerInvalid));
     }
+    // F12 (engine_spec 2): malformed verified wordings (7.3).
+    if let Some(w) = &sp.wordings
+        && rotation::family_of(sp.id.as_str(), w).is_err()
+    {
+        return Ok(Err(ReasonCode::TriggerInvalid));
+    }
     let mut narrowed: Option<Signpost> = None;
     if sp.event == EventKind::Approach {
         let lead = sp.trigger.lead_s.unwrap_or(LEAD_S_DEFAULT);
@@ -578,6 +621,7 @@ fn drop_decision(sp: &Signpost, reason: ReasonCode, t_ms: i64) -> Decision {
         copy: copy_for_tier(0),
         d_rem_mm: None,
         t_hat_ms: None,
+        wording: None,
     }
 }
 
@@ -594,6 +638,7 @@ fn event_drop(sp: &Signpost, ev: &Event, reason: ReasonCode) -> Decision {
         copy: copy_for_tier(ev.path_tier),
         d_rem_mm: ev.d_rem_mm,
         t_hat_ms: ev.t_hat_ms,
+        wording: None,
     }
 }
 
@@ -657,7 +702,8 @@ pub(crate) mod tests_support {
             fresh_required_s: Reserved::default(),
             cooldown_s: Reserved::default(),
             creatives: Reserved::default(),
-            rot_days: Reserved::default(),
+            rot_days: None,
+            wordings: None,
             pack_kind: Reserved::default(),
         }
     }
