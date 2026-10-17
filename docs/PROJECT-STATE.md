@@ -59,6 +59,12 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
 
 ## Session log
 
+- **2026-10-17 (website):**
+  - Site (`apps/site`) is white and orange, prices in US dollars, geofenced areas drawn as polygons anywhere (pull requests 5 and 12 merged).
+  - Hero icons are now buttons: tapping one splits it into two or three new kinds of business (sports, shopping, school, office, gadgets and more), up to 12.
+  - Removed the "open source" and "no cookies" lines from the page footer at the owner's request.
+  - CSS and JS links carry a `?v=` version so browsers fetch new styles after a deploy.
+  - Waiting on the owner: business photos, partner logos, and evidence for the "cheapest way to advertise" badge before public launch.
 - **2026-10-17 (later):**
   - Pull request 6 merged; the owner approved OI-ROT-1 and it is closed, so M2 exit and M3 entry are unblocked.
   - M3 slice 1: sender and app day caps, dismiss / hide / report; engine_spec 2.
