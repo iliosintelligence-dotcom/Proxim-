@@ -250,3 +250,9 @@ p { margin: 0; }
 }
 @media (max-width: 480px) { .hero .tokens .token { width: 56px; height: 56px; } .hero .tokens .token svg { width: 26px; height: 26px; } .tokens { gap: 10px; } }
 .closing .links { display: flex; flex-wrap: wrap; gap: 10px; }
+.partners { padding-block: 96px; }
+.partner-row { display: grid; gap: 40px; max-width: 900px; margin: 0 auto; }
+@media (min-width: 760px) { .partner-row { grid-template-columns: 1fr 1fr; } }
+.partner { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; min-width: 0; }
+.partner h3 { font-family: var(--display); font-weight: 400; font-size: 30px; margin-bottom: 4px; }
+.partner p { color: var(--muted); }
