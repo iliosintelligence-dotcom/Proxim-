@@ -118,3 +118,78 @@
   input.addEventListener("input", update);
   update();
 })();
+
+// Tapping a hero icon splits it into two or three new ones (sports, shopping, school,
+// office, gadgets and more), to show the many kinds of business Proxim can carry.
+(function () {
+  var row = document.querySelector(".hero .tokens");
+  var tpl = document.getElementById("more-icons");
+  if (!row || !tpl) return;
+  var library = Array.prototype.slice.call(tpl.content.querySelectorAll("svg"));
+  if (!library.length) return;
+  var MAX = 12, VARIANTS = ["", "soft", "dark"];
+  var still = !window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches || !Element.prototype.animate;
+
+  function shown() {
+    return Array.prototype.map.call(row.querySelectorAll(".token svg[data-name]"), function (s) { return s.getAttribute("data-name"); });
+  }
+  function pickIcons(n) {
+    var used = shown();
+    var fresh = library.filter(function (s) { return used.indexOf(s.getAttribute("data-name")) < 0; });
+    var pool = fresh.length >= n ? fresh : library.slice();
+    var out = [];
+    while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return out;
+  }
+  function makeToken(svg) {
+    var b = document.createElement("button");
+    var v = VARIANTS[Math.floor(Math.random() * VARIANTS.length)];
+    b.type = "button";
+    b.className = "token go settled" + (v ? " " + v : "");
+    b.setAttribute("aria-label", svg.getAttribute("data-name") + ": tap to see more");
+    b.appendChild(svg.cloneNode(true));
+    return b;
+  }
+
+  row.addEventListener("click", function (e) {
+    var tok = e.target.closest ? e.target.closest(".token") : null;
+    if (!tok || !row.contains(tok)) return;
+    var all = Array.prototype.slice.call(row.querySelectorAll(".token"));
+    all.forEach(function (t) { t.getAnimations && t.getAnimations().forEach(function (a) {
+      if (!window.CSSAnimation || !(a instanceof CSSAnimation)) a.finish();
+    }); });
+
+    var n = all.length >= MAX ? 0 : Math.min(2 + Math.floor(Math.random() * 2), MAX - all.length + 1);
+    if (n < 2) {
+      if (!still) tok.animate([{ transform: "rotate(0)" }, { transform: "rotate(-14deg)" }, { transform: "rotate(12deg)" }, { transform: "rotate(0)" }], { duration: 420, easing: "ease-in-out" });
+      return;
+    }
+
+    var before = new Map();
+    all.forEach(function (t) { before.set(t, t.getBoundingClientRect()); });
+    var from = before.get(tok);
+    var kids = pickIcons(n).map(makeToken);
+    var focusFirst = document.activeElement === tok;
+    kids.forEach(function (k) { row.insertBefore(k, tok); });
+    row.removeChild(tok);
+    if (focusFirst && kids[0]) kids[0].focus();
+    if (still) return;
+
+    all.forEach(function (t) {
+      if (t === tok || !t.isConnected) return;
+      var a = before.get(t), b = t.getBoundingClientRect();
+      var dx = a.left - b.left, dy = a.top - b.top;
+      if (dx || dy) t.animate([{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "translate(0,0)" }], { duration: 380, easing: "cubic-bezier(.2,.8,.3,1)" });
+    });
+    kids.forEach(function (k, i) {
+      var b = k.getBoundingClientRect();
+      var dx = from.left - b.left, dy = from.top - b.top;
+      var spin = (b.left >= from.left ? 1 : -1) * 360;
+      k.animate([
+        { transform: "translate(" + dx + "px," + dy + "px) scale(.3) rotate(0deg)", opacity: 0.4 },
+        { transform: "translate(0,-18px) scale(1.08) rotate(" + spin * 0.9 + "deg)", opacity: 1, offset: 0.7 },
+        { transform: "translate(0,0) scale(1) rotate(" + spin + "deg)" }
+      ], { duration: 620, delay: i * 70, easing: "cubic-bezier(.3,.7,.4,1)", fill: "backwards" });
+    });
+  });
+})();

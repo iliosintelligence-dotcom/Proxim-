@@ -300,3 +300,10 @@ p { margin: 0; }
 .q-vtx { fill: #fff; stroke: var(--brand); stroke-width: 2.5; }
 .q-pin path { fill: var(--brand-shade); }
 .q-pin-h { fill: #fff; }
+
+/* ---------- Hero tokens split when tapped ---------- */
+button.token { border: 0; padding: 0; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.token:focus-visible { outline: 3px solid var(--brand-ink); outline-offset: 4px; }
+.tokens-wrap { min-width: 0; }
+.tokens-hint { margin: 14px 0 0; font: 900 12px/1 var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-brand); opacity: 0.9; }
+.hero-foot .tokens-hint { font-size: 12px; line-height: 1; }
