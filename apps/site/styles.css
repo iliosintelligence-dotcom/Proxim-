@@ -293,3 +293,20 @@ p { margin: 0; }
   .cmp .num { text-align: left; white-space: normal; font-size: 30px; }
   .cmp.us .num { font-size: 40px; }
 }
+
+/* ---------- Quality of views ---------- */
+.quality { padding-block: 110px 40px; }
+.quality h2 { font-size: clamp(34px, 5.2vw, 64px); line-height: 1.02; max-width: 16ch; margin: 0 auto 56px; text-wrap: balance; }
+.center { text-align: center; }
+.q-pair { display: grid; gap: 56px; }
+@media (min-width: 860px) { .q-pair { grid-template-columns: 1fr 1fr; gap: 72px; } }
+.q-side { margin: 0; min-width: 0; }
+.q-side svg { width: 100%; height: auto; display: block; border-radius: 32px; background: var(--brand-soft); box-shadow: inset 4px 6px 14px rgba(90, 35, 0, 0.08); }
+.q-side figcaption { margin-top: 22px; font-size: 18px; color: var(--muted); max-width: 44ch; }
+.q-side figcaption b { display: block; font: 400 26px/1.1 var(--display); color: var(--ink); margin-bottom: 8px; }
+.q-side.us figcaption b { color: var(--brand); }
+.q-far { fill: #c9b4a4; }
+.q-near { fill: var(--brand); filter: drop-shadow(2px 3px 2px rgba(90, 35, 0, 0.25)); }
+.q-ring { fill: rgba(255, 117, 31, 0.12); stroke: var(--brand); stroke-width: 3; stroke-dasharray: 8 8; }
+.q-pin path { fill: var(--brand-ink); }
+.q-pin-h { fill: #fff; }
