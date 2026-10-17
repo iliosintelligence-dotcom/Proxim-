@@ -31,6 +31,11 @@ body {
   padding-top: 24px; padding-bottom: 24px;
 }
 .logo { font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--accent); }
+.switch { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; }
+.switch a { padding: 5px 12px; border-radius: 999px; color: var(--muted); text-decoration: none; }
+.switch a[aria-current="page"] { background: var(--accent); color: var(--bg); font-weight: 650; }
+.switch a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eyebrow { font-size: 14px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 0 0 10px; }
 .badge {
   font-size: 13px; color: var(--muted);
   border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px;
