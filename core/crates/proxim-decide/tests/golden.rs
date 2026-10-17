@@ -127,7 +127,7 @@ fn golden_files_are_canonical_synthetic_and_carry_the_spec_header() {
         let v = parse(&bytes).unwrap_or_else(|e| panic!("{id}: {e}"));
         assert_eq!(v.header.id, id);
         assert_eq!(v.header.kind, "decide");
-        assert_eq!(v.header.engine_spec, 1);
+        assert_eq!(v.header.engine_spec, proxim_types::ENGINE_SPEC);
         assert!(v.header.synthetic);
         assert_eq!(v.header.format, "proxim-golden/1");
         assert!(bytes.ends_with(b"\n") && !bytes.ends_with(b"\n\n"));

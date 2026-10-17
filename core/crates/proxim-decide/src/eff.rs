@@ -5,9 +5,9 @@ use crate::params::{SLOTS_CEILING, STANDOFF_MAX_M};
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use proxim_types::defaults::{
-    AFFINITY_MAX_MILLI, AFFINITY_NEUTRAL_MILLI, APP_MIN_INTERVAL_S, CAP_SIGNPOST_DAY,
-    CAP_SIGNPOST_WEEK, LEAD_S_MAX, LEAD_S_MIN, MAX_ACC_MM, MAX_CATEGORY_RULES, MAX_STANDOFF_ZONES,
-    SENSITIVITY_CEILING, STANDOFF_M,
+    AFFINITY_MAX_MILLI, AFFINITY_NEUTRAL_MILLI, APP_MIN_INTERVAL_S, CAP_APP_DAY, CAP_APP_DAY_MAX,
+    CAP_SENDER_DAY, CAP_SIGNPOST_DAY, CAP_SIGNPOST_WEEK, LEAD_S_MAX, LEAD_S_MIN, MAX_ACC_MM,
+    MAX_CATEGORY_RULES, MAX_STANDOFF_ZONES, SENSITIVITY_CEILING, STANDOFF_M,
 };
 use proxim_types::taxonomy::{is_valid_code, prefixes};
 use proxim_types::{EngineError, Policy};
@@ -23,6 +23,10 @@ pub(crate) struct Eff<'a> {
     pub cap_day: u32,
     pub cap_week: u32,
     pub app_interval_ms: i64,
+    pub cap_sender_day: u32,
+    pub cap_app_day: u32,
+    pub rot_lane: u32,
+    pub rot_lanes: u32,
     pub slots: usize,
     pub max_acc_mm: u32,
     pub categories_blocked: BTreeSet<&'a str>,
@@ -43,6 +47,12 @@ impl<'a> Eff<'a> {
             || p.category_affinity.len() > MAX_CATEGORY_RULES
         {
             return Err(EngineError::Limit);
+        }
+        // Rotation lane (Addendum 02 5.1): lanes >= 1 and lane < lanes, else the policy is invalid.
+        let rot_lanes = p.rot_lanes.unwrap_or(1);
+        let rot_lane = p.rot_lane.unwrap_or(0);
+        if rot_lanes == 0 || rot_lane >= rot_lanes {
+            return Err(EngineError::Parse);
         }
         let mut categories_accepted = BTreeSet::new();
         for c in &p.categories_accepted {
@@ -92,6 +102,13 @@ impl<'a> Eff<'a> {
                     .max(APP_MIN_INTERVAL_S),
             )
             .saturating_mul(1000),
+            cap_sender_day: p
+                .cap_sender_day
+                .unwrap_or(CAP_SENDER_DAY)
+                .min(CAP_SENDER_DAY),
+            cap_app_day: p.cap_app_day.unwrap_or(CAP_APP_DAY).min(CAP_APP_DAY_MAX),
+            rot_lane,
+            rot_lanes,
             slots: usize::from(p.slots.unwrap_or(SLOTS_CEILING).min(SLOTS_CEILING)),
             max_acc_mm: p.max_acc_mm.unwrap_or(MAX_ACC_MM).min(MAX_ACC_MM),
             categories_blocked: p.categories_blocked.iter().map(String::as_str).collect(),

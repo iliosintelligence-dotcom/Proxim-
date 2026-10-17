@@ -11,6 +11,20 @@ pub const LEAD_S_DEFAULT: u32 = 40;
 pub const CAP_SIGNPOST_DAY: u32 = 2;
 pub const CAP_SIGNPOST_WEEK: u32 = 5;
 pub const APP_MIN_INTERVAL_S: u32 = 1800;
+/// PLAN 5.6 step 5: per sender 3 a day (partners may only lower).
+pub const CAP_SENDER_DAY: u32 = 3;
+/// Per app 4 interruptive a day; partners may lower it, and raise it only up to
+/// [`CAP_APP_DAY_MAX`] (navigation and transit partners, PLAN 5.6).
+pub const CAP_APP_DAY: u32 = 4;
+pub const CAP_APP_DAY_MAX: u32 = 8;
+/// A dismissal rests the whole family for 7 days (PLAN 5.6; Addendum 02 5.3).
+pub const DISMISS_COOLDOWN_MS: i64 = 7 * 86_400_000;
+/// Bounds of the user-control lists (oldest-expiring dismissals are pruned first).
+pub const MAX_DISMISSED: usize = 256;
+pub const MAX_HIDDEN: usize = 1024;
+pub const MAX_REPORTED: usize = 256;
+/// Distinct senders with a cap entry in one day (one per signpost at most).
+pub const MAX_SENDERS: usize = 4096;
 pub const SLOTS: u8 = 1;
 pub const MAX_ACC_MM: u32 = 100_000;
 pub const STANDOFF_M: u32 = 1000;

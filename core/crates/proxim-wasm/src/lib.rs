@@ -131,6 +131,6 @@ mod tests {
 
     #[test]
     fn spec_version_is_one() {
-        assert_eq!(engine_spec(), 1);
+        assert_eq!(engine_spec(), 2);
     }
 }

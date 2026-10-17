@@ -244,7 +244,7 @@ fn is_well_formed(r: &str) -> bool {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 300, failure_persistence: None, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 300, failure_persistence: None, rng_algorithm: proptest::test_runner::RngAlgorithm::ChaCha, rng_seed: proptest::test_runner::RngSeed::Fixed(0x5eed2029), ..ProptestConfig::default() })]
 
     /// Arbitrary bytes in any argument slot never panic and always give a well-formed response.
     #[test]
@@ -286,7 +286,7 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 16, failure_persistence: None, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 16, failure_persistence: None, rng_algorithm: proptest::test_runner::RngAlgorithm::ChaCha, rng_seed: proptest::test_runner::RngSeed::Fixed(0x5eed202a), ..ProptestConfig::default() })]
 
     /// Random typed values through the JSON boundary agree with the typed function.
     #[test]

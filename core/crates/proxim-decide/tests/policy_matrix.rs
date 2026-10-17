@@ -107,11 +107,10 @@ fn the_authored_lead_must_be_in_range_even_if_the_policy_would_clamp_it() {
 
 #[test]
 fn reserved_policy_and_signpost_fields_are_accepted_and_ignored() {
-    // Spec 10: reserved fields parse and have no effect (and are not re-emitted).
-    let policy: Policy = proxim_types::strict::from_json(
-        br#"{"explain":true,"rot_lane":{"anything":[1,2,3]},"rot_lanes":7}"#,
-    )
-    .unwrap();
+    // Spec 10: reserved fields parse and have no effect (and are not re-emitted). A lane has no
+    // effect on a family without wordings (7.3).
+    let policy: Policy =
+        proxim_types::strict::from_json(br#"{"explain":true,"rot_lane":3,"rot_lanes":7}"#).unwrap();
     let sp: proxim_types::Signpost = {
         let mut v = serde_json::to_value(circle("c", 200)).unwrap();
         let o = v.as_object_mut().unwrap();
@@ -128,7 +127,7 @@ fn reserved_policy_and_signpost_fields_are_accepted_and_ignored() {
             "fresh_required_s",
             "cooldown_s",
             "creatives",
-            "rot_days",
+            "pack_kind",
         ] {
             o.insert(k.into(), serde_json::json!({"x": [1, 2]}));
         }

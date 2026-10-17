@@ -118,11 +118,13 @@ pub fn run_seed(
     for nf in &fixes {
         let t_rel = nf.fix.t_ms - sc.start_ms;
         while restarts.get(next_restart).is_some_and(|r| t_rel >= *r) {
-            // A new process: only `caps` survives (spec 3.3).
+            // A new process: only the persisted part, `caps` and `controls`, survives (spec 3.3).
             state = State {
                 v: 1,
                 caps: state.caps.clone(),
                 mem: proxim_types::Mem::default(),
+                controls: state.controls.clone(),
+                rotation: state.rotation.clone(),
             };
             next_restart += 1;
         }

@@ -1,174 +1,178 @@
-//! Keyset verification (pack-spec 3.1): pinned roots sign the list of online keys and revoked kids.
+//! Key set (pack-format 3.1): the root-signed list of approve and manifest keys.
 
-use crate::doc::{self, KIND_KEYSET};
-use crate::error::PackError;
-use crate::es256::PublicKey;
-use crate::wire::is_valid_kid;
-use crate::{SeqMark, sha256};
-use alloc::collections::{BTreeMap, BTreeSet};
+use crate::jws::{self, TYP_KEYSET};
+use crate::{Guard, PackResult, b64, crypto, doc, valid_kid};
 use alloc::string::String;
 use alloc::vec::Vec;
-use proxim_types::strict::from_canonical_json;
+use p256::ecdsa::VerifyingKey;
+use proxim_types::ReasonCode;
 use serde::{Deserialize, Serialize};
 
-const MAX_KEYS: usize = 32;
-const MAX_REVOKED: usize = 256;
+pub const FORMAT: &str = "proxim-keyset/1";
+const MAX_KEYS: usize = 64;
 
-/// Root public keys pinned in the SDK build. Only these may sign a keyset.
-#[derive(Clone, Debug, Default)]
-pub struct TrustRoots {
-    keys: BTreeMap<String, PublicKey>,
+/// What a key may sign.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Purpose {
+    /// Signpost revisions (pack entries).
+    Approve,
+    /// Tile manifests and revocation lists.
+    Manifest,
 }
 
-impl TrustRoots {
+/// A root key pinned in the SDK build.
+#[derive(Clone, Debug)]
+pub struct RootKey {
+    pub kid: String,
+    key: VerifyingKey,
+}
+
+impl RootKey {
     /// # Errors
-    /// [`PackError::Malformed`] for a bad kid or key, [`PackError::Duplicate`] for a repeated kid.
-    pub fn new(roots: &[(&str, &[u8])]) -> Result<Self, PackError> {
-        let mut keys = BTreeMap::new();
-        for (kid, sec1) in roots {
-            if !is_valid_kid(kid.as_bytes()) {
-                return Err(PackError::Malformed);
-            }
-            if keys
-                .insert(String::from(*kid), PublicKey::from_sec1(sec1)?)
-                .is_some()
-            {
-                return Err(PackError::Duplicate);
-            }
+    /// [`ReasonCode::SignatureInvalid`] for a bad kid or key encoding.
+    pub fn new(kid: &str, sec1: &[u8]) -> PackResult<Self> {
+        if !valid_kid(kid) {
+            return Err(ReasonCode::SignatureInvalid);
         }
-        Ok(Self { keys })
+        let key = crypto::public_key(sec1).ok_or(ReasonCode::SignatureInvalid)?;
+        Ok(Self {
+            kid: kid.into(),
+            key,
+        })
     }
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct KeyRecord {
+struct KeyDoc {
     kid: String,
-    not_after_ms: i64,
-    not_before_ms: i64,
+    purpose: Purpose,
     #[serde(rename = "pub")]
     public: String,
+    not_before_ms: i64,
+    not_after_ms: i64,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct KeysetPayload {
-    expires_ms: i64,
-    issued_ms: i64,
-    keys: Vec<KeyRecord>,
+struct KeysetDoc {
+    format: String,
+    version: u64,
+    issued_at_ms: i64,
+    expires_at_ms: i64,
+    keys: Vec<KeyDoc>,
     revoked_kids: Vec<String>,
-    seq: u64,
-    v: u32,
 }
 
 #[derive(Clone, Debug)]
-struct OnlineKey {
-    key: PublicKey,
-    not_before_ms: i64,
-    not_after_ms: i64,
+pub struct Key {
+    pub kid: String,
+    pub purpose: Purpose,
+    pub not_before_ms: i64,
+    pub not_after_ms: i64,
+    key: VerifyingKey,
 }
 
-/// A verified keyset: the online keys that may sign manifests and entries.
+/// How a kid stands for one use at one moment.
+#[derive(Clone, Copy, Debug)]
+pub enum KeyStatus<'a> {
+    Usable(&'a VerifyingKey),
+    /// Listed, but revoked, outside its window or of another purpose.
+    Unusable,
+    Unknown,
+}
+
+/// An accepted key set.
 #[derive(Clone, Debug)]
 pub struct Keyset {
-    pub seq: u64,
-    pub issued_ms: i64,
-    pub expires_ms: i64,
-    digest: [u8; 32],
-    keys: BTreeMap<String, OnlineKey>,
-    revoked: BTreeSet<String>,
+    pub guard: Guard,
+    pub expires_at_ms: i64,
+    pub keys: Vec<Key>,
+    pub revoked_kids: Vec<String>,
 }
 
 impl Keyset {
-    /// The rollback mark to persist after accepting this keyset.
+    /// Look up `kid` for `purpose` at `now_ms`.
     #[must_use]
-    pub const fn mark(&self) -> SeqMark {
-        SeqMark {
-            seq: self.seq,
-            digest: self.digest,
+    pub fn lookup(&self, kid: &str, purpose: Purpose, now_ms: i64) -> KeyStatus<'_> {
+        if self.revoked_kids.iter().any(|k| k == kid) {
+            return KeyStatus::Unusable;
+        }
+        match self.keys.iter().find(|k| k.kid == kid) {
+            None => KeyStatus::Unknown,
+            Some(k)
+                if k.purpose == purpose && k.not_before_ms <= now_ms && now_ms < k.not_after_ms =>
+            {
+                KeyStatus::Usable(&k.key)
+            }
+            Some(_) => KeyStatus::Unusable,
         }
     }
 
-    /// Whether `kid` is on the revoked list.
-    #[must_use]
-    pub fn is_revoked(&self, kid: &str) -> bool {
-        self.revoked.contains(kid)
-    }
-
-    /// The online key that may verify a signature by `kid` at `now_ms`.
+    /// The usable key, or the failure code for a document or entry signed with `kid`.
     ///
     /// # Errors
-    /// [`PackError::KidRevoked`], [`PackError::UnknownKid`] or [`PackError::KeyNotValid`].
-    pub fn key_for(&self, kid: &str, now_ms: i64) -> Result<&PublicKey, PackError> {
-        if self.revoked.contains(kid) {
-            return Err(PackError::KidRevoked);
+    /// [`ReasonCode::KidRevoked`] for a listed but unusable kid, else
+    /// [`ReasonCode::SignatureInvalid`].
+    pub fn usable(&self, kid: &str, purpose: Purpose, now_ms: i64) -> PackResult<&VerifyingKey> {
+        match self.lookup(kid, purpose, now_ms) {
+            KeyStatus::Usable(k) => Ok(k),
+            KeyStatus::Unusable => Err(ReasonCode::KidRevoked),
+            KeyStatus::Unknown => Err(ReasonCode::SignatureInvalid),
         }
-        let k = self.keys.get(kid).ok_or(PackError::UnknownKid)?;
-        if now_ms < k.not_before_ms || now_ms > k.not_after_ms {
-            return Err(PackError::KeyNotValid);
-        }
-        Ok(&k.key)
     }
 }
 
-/// Verify a keyset document against the pinned roots.
+/// Verify a key set token against the pinned `roots` and the previously accepted one.
 ///
 /// # Errors
-/// Any [`PackError`]; see pack-spec 3.1 for the order of checks.
-pub fn verify_keyset(
-    roots: &TrustRoots,
-    bytes: &[u8],
+/// `SIGNATURE_INVALID` (bad token, unknown root, bad content), `PACK_EXPIRED`, `SEQ_ROLLBACK`.
+pub fn accept_keyset(
+    token: &[u8],
+    roots: &[RootKey],
+    prev: Option<&Guard>,
     now_ms: i64,
-    last: Option<SeqMark>,
-) -> Result<Keyset, PackError> {
-    let d = doc::parse(bytes, KIND_KEYSET)?;
-    let root = roots.keys.get(d.kid).ok_or(PackError::UnknownKid)?;
-    root.verify(&d.signed_msg, &d.sig)?;
-    let p: KeysetPayload = from_canonical_json(d.payload)?;
-    if p.v != 1
-        || p.keys.is_empty()
-        || p.issued_ms > p.expires_ms
-        || !p.revoked_kids.iter().all(|k| is_valid_kid(k.as_bytes()))
-    {
-        return Err(PackError::Malformed);
+) -> PackResult<Keyset> {
+    let bad = ReasonCode::SignatureInvalid;
+    let j = jws::parse(token, TYP_KEYSET)?;
+    let root = roots.iter().find(|r| r.kid == j.kid).ok_or(bad)?;
+    if !j.verify(&root.key) {
+        return Err(bad);
     }
-    if p.keys.len() > MAX_KEYS || p.revoked_kids.len() > MAX_REVOKED {
-        return Err(PackError::Limit);
+    let d: KeysetDoc = doc::decode(&j.payload)?;
+    if d.format != FORMAT || d.keys.len() > MAX_KEYS {
+        return Err(bad);
     }
-    let digest = sha256(bytes);
-    SeqMark::admit(last, SeqMark { seq: p.seq, digest })?;
-    if now_ms < p.issued_ms || now_ms > p.expires_ms {
-        return Err(PackError::Expired);
-    }
-    let mut revoked = BTreeSet::new();
-    for kid in p.revoked_kids {
-        if !revoked.insert(kid) {
-            return Err(PackError::Duplicate);
+    let mut keys: Vec<Key> = Vec::with_capacity(d.keys.len());
+    for k in d.keys {
+        let fresh = valid_kid(&k.kid)
+            && !keys.iter().any(|x| x.kid == k.kid)
+            && !roots.iter().any(|r| r.kid == k.kid)
+            && !d.revoked_kids.contains(&k.kid)
+            && k.not_before_ms < k.not_after_ms;
+        if !fresh {
+            return Err(bad);
         }
+        let raw = b64::decode(k.public.as_bytes()).ok_or(bad)?;
+        let key = crypto::public_key(&raw).ok_or(bad)?;
+        keys.push(Key {
+            kid: k.kid,
+            purpose: k.purpose,
+            not_before_ms: k.not_before_ms,
+            not_after_ms: k.not_after_ms,
+            key,
+        });
     }
-    let mut keys = BTreeMap::new();
-    for rec in p.keys {
-        if !is_valid_kid(rec.kid.as_bytes()) || rec.not_before_ms > rec.not_after_ms {
-            return Err(PackError::Malformed);
-        }
-        if revoked.contains(&rec.kid) || roots.keys.contains_key(&rec.kid) {
-            return Err(PackError::Malformed);
-        }
-        let key = OnlineKey {
-            key: PublicKey::from_hex(&rec.public)?,
-            not_before_ms: rec.not_before_ms,
-            not_after_ms: rec.not_after_ms,
-        };
-        if keys.insert(rec.kid, key).is_some() {
-            return Err(PackError::Duplicate);
-        }
+    if !d.revoked_kids.iter().all(|k| valid_kid(k)) {
+        return Err(bad);
     }
+    doc::check_window(d.issued_at_ms, d.expires_at_ms, now_ms)?;
+    let guard = Guard::check(prev, d.version, &j.payload_sha256())?;
     Ok(Keyset {
-        seq: p.seq,
-        issued_ms: p.issued_ms,
-        expires_ms: p.expires_ms,
-        digest,
+        guard,
+        expires_at_ms: d.expires_at_ms,
         keys,
-        revoked,
+        revoked_kids: d.revoked_kids,
     })
 }

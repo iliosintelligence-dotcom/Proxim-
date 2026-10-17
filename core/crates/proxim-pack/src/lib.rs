@@ -1,69 +1,71 @@
-//! proxim-pack: verification of signed keysets, manifests, packs and envelope v2 entries
-//! (docs/pack-spec.md; invariants I10 and I17).
+//! proxim-pack: signed content verification (M2). Normative format: `docs/pack-format.md`.
 //!
-//! Pure: every function is a function of its arguments. There is no clock (`now_ms` is an
-//! argument), no network, no storage and no randomness. Rollback state ([`SeqMark`]) is passed in
-//! and handed back so the SDK shell can persist it. Every input is untrusted: no `unwrap`, no
-//! unchecked indexing, all lengths checked before use.
-//!
-//! Order of use: [`verify_keyset`] against the pinned [`TrustRoots`], then [`verify_manifest`] for
-//! the device's cell, then [`verify_pack`] for each tier file. A framing error rejects a whole
-//! document; a bad entry inside a pack is dropped on its own with a reason.
+//! Trust chain: pinned root keys → [`keyset`] → approve and manifest keys → [`manifest`],
+//! [`revocation`] lists and every [`pack`] entry. All functions are pure: the caller supplies the
+//! bytes, the previously accepted state (rollback guards) and `now`. Any failure is a
+//! [`ReasonCode`] from engine spec 8 row 500 (or `NOT_YET_LIVE` for a revision before `live_at`).
 #![no_std]
 
 extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod b64;
+pub mod crypto;
+pub mod encode;
+pub mod jws;
+pub mod keyset;
+pub mod manifest;
+pub mod pack;
+pub mod revocation;
+#[cfg(feature = "testkit")]
+pub mod testkit;
+
 mod doc;
-mod entry;
-mod error;
-mod es256;
-mod hex;
-mod keyset;
-mod manifest;
-mod pack;
-mod wire;
 
-pub use entry::{Creative, ShippedCreative, VerifiedEntry, verify_entry};
-pub use error::PackError;
-pub use es256::PublicKey;
-pub use keyset::{Keyset, TrustRoots, verify_keyset};
-pub use manifest::{Manifest, TierRecord, verify_manifest};
-pub use pack::{Dropped, VerifiedPack, verify_pack};
+pub use keyset::{Keyset, Purpose, RootKey};
+pub use manifest::{Manifest, PackKind};
+pub use pack::{DroppedEntry, OpenedPack, VerifiedEntry, open_pack};
+pub use proxim_types::ReasonCode;
+pub use revocation::RevocationList;
 
-use sha2::{Digest as _, Sha256};
+/// Result of every verification step.
+pub type PackResult<T> = Result<T, ReasonCode>;
 
-/// Highest accepted sequence number of a keyset or of one cell's manifest, with the digest of the
-/// document that carried it. A later document with a lower `seq` is a rollback; one with the same
-/// `seq` must be byte-identical.
+/// Rollback guard for a versioned document (key set version, revocation seq, manifest seq per
+/// cell): the highest number accepted and the SHA-256 of that document's payload.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SeqMark {
+pub struct Guard {
     pub seq: u64,
-    pub digest: [u8; 32],
+    pub sha256: [u8; 32],
 }
 
-impl SeqMark {
-    /// Apply the rollback rule (pack-spec 3.1 and 3.2) for a candidate document.
+impl Guard {
+    /// Accept `seq` with payload hash `sha256` after `prev`: a higher number, or the same number
+    /// with the same bytes (a re-fetch). Anything else is `SEQ_ROLLBACK`.
     ///
     /// # Errors
-    /// [`PackError::Rollback`] for a lower `seq`, [`PackError::SeqConflict`] for the same `seq`
-    /// with a different digest.
-    pub fn admit(last: Option<Self>, next: Self) -> Result<(), PackError> {
-        match last {
-            Some(prev) if next.seq < prev.seq => Err(PackError::Rollback),
-            Some(prev) if next.seq == prev.seq && next.digest != prev.digest => {
-                Err(PackError::SeqConflict)
+    /// [`ReasonCode::SeqRollback`].
+    pub fn check(prev: Option<&Self>, seq: u64, sha256: &[u8; 32]) -> PackResult<Self> {
+        match prev {
+            Some(p) if seq < p.seq || (seq == p.seq && &p.sha256 != sha256) => {
+                Err(ReasonCode::SeqRollback)
             }
-            _ => Ok(()),
+            _ => Ok(Self {
+                seq,
+                sha256: *sha256,
+            }),
         }
     }
 }
 
-/// SHA-256 of `bytes`.
+/// `kid`: 1 to 32 characters from `a-z 0-9 -` (pack-format 2).
 #[must_use]
-pub fn sha256(bytes: &[u8]) -> [u8; 32] {
-    Sha256::digest(bytes).into()
+pub fn valid_kid(kid: &str) -> bool {
+    (1..=32).contains(&kid.len())
+        && kid
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
 #[cfg(test)]
@@ -71,49 +73,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn seq_mark_rules() {
-        let a = SeqMark {
-            seq: 5,
-            digest: [1; 32],
-        };
-        assert_eq!(SeqMark::admit(None, a), Ok(()));
-        assert_eq!(SeqMark::admit(Some(a), a), Ok(()));
-        assert_eq!(
-            SeqMark::admit(
-                Some(a),
-                SeqMark {
-                    seq: 6,
-                    digest: [2; 32]
-                }
-            ),
-            Ok(())
-        );
-        assert_eq!(
-            SeqMark::admit(
-                Some(a),
-                SeqMark {
-                    seq: 4,
-                    digest: [1; 32]
-                }
-            ),
-            Err(PackError::Rollback)
-        );
-        assert_eq!(
-            SeqMark::admit(
-                Some(a),
-                SeqMark {
-                    seq: 5,
-                    digest: [2; 32]
-                }
-            ),
-            Err(PackError::SeqConflict)
-        );
+    fn guard_accepts_newer_or_identical_only() {
+        let a = [1u8; 32];
+        let b = [2u8; 32];
+        let g = Guard::check(None, 5, &a).unwrap();
+        assert_eq!(Guard::check(Some(&g), 5, &a), Ok(g));
+        assert_eq!(Guard::check(Some(&g), 5, &b), Err(ReasonCode::SeqRollback));
+        assert_eq!(Guard::check(Some(&g), 4, &a), Err(ReasonCode::SeqRollback));
+        assert_eq!(Guard::check(Some(&g), 6, &b).unwrap().seq, 6);
     }
 
     #[test]
-    fn sha256_known_answer() {
-        let d = sha256(b"abc");
-        assert_eq!(d[0], 0xba);
-        assert_eq!(d[31], 0xad);
+    fn kid_charset() {
+        assert!(valid_kid("approve-2026-1"));
+        assert!(!valid_kid(""));
+        assert!(!valid_kid("Approve"));
+        assert!(!valid_kid("a_b"));
+        assert!(!valid_kid(&"a".repeat(33)));
     }
 }

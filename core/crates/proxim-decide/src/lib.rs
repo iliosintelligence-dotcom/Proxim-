@@ -5,10 +5,9 @@
 //! and sorted vectors only). Every input is untrusted: no `unwrap`, no unchecked indexing, time
 //! arithmetic saturates and geometry arithmetic is `i128` or checked, so overflow is impossible.
 //!
-//! M1 scope of the pack checks (spec 8, 10): the engine receives already-decoded signposts, so
-//! signature, pack expiry and revocation (reason ids 500 and above: `REVOKED`, `SIGNATURE_INVALID`,
-//! `SEQ_ROLLBACK`, `KID_REVOKED`, `PACK_EXPIRED`) are placeholders owned by `proxim-pack` (M2) and
-//! are not decided here; what M1 does check is the signpost's own validity window (F13, F14), the
+//! Pack checks (spec 8, 10; errata E-PACK): the engine receives signposts that `proxim-pack` has
+//! already verified, so signature, pack expiry and revocation (reason ids 500 to 504) are decided
+//! there, never here; what `decide` does check is the signpost's own validity window (F13, F14), the
 //! reserved-event fail-closed rule (F11), consent (F01, F15) and the policy filters (F16 to F18).
 //!
 //! Module map: [`json`] is the cross-binding conformance entry (`decide_json`), [`golden`] runs and
@@ -21,10 +20,12 @@ extern crate std;
 
 mod calendar;
 mod caps;
+pub mod controls;
 mod eff;
 pub mod golden;
 pub mod json;
 pub mod params;
+pub mod rotation;
 pub mod sha256;
 mod standoff;
 mod validate;
@@ -32,12 +33,12 @@ mod validate;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
-use caps::CapsBook;
+use caps::{Books, CapsBook};
 use eff::Eff;
 use params::{
     DET_PRUNE_MS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M, FIX_FUTURE_SLACK_MS,
     FIX_MAX_AGE_MS, JUMP_MARGIN_MM, JUMP_MAX_SPEED_MMPS, JUMP_RESET_AT, JUMP_WINDOW_MS,
-    RANK_DEFAULT_MILLI,
+    RANK_DEFAULT_MILLI, RANK_MAX_MILLI,
 };
 use proxim_detect::{Event, Prepared};
 use proxim_geo::{acc_eff_mm, dist_mm, frame_for};
@@ -84,10 +85,15 @@ pub fn decide(
 
     // ---- global filters F01-F10 (first failure ends the call) ----
     if consent.location_matching != ConsentValue::Granted {
-        return Ok(stop(state, now, ReasonCode::ConsentDenied, true));
+        // I4 and Addendum 02 5.2: withdrawal also wipes the wording ledger.
+        let (out, mut next) = stop(state, now, ReasonCode::ConsentDenied, true);
+        next.rotation = proxim_types::Rotation::default();
+        return Ok((out, next));
     }
     if eff.child_directed {
-        return Ok(stop(state, now, ReasonCode::EngineDisabled, true));
+        let (out, mut next) = stop(state, now, ReasonCode::EngineDisabled, true);
+        next.rotation = proxim_types::Rotation::default();
+        return Ok((out, next));
     }
     if validate::fix_is_invalid(fix) {
         return Ok(stop(state, now, ReasonCode::FixInvalid, false));
@@ -117,7 +123,11 @@ pub fn decide(
             let (out, _) = stop(state, now, ReasonCode::FixJump, false);
             return Ok((out, next));
         }
-        base_mem = Mem::default();
+        // The reset forgets the trace, not the memory-only facility record (7.4).
+        base_mem = Mem {
+            facility: state.mem.facility.clone(),
+            ..Mem::default()
+        };
     }
     base_mem.jump_rejects = 0;
     // F10: minimal standoff. Generic SUPPRESSED, memory wiped, caps untouched, nothing learned.
@@ -128,12 +138,28 @@ pub fn decide(
         } else {
             ReasonCode::Suppressed
         };
+        // I6: all of `mem` goes, the memory-only facility record included (7.4): nothing is kept
+        // inside a standoff, at the price that facility caps restart after it.
         return Ok(stop(state, now, reason, true));
     }
 
     // ---- accepted: filters, trace, caps buckets ----
     let (mut mem, summary) = path_update(&base_mem, fix)?;
-    let mut book = CapsBook::load(&state.caps, now, clock.tz_offset_min);
+    let fac = &state.mem.facility;
+    let fac_caps = Caps {
+        hwm_ms: 0,
+        last_fire_ms: fac.last_fire_ms,
+        signposts: fac.signposts.clone(),
+        senders: fac.senders.clone(),
+    };
+    let mut book = Books {
+        persisted: CapsBook::load(&state.caps, now, clock.tz_offset_min),
+        volatile: CapsBook::load(&fac_caps, now, clock.tz_offset_min),
+    };
+    let rday = rotation::rot_day(calendar::day_week(now, clock.tz_offset_min).0);
+    let mut rbook = rotation::Book::load(&state.rotation, rday);
+    let mut vrbook = rotation::Book::load(&fac.rotation, rday);
+    let last_fire_any = state.caps.last_fire_ms.max(fac.last_fire_ms);
 
     let (candidates, mut drops) = select_revisions(signposts, fix.t_ms);
     let present: BTreeSet<&str> = signposts.iter().map(|s| s.id.as_str()).collect();
@@ -150,9 +176,13 @@ pub fn decide(
         det.remove(*id);
     }
 
+    let controls = controls::prune(&state.controls, now);
+    let fac_controls = controls::prune(&fac.controls, now);
     let ctx = Ctx {
         eff: &eff,
         consent,
+        controls: &controls,
+        fac_controls: &fac_controls,
         zones: &zones,
         now,
     };
@@ -206,7 +236,7 @@ pub fn decide(
             _ => {}
         }
         let Some(ev) = d.event else { continue };
-        match event_filter(&ctx, &book, state.caps.last_fire_ms, sp, &ev) {
+        match event_filter(&ctx, &book, last_fire_any, sp, &ev) {
             Some(reason) => drops.push(event_drop(sp, &ev, reason)),
             None => survivors.push(Cand {
                 sp,
@@ -227,17 +257,70 @@ pub fn decide(
     });
     let mut fires: Vec<Decision> = Vec::new();
     let mut last_fire_ms = state.caps.last_fire_ms;
+    let mut fac_last_fire_ms = fac.last_fire_ms;
     let mut path_info = summary.info;
-    for (rank, c) in survivors.iter().enumerate() {
-        if rank < eff.slots {
-            book.record_fire(&c.sp.id);
-            last_fire_ms = Some(now);
+    let mut taken = 0usize;
+    for c in &survivors {
+        // With more than one slot, an earlier winner in this call can use up the sender's or the
+        // app's day: such a candidate is consumed with that cap code and takes no slot (7.2).
+        let cap_now = if book.sender_day_count(&c.sp.sender) >= eff.cap_sender_day {
+            Some(ReasonCode::CapSenderDay)
+        } else if book.app_day_count() >= eff.cap_app_day {
+            Some(ReasonCode::CapAppDay)
+        } else {
+            None
+        };
+        if taken < eff.slots
+            && let Some(reason) = cap_now
+        {
+            drops.push(event_drop(c.sp, &c.ev, reason));
+            continue;
+        }
+        if taken < eff.slots {
+            taken += 1;
+            let facility = c.sp.class.is_facility();
+            book.record_fire(&c.sp.id, &c.sp.sender, facility);
+            if facility {
+                fac_last_fire_ms = Some(now);
+            } else {
+                last_fire_ms = Some(now);
+            }
             path_info = PathInfo {
                 tier: c.ev.path_tier,
                 conf_milli: c.ev.path_conf_milli,
                 ..summary.info
             };
-            fires.push(fire_decision(c.sp, &c.ev));
+            // Step 7b (Addendum 02 5.1): the wording, chosen and committed with the fire.
+            let wording = match &c.sp.wordings {
+                Some(w) => {
+                    let fam = rotation::family_of(c.sp.id.as_str(), w)?;
+                    let rb = if facility { &mut vrbook } else { &mut rbook };
+                    let mut led = rb.view(c.sp.id.as_str());
+                    let pick = rotation::select(
+                        &led,
+                        rday,
+                        &fam,
+                        w.avail_mask,
+                        c.sp.rot_days.unwrap_or(0),
+                        eff.rot_lane,
+                        eff.rot_lanes,
+                    );
+                    match pick {
+                        Some(s) => {
+                            let vid = fam.vids.get(s.idx).copied().ok_or(EngineError::Parse)?;
+                            rotation::commit(&mut led, vid, rday, s.new_count);
+                            rb.store(&c.sp.id, &led, Some(vid));
+                            u8::try_from(s.idx).ok()
+                        }
+                        None => None,
+                    }
+                }
+                None => None,
+            };
+            fires.push(Decision {
+                wording,
+                ..fire_decision(c.sp, &c.ev)
+            });
         } else {
             // The loser reverts to its pre-event detector state: it may fire at a later fix.
             match c.pre {
@@ -260,18 +343,32 @@ pub fn decide(
     }
 
     // ---- commit and output ----
-    if book.len() > MAX_SIGNPOSTS || det.len() > MAX_DETECTORS {
+    if book.persisted.len().saturating_add(book.volatile.len()) > MAX_SIGNPOSTS
+        || det.len() > MAX_DETECTORS
+    {
         return Err(EngineError::Limit);
     }
     mem.det = det.into_values().collect();
+    let (signposts_caps, senders) = book.persisted.into_parts();
+    let (fac_signposts, fac_senders) = book.volatile.into_parts();
+    mem.facility = proxim_types::Volatile {
+        last_fire_ms: fac_last_fire_ms,
+        signposts: fac_signposts,
+        senders: fac_senders,
+        rotation: vrbook.into_rotation()?,
+        controls: fac_controls,
+    };
     let next = State {
         v: 1,
         caps: Caps {
             hwm_ms: now,
             last_fire_ms,
-            signposts: book.into_vec(),
+            signposts: signposts_caps,
+            senders,
         },
         mem,
+        controls,
+        rotation: rbook.into_rotation()?,
     };
     sort_decisions(&mut fires);
     sort_decisions(&mut drops);
@@ -314,6 +411,9 @@ fn sort_decisions(v: &mut [Decision]) {
 struct Ctx<'a> {
     eff: &'a Eff<'a>,
     consent: &'a Consent,
+    controls: &'a proxim_types::Controls,
+    /// Memory-only controls on `health_facility` adverts (7.4).
+    fac_controls: &'a proxim_types::Controls,
     zones: &'a [standoff::Zone],
     now: i64,
 }
@@ -331,7 +431,11 @@ impl Cand<'_> {
     /// affinity 1000 this is exactly the M1 score `rank x conf / 1000`. Fits u64: below 2^32 x
     /// 2^16 x 3000.
     fn score(&self) -> u64 {
-        let rank = self.sp.rank_milli.unwrap_or(RANK_DEFAULT_MILLI);
+        let rank = self
+            .sp
+            .rank_milli
+            .unwrap_or(RANK_DEFAULT_MILLI)
+            .min(RANK_MAX_MILLI);
         u64::from(rank) * u64::from(self.ev.path_conf_milli) * u64::from(self.affinity_milli)
             / 1_000_000
     }
@@ -431,12 +535,22 @@ fn select_revisions(signposts: &[Signpost], t_ms: i64) -> (Vec<&Signpost>, Vec<D
 /// Static filters F11-F19, then the prepared trigger. `Ok(Err(reason))` is a per-signpost drop.
 fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>, EngineError> {
     let eff = ctx.eff;
+    // F11a (R4, engine spec 7.4): a prohibited anchor is never served.
+    if sp.class == Class::ProhibitedAnchor {
+        return Ok(Err(ReasonCode::ProhibitedAnchor));
+    }
     // F11 (E5): everything but enter and approach is reserved and fails closed.
     if !matches!(sp.event, EventKind::Enter | EventKind::Approach) {
         return Ok(Err(ReasonCode::UnsupportedEvent));
     }
     // F12: validity window and lead range are checked on the authored values, before narrowing.
     if sp.valid_until_ms <= sp.valid_from_ms {
+        return Ok(Err(ReasonCode::TriggerInvalid));
+    }
+    // F12 (engine_spec 2): malformed verified wordings (7.3).
+    if let Some(w) = &sp.wordings
+        && rotation::family_of(sp.id.as_str(), w).is_err()
+    {
         return Ok(Err(ReasonCode::TriggerInvalid));
     }
     let mut narrowed: Option<Signpost> = None;
@@ -464,7 +578,7 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
         return Ok(Err(ReasonCode::Expired));
     }
     // F15 (I12): health needs the consent flag and a receipt (M1: non-empty; the SDK issues it).
-    if sp.class == Class::Health {
+    if sp.class.is_health() {
         let receipt = ctx
             .consent
             .health_receipt
@@ -484,10 +598,16 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
     if eff.senders_blocked.contains(sp.sender.as_str()) {
         return Ok(Err(ReasonCode::SenderBlocked));
     }
+    // F17a-c (engine spec 7.2): the person's own controls.
+    for c in [ctx.controls, ctx.fac_controls] {
+        if let Some(r) = controls::blocks(c, sp.id.as_str(), &sp.sender, ctx.now) {
+            return Ok(Err(r));
+        }
+    }
     if sp.sensitivity > eff.sensitivity_ceiling {
         return Ok(Err(ReasonCode::SensitivityAboveCeiling));
     }
-    if sp.class == Class::Health && standoff::trigger_in_standoff(ctx.zones, sp)? {
+    if sp.class.is_health() && standoff::trigger_in_standoff(ctx.zones, sp)? {
         return Ok(Err(ReasonCode::TriggerInStandoff));
     }
     Ok(Ok(prepared))
@@ -496,7 +616,7 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
 /// Event filters F20-F24. A dropped event is consumed, never retried.
 fn event_filter(
     ctx: &Ctx<'_>,
-    book: &CapsBook,
+    book: &Books,
     last_fire_ms: Option<i64>,
     sp: &Signpost,
     ev: &Event,
@@ -520,9 +640,15 @@ fn event_filter(
     if book.week_count(sp.id.as_str()) >= ctx.eff.cap_week {
         return Some(ReasonCode::CapSignpostWeek);
     }
+    if book.sender_day_count(&sp.sender) >= ctx.eff.cap_sender_day {
+        return Some(ReasonCode::CapSenderDay);
+    }
     // A last fire in the future of `now` (tampered state) also blocks: fail closed.
     if last_fire_ms.is_some_and(|l| ctx.now.saturating_sub(l) < ctx.eff.app_interval_ms) {
         return Some(ReasonCode::CapAppInterval);
+    }
+    if book.app_day_count() >= ctx.eff.cap_app_day {
+        return Some(ReasonCode::CapAppDay);
     }
     None
 }
@@ -540,6 +666,7 @@ fn drop_decision(sp: &Signpost, reason: ReasonCode, t_ms: i64) -> Decision {
         copy: copy_for_tier(0),
         d_rem_mm: None,
         t_hat_ms: None,
+        wording: None,
     }
 }
 
@@ -556,6 +683,7 @@ fn event_drop(sp: &Signpost, ev: &Event, reason: ReasonCode) -> Decision {
         copy: copy_for_tier(ev.path_tier),
         d_rem_mm: ev.d_rem_mm,
         t_hat_ms: ev.t_hat_ms,
+        wording: None,
     }
 }
 
@@ -619,7 +747,9 @@ pub(crate) mod tests_support {
             fresh_required_s: Reserved::default(),
             cooldown_s: Reserved::default(),
             creatives: Reserved::default(),
-            rot_days: Reserved::default(),
+            rot_days: None,
+            wordings: None,
+            pack_kind: Reserved::default(),
         }
     }
 }
@@ -759,10 +889,14 @@ mod tests {
         assert_eq!(score(&sp, 500), 999, "floor division");
         sp.rank_milli = Some(0);
         assert_eq!(score(&sp, 800), 0);
+        // E-D-RANK: a rank above 3000 is clamped, so u32::MAX scores like 3000.
         sp.rank_milli = Some(u32::MAX);
-        assert_eq!(score(&sp, u16::MAX), 281_470_681_677);
-        // spec 7.1: the affinity multiplies; the largest product still fits u64
-        assert_eq!(weighted(&sp, u16::MAX, 3000), 844_412_045_033);
+        assert_eq!(score(&sp, u16::MAX), 196_605);
+        sp.rank_milli = Some(3000);
+        assert_eq!(score(&sp, u16::MAX), 196_605);
+        sp.rank_milli = Some(u32::MAX);
+        // spec 7.1: the affinity multiplies; the largest product fits u64 easily
+        assert_eq!(weighted(&sp, u16::MAX, 3000), 589_815);
         sp.rank_milli = None;
         assert_eq!(weighted(&sp, 500, 2000), 1000);
         assert_eq!(weighted(&sp, 500, 1), 0, "floor division");

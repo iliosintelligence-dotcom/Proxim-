@@ -258,9 +258,9 @@ fn key_order_and_insignificant_whitespace_in_inputs_do_not_change_the_result() {
 }
 
 #[test]
-fn engine_spec_version_is_exposed_and_is_one() {
-    assert_eq!(proxim_ffi::engine_spec(), 1);
-    assert_eq!(proxim_types::ENGINE_SPEC, 1);
+fn engine_spec_version_is_exposed_and_is_two() {
+    assert_eq!(proxim_ffi::engine_spec(), 2);
+    assert_eq!(proxim_types::ENGINE_SPEC, 2);
 }
 
 #[test]

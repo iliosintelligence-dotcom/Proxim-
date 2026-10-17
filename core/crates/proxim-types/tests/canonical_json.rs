@@ -44,8 +44,12 @@ fn reserved_fields_are_accepted_ignored_and_never_re_emitted() {
     );
     let sp: Signpost = from_json(with_reserved.as_bytes()).unwrap();
     assert_eq!(to_canonical_json(&sp).unwrap(), SIGNPOST);
-    let pol: Policy = from_json(br#"{"rot_lane":{"x":[1,2]},"rot_lanes":3}"#).unwrap();
-    assert_eq!(to_canonical_json(&pol).unwrap(), "{}");
+    // Typed from engine_spec 2 (no longer reserved): re-emitted as given.
+    let pol: Policy = from_json(br#"{"rot_lane":1,"rot_lanes":3}"#).unwrap();
+    assert_eq!(
+        to_canonical_json(&pol).unwrap(),
+        r#"{"rot_lane":1,"rot_lanes":3}"#
+    );
 }
 
 #[test]
@@ -62,6 +66,12 @@ fn state_with_every_detector_tag_round_trips() {
                 week_idx: 2_714,
                 week_n: 3,
                 tz_offset_min: None,
+            }],
+            senders: vec![proxim_types::SenderCaps {
+                sender: "s-1".into(),
+                day_idx: 19_000,
+                day_n: 1,
+                tz_offset_min: 0,
             }],
         },
         mem: Mem {
@@ -119,6 +129,31 @@ fn state_with_every_detector_tag_round_trips() {
                     },
                 },
             ],
+            facility: proxim_types::Volatile {
+                last_fire_ms: Some(3),
+                ..Default::default()
+            },
+        },
+        controls: proxim_types::Controls {
+            dismissed: vec![proxim_types::Dismissal {
+                id: Id::new("a").unwrap(),
+                until_ms: 9,
+            }],
+            hidden: vec![Id::new("b").unwrap()],
+            reported: vec!["s-2".into()],
+        },
+        rotation: proxim_types::Rotation {
+            rows: vec![proxim_types::RotRow {
+                id: Id::new("a").unwrap(),
+                vid: 7,
+                count: 256,
+                last_day: 19_000,
+            }],
+            families: vec![proxim_types::RotFamily {
+                id: Id::new("a").unwrap(),
+                recent: vec![7],
+                last_day: 19_000,
+            }],
         },
     };
     let j = to_canonical_json(&st).unwrap();

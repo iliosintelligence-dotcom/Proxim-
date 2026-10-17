@@ -65,6 +65,18 @@ fn higher_rank_beats_lower_id() {
 }
 
 #[test]
+fn rank_above_3000_buys_nothing_more() {
+    // E-D-RANK: a rank of 60000 is clamped to 3000, so it ties with 3000 and the lower id wins.
+    let mut rig = two(("a-1", 3000), ("b-1", 60000));
+    assert!(
+        first_event(&mut rig).fired("a-1"),
+        "60000 is worth no more than 3000"
+    );
+    let mut rig = two(("a-1", 2999), ("b-1", 60000));
+    assert!(first_event(&mut rig).fired("b-1"), "3000 still beats 2999");
+}
+
+#[test]
 fn decisions_are_sorted_fire_first_then_by_id() {
     let mut rig = Rig::new();
     let mut sps = vec![];

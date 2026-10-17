@@ -6,7 +6,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt::Write;
-use proxim_types::{Class, ReasonCode};
+use proxim_types::ReasonCode;
 
 fn reason_text(r: ReasonCode) -> &'static str {
     match r {
@@ -130,7 +130,7 @@ pub fn markdown(world: &World, runs: &[RunResult]) -> String {
             .filter(|f| Some(f.1) == best)
             .map(|f| app_name(f.0))
             .collect();
-        let class = if ad.signpost.class == Class::Health {
+        let class = if ad.signpost.class.is_health() {
             " (health)"
         } else {
             ""

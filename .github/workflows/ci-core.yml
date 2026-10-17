@@ -56,6 +56,33 @@ jobs:
           ls core/testdata/golden || true
           cargo test --manifest-path core/Cargo.toml --workspace --all-features golden
 
+  pack-ts:
+    # packages/pack: the TypeScript pack compiler and second verifier (docs/pack-format.md).
+    # Replays the Rust golden vectors, checks the compiled fixture Rust opens, measures tier 0.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.0"
+      - name: pack tests
+        working-directory: packages/pack
+        run: node --test test/*.test.ts
+
+  rotation-ref:
+    # OI-ROT-1: the normative Python reference reproduces the frozen golden_v2.json, two Python
+    # kernels agree, and the new_count supplement is current (tools/rotation-ref/README.md).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography==50.0.1
+      - run: python3 -I tools/rotation-ref/verify_golden.py
+      - run: python3 -I tools/rotation-ref/crosscheck.py
+      - run: python3 -I tools/rotation-ref/gen_newcount.py
+
   cargo-deny:
     runs-on: ubuntu-latest
     steps:

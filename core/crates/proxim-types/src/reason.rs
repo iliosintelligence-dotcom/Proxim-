@@ -47,6 +47,26 @@ pub enum ReasonCode {
     CapAppInterval = 404,
     LostSlot = 405,
     NoEvent = 406,
+    // Pack verification (M2, engine spec 8 row 500; `proxim-pack`). Never emitted by `decide`.
+    Revoked = 500,
+    SignatureInvalid = 501,
+    SeqRollback = 502,
+    KidRevoked = 503,
+    PackExpired = 504,
+    // The rest of PLAN 5.6 (M3), appended in spec order. Emitted from engine_spec 2 as each slice
+    // lands (spec 8 marks which); the others are reserved and never produced yet.
+    CapSenderDay = 505,
+    CapAppDay = 506,
+    CooldownDismissed = 507,
+    HiddenByUser = 508,
+    SenderReported = 509,
+    PacedOut = 510,
+    SurfaceNotReady = 511,
+    DrivingUnsafeFormat = 512,
+    QuietHours = 513,
+    OutsideDaypart = 514,
+    DestinationSuppressed = 515,
+    ProhibitedAnchor = 516,
 }
 
 impl ReasonCode {
@@ -71,7 +91,7 @@ mod tests {
         assert_eq!(ReasonCode::NoEvent.id(), 406);
     }
 
-    /// The whole spec section 8 table (rows 0..400, implemented codes): id and wire string.
+    /// The whole spec section 8 table (rows 0..400 and row 500 through PROHIBITED_ANCHOR): id and wire string.
     const SPEC_TABLE: &[(ReasonCode, u16, &str)] = &[
         (ReasonCode::Ok, 0, "OK"),
         (ReasonCode::Suppressed, 1, "SUPPRESSED"),
@@ -133,6 +153,31 @@ mod tests {
         (ReasonCode::CapAppInterval, 404, "CAP_APP_INTERVAL"),
         (ReasonCode::LostSlot, 405, "LOST_SLOT"),
         (ReasonCode::NoEvent, 406, "NO_EVENT"),
+        (ReasonCode::Revoked, 500, "REVOKED"),
+        (ReasonCode::SignatureInvalid, 501, "SIGNATURE_INVALID"),
+        (ReasonCode::SeqRollback, 502, "SEQ_ROLLBACK"),
+        (ReasonCode::KidRevoked, 503, "KID_REVOKED"),
+        (ReasonCode::PackExpired, 504, "PACK_EXPIRED"),
+        (ReasonCode::CapSenderDay, 505, "CAP_SENDER_DAY"),
+        (ReasonCode::CapAppDay, 506, "CAP_APP_DAY"),
+        (ReasonCode::CooldownDismissed, 507, "COOLDOWN_DISMISSED"),
+        (ReasonCode::HiddenByUser, 508, "HIDDEN_BY_USER"),
+        (ReasonCode::SenderReported, 509, "SENDER_REPORTED"),
+        (ReasonCode::PacedOut, 510, "PACED_OUT"),
+        (ReasonCode::SurfaceNotReady, 511, "SURFACE_NOT_READY"),
+        (
+            ReasonCode::DrivingUnsafeFormat,
+            512,
+            "DRIVING_UNSAFE_FORMAT",
+        ),
+        (ReasonCode::QuietHours, 513, "QUIET_HOURS"),
+        (ReasonCode::OutsideDaypart, 514, "OUTSIDE_DAYPART"),
+        (
+            ReasonCode::DestinationSuppressed,
+            515,
+            "DESTINATION_SUPPRESSED",
+        ),
+        (ReasonCode::ProhibitedAnchor, 516, "PROHIBITED_ANCHOR"),
     ];
 
     #[test]
@@ -151,7 +196,7 @@ mod tests {
 
     #[test]
     fn unknown_or_reserved_names_do_not_parse() {
-        for bad in ["\"REVOKED\"", "\"ok\"", "\"\"", "7", "null"] {
+        for bad in ["\"HOSTED_BACKGROUND_OFF\"", "\"ok\"", "\"\"", "7", "null"] {
             assert!(serde_json::from_str::<ReasonCode>(bad).is_err(), "{bad}");
         }
     }

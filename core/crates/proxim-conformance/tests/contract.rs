@@ -102,7 +102,7 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
     let root = golden_dir();
     let manifest: Value =
         serde_json::from_slice(&std::fs::read(root.join("MANIFEST.json")).unwrap()).unwrap();
-    assert_eq!(manifest["engine_spec"], 1);
+    assert_eq!(manifest["engine_spec"], proxim_types::ENGINE_SPEC);
     assert_eq!(manifest["format"], "proxim-golden-manifest/1");
     let listed: std::collections::BTreeMap<String, String> = manifest["vectors"]
         .as_array()
@@ -128,6 +128,13 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
             .get(&rel)
             .unwrap_or_else(|| panic!("{rel} is not in MANIFEST.json"));
         assert_eq!(&sha256_hex(&bytes), want, "{rel}: manifest hash differs");
+        // OI-ROT-1 (Addendum 02 13): golden_v2.json is committed unchanged from the reference
+        // kernel's output (indented, no header) and is never regenerated, so only its listing and
+        // hash are checked here; `proxim-decide/tests/rotation_golden.rs` pins its exact bytes.
+        if rel == "rotation/golden_v2.json" {
+            seen += 1;
+            continue;
+        }
         let text = std::str::from_utf8(&bytes).unwrap();
         let body = text
             .strip_suffix('\n')
@@ -145,7 +152,17 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
             &v
         };
         assert_eq!(h["format"], "proxim-golden/1", "{rel}");
-        assert_eq!(h["engine_spec"], 1, "{rel}");
+        // The header records the spec a vector was made under (engine spec 9, E-SPEC2): decide
+        // vectors must match the current spec; other kinds stay valid until their behaviour moves.
+        let made_under = h["engine_spec"].as_u64().unwrap();
+        if rel.starts_with("decide/") {
+            assert_eq!(made_under, u64::from(proxim_types::ENGINE_SPEC), "{rel}");
+        } else {
+            assert!(
+                (1..=u64::from(proxim_types::ENGINE_SPEC)).contains(&made_under),
+                "{rel}"
+            );
+        }
         assert_eq!(
             h["synthetic"], true,
             "{rel}: golden data must be synthetic (I2)"

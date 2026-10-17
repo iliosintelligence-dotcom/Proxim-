@@ -140,7 +140,9 @@ pub fn signpost(id: &str, event: EventKind, trigger: Trigger) -> Signpost {
         fresh_required_s: Reserved::default(),
         cooldown_s: Reserved::default(),
         creatives: Reserved::default(),
-        rot_days: Reserved::default(),
+        rot_days: None,
+        wordings: None,
+        pack_kind: Reserved::default(),
     }
 }
 

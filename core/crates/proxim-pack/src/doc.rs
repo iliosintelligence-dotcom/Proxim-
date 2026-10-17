@@ -1,50 +1,32 @@
-//! Signed document framing (pack-spec 3): keysets and manifests.
+//! Shared decoding for the signed JSON documents.
 
-use crate::error::PackError;
-use crate::wire::Reader;
-use alloc::vec::Vec;
+use crate::PackResult;
+use proxim_types::ReasonCode;
+use proxim_types::strict::{JsonLimits, from_canonical_json_with};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
-pub const KIND_KEYSET: u8 = 1;
-pub const KIND_MANIFEST: u8 = 2;
-const MAGIC: &[u8; 4] = b"PXSD";
-const DOMAIN: &[u8] = b"PROXIM-DOC-V1\x00";
-/// Largest payload accepted (pack-spec 3).
-pub const MAX_PAYLOAD: usize = 1 << 20;
+/// Largest JWS token, and the array bound that lets a revocation list hold 65,536 entries.
+pub const MAX_JWS_BYTES: usize = 262_144;
+const MAX_DOC_ARRAY: usize = 65_536;
 
-pub struct Doc<'a> {
-    pub kid: &'a str,
-    pub payload: &'a [u8],
-    pub signed_msg: Vec<u8>,
-    pub sig: [u8; 64],
+/// Strict, canonical decode of a JWS payload; any failure is `SIGNATURE_INVALID` (malformed
+/// signed content is treated as untrusted, pack-format 2).
+pub fn decode<T: DeserializeOwned + Serialize>(payload: &[u8]) -> PackResult<T> {
+    let limits = JsonLimits {
+        max_bytes: MAX_JWS_BYTES,
+        max_array_len: MAX_DOC_ARRAY,
+        ..JsonLimits::default()
+    };
+    from_canonical_json_with(payload, &limits).map_err(|_| ReasonCode::SignatureInvalid)
 }
 
-/// Parse a signed document of the expected kind. Does not verify the signature.
-pub fn parse(bytes: &[u8], kind: u8) -> Result<Doc<'_>, PackError> {
-    let mut r = Reader::new(bytes);
-    if r.take(4)? != MAGIC || r.u8()? != 1 || r.u8()? != kind {
-        return Err(PackError::Malformed);
+/// `issued_at_ms <= now < expires_at_ms`, else `PACK_EXPIRED` (a document from the future is
+/// treated like an expired one: the clock and the document disagree, so neither is trusted).
+pub fn check_window(issued_at_ms: i64, expires_at_ms: i64, now_ms: i64) -> PackResult<()> {
+    if issued_at_ms <= now_ms && now_ms < expires_at_ms {
+        Ok(())
+    } else {
+        Err(ReasonCode::PackExpired)
     }
-    let kid_start = r.pos();
-    let kid = r.kid()?;
-    let len = usize::try_from(r.u32()?).map_err(|_| PackError::Limit)?;
-    if len > MAX_PAYLOAD {
-        return Err(PackError::Limit);
-    }
-    let payload = r.take(len)?;
-    let signed_end = r.pos();
-    let sig = r.array::<64>()?;
-    r.finish()?;
-    let header = bytes
-        .get(kid_start..signed_end)
-        .ok_or(PackError::Malformed)?;
-    let mut signed_msg = Vec::with_capacity(DOMAIN.len() + 1 + header.len());
-    signed_msg.extend_from_slice(DOMAIN);
-    signed_msg.push(kind);
-    signed_msg.extend_from_slice(header);
-    Ok(Doc {
-        kid,
-        payload,
-        signed_msg,
-        sig,
-    })
 }

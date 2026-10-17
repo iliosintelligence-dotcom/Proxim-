@@ -413,3 +413,32 @@ fn nearby_zones_never_create_decisions_for_the_standoff_itself() {
     assert!(o.decisions.iter().all(|d| d.outcome != Outcome::Fire));
     assert!(o.decisions.is_empty());
 }
+
+/// I7 (engine part, engine spec 7.4): a `health_facility` fire leaves nothing in the persisted
+/// state (caps, controls, wording ledger), so the device keeps no record of it beyond memory, and
+/// the engine emits no event of any kind (it has no event output; `proxim-events` will carry the
+/// class rule when built). The fire itself still reaches the in-app surface.
+#[test]
+fn health_facility_emits_no_device_events() {
+    let mut sp = route("clinic", 2500, 30);
+    sp.class = Class::HealthFacility;
+    let mut sim = Sim::new(vec![sp]);
+    sim.consent = granted_health();
+    let mut before = sim.state.caps.clone();
+    let before_rest = to_canonical_json(&(&sim.state.controls, &sim.state.rotation)).unwrap();
+    let outs = sim.run(&drive_north(T0, 1_400_000, 15_000, 40, 0));
+    assert_eq!(fire_indices(&outs).len(), 1, "it is shown in the app");
+    before.hwm_ms = sim.state.caps.hwm_ms;
+    assert_eq!(
+        sim.state.caps, before,
+        "no persisted cap row, sender row or last fire"
+    );
+    assert_eq!(
+        to_canonical_json(&(&sim.state.controls, &sim.state.rotation)).unwrap(),
+        before_rest
+    );
+    assert!(
+        !sim.state.mem.facility.is_empty(),
+        "counted in memory only (Option A)"
+    );
+}

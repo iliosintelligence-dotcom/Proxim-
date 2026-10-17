@@ -31,7 +31,7 @@ fn reserved_fields_are_ignored_whatever_json_value_they_hold() {
         "fresh_required_s",
         "cooldown_s",
         "creatives",
-        "rot_days",
+        "pack_kind",
     ];
     let values: [Value; 7] = [
         json!(1),
@@ -53,16 +53,8 @@ fn reserved_fields_are_ignored_whatever_json_value_they_hold() {
             }
         }
     }
-    for f in ["rot_lane", "rot_lanes"] {
-        for v in &values {
-            let mut c = Call::base();
-            c.policy[f] = v.clone();
-            let t = c.run().text;
-            if t != plain {
-                refused.push(format!("policy.{f}={v}: {}", &t[..t.len().min(80)]));
-            }
-        }
-    }
+    // `rot_days`, `rot_lane` and `rot_lanes` are typed from engine_spec 2 (7.3), so they are no
+    // longer "any JSON value"; their own tests are in proxim-decide/tests/rotation_decide.rs.
     assert!(
         refused.is_empty(),
         "reserved fields must be accepted and ignored:\n{}",

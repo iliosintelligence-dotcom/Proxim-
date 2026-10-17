@@ -1,20 +1,31 @@
 [package]
 name = "proxim-pack"
-description = "Signed pack, manifest and keyset verification (M2; docs/pack-spec.md)"
+description = "Signed pack, manifest, key set and revocation list verification (M2, docs/pack-format.md)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+# Deterministic test keys and signing for golden vectors and tests. Never enabled by a release SDK.
+testkit = []
+
 [dependencies]
 proxim-types = { workspace = true }
 p256 = { workspace = true }
 sha2 = { workspace = true }
+miniz_oxide = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+proxim-decide = { workspace = true }
 proptest = { workspace = true }
+proxim-pack = { path = ".", features = ["testkit"] }
+
+[[example]]
+name = "gen_pack_vectors"
+required-features = ["testkit"]
 
 [lints]
 workspace = true
