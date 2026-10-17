@@ -33,7 +33,7 @@ mod validate;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
-use caps::CapsBook;
+use caps::{Books, CapsBook};
 use eff::Eff;
 use params::{
     DET_PRUNE_MS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M, FIX_FUTURE_SLACK_MS,
@@ -123,7 +123,11 @@ pub fn decide(
             let (out, _) = stop(state, now, ReasonCode::FixJump, false);
             return Ok((out, next));
         }
-        base_mem = Mem::default();
+        // The reset forgets the trace, not the memory-only facility record (7.4).
+        base_mem = Mem {
+            facility: state.mem.facility.clone(),
+            ..Mem::default()
+        };
     }
     base_mem.jump_rejects = 0;
     // F10: minimal standoff. Generic SUPPRESSED, memory wiped, caps untouched, nothing learned.
@@ -134,14 +138,28 @@ pub fn decide(
         } else {
             ReasonCode::Suppressed
         };
+        // I6: all of `mem` goes, the memory-only facility record included (7.4): nothing is kept
+        // inside a standoff, at the price that facility caps restart after it.
         return Ok(stop(state, now, reason, true));
     }
 
     // ---- accepted: filters, trace, caps buckets ----
     let (mut mem, summary) = path_update(&base_mem, fix)?;
-    let mut book = CapsBook::load(&state.caps, now, clock.tz_offset_min);
+    let fac = &state.mem.facility;
+    let fac_caps = Caps {
+        hwm_ms: 0,
+        last_fire_ms: fac.last_fire_ms,
+        signposts: fac.signposts.clone(),
+        senders: fac.senders.clone(),
+    };
+    let mut book = Books {
+        persisted: CapsBook::load(&state.caps, now, clock.tz_offset_min),
+        volatile: CapsBook::load(&fac_caps, now, clock.tz_offset_min),
+    };
     let rday = rotation::rot_day(calendar::day_week(now, clock.tz_offset_min).0);
     let mut rbook = rotation::Book::load(&state.rotation, rday);
+    let mut vrbook = rotation::Book::load(&fac.rotation, rday);
+    let last_fire_any = state.caps.last_fire_ms.max(fac.last_fire_ms);
 
     let (candidates, mut drops) = select_revisions(signposts, fix.t_ms);
     let present: BTreeSet<&str> = signposts.iter().map(|s| s.id.as_str()).collect();
@@ -159,10 +177,12 @@ pub fn decide(
     }
 
     let controls = controls::prune(&state.controls, now);
+    let fac_controls = controls::prune(&fac.controls, now);
     let ctx = Ctx {
         eff: &eff,
         consent,
         controls: &controls,
+        fac_controls: &fac_controls,
         zones: &zones,
         now,
     };
@@ -216,7 +236,7 @@ pub fn decide(
             _ => {}
         }
         let Some(ev) = d.event else { continue };
-        match event_filter(&ctx, &book, state.caps.last_fire_ms, sp, &ev) {
+        match event_filter(&ctx, &book, last_fire_any, sp, &ev) {
             Some(reason) => drops.push(event_drop(sp, &ev, reason)),
             None => survivors.push(Cand {
                 sp,
@@ -237,6 +257,7 @@ pub fn decide(
     });
     let mut fires: Vec<Decision> = Vec::new();
     let mut last_fire_ms = state.caps.last_fire_ms;
+    let mut fac_last_fire_ms = fac.last_fire_ms;
     let mut path_info = summary.info;
     let mut taken = 0usize;
     for c in &survivors {
@@ -257,8 +278,13 @@ pub fn decide(
         }
         if taken < eff.slots {
             taken += 1;
-            book.record_fire(&c.sp.id, &c.sp.sender);
-            last_fire_ms = Some(now);
+            let facility = c.sp.class.is_facility();
+            book.record_fire(&c.sp.id, &c.sp.sender, facility);
+            if facility {
+                fac_last_fire_ms = Some(now);
+            } else {
+                last_fire_ms = Some(now);
+            }
             path_info = PathInfo {
                 tier: c.ev.path_tier,
                 conf_milli: c.ev.path_conf_milli,
@@ -268,7 +294,8 @@ pub fn decide(
             let wording = match &c.sp.wordings {
                 Some(w) => {
                     let fam = rotation::family_of(c.sp.id.as_str(), w)?;
-                    let mut led = rbook.view(c.sp.id.as_str());
+                    let rb = if facility { &mut vrbook } else { &mut rbook };
+                    let mut led = rb.view(c.sp.id.as_str());
                     let pick = rotation::select(
                         &led,
                         rday,
@@ -282,7 +309,7 @@ pub fn decide(
                         Some(s) => {
                             let vid = fam.vids.get(s.idx).copied().ok_or(EngineError::Parse)?;
                             rotation::commit(&mut led, vid, rday, s.new_count);
-                            rbook.store(&c.sp.id, &led, Some(vid));
+                            rb.store(&c.sp.id, &led, Some(vid));
                             u8::try_from(s.idx).ok()
                         }
                         None => None,
@@ -316,11 +343,21 @@ pub fn decide(
     }
 
     // ---- commit and output ----
-    if book.len() > MAX_SIGNPOSTS || det.len() > MAX_DETECTORS {
+    if book.persisted.len().saturating_add(book.volatile.len()) > MAX_SIGNPOSTS
+        || det.len() > MAX_DETECTORS
+    {
         return Err(EngineError::Limit);
     }
     mem.det = det.into_values().collect();
-    let (signposts_caps, senders) = book.into_parts();
+    let (signposts_caps, senders) = book.persisted.into_parts();
+    let (fac_signposts, fac_senders) = book.volatile.into_parts();
+    mem.facility = proxim_types::Volatile {
+        last_fire_ms: fac_last_fire_ms,
+        signposts: fac_signposts,
+        senders: fac_senders,
+        rotation: vrbook.into_rotation()?,
+        controls: fac_controls,
+    };
     let next = State {
         v: 1,
         caps: Caps {
@@ -375,6 +412,8 @@ struct Ctx<'a> {
     eff: &'a Eff<'a>,
     consent: &'a Consent,
     controls: &'a proxim_types::Controls,
+    /// Memory-only controls on `health_facility` adverts (7.4).
+    fac_controls: &'a proxim_types::Controls,
     zones: &'a [standoff::Zone],
     now: i64,
 }
@@ -496,6 +535,10 @@ fn select_revisions(signposts: &[Signpost], t_ms: i64) -> (Vec<&Signpost>, Vec<D
 /// Static filters F11-F19, then the prepared trigger. `Ok(Err(reason))` is a per-signpost drop.
 fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>, EngineError> {
     let eff = ctx.eff;
+    // F11a (R4, engine spec 7.4): a prohibited anchor is never served.
+    if sp.class == Class::ProhibitedAnchor {
+        return Ok(Err(ReasonCode::ProhibitedAnchor));
+    }
     // F11 (E5): everything but enter and approach is reserved and fails closed.
     if !matches!(sp.event, EventKind::Enter | EventKind::Approach) {
         return Ok(Err(ReasonCode::UnsupportedEvent));
@@ -535,7 +578,7 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
         return Ok(Err(ReasonCode::Expired));
     }
     // F15 (I12): health needs the consent flag and a receipt (M1: non-empty; the SDK issues it).
-    if sp.class == Class::Health {
+    if sp.class.is_health() {
         let receipt = ctx
             .consent
             .health_receipt
@@ -556,13 +599,15 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
         return Ok(Err(ReasonCode::SenderBlocked));
     }
     // F17a-c (engine spec 7.2): the person's own controls.
-    if let Some(r) = controls::blocks(ctx.controls, sp.id.as_str(), &sp.sender, ctx.now) {
-        return Ok(Err(r));
+    for c in [ctx.controls, ctx.fac_controls] {
+        if let Some(r) = controls::blocks(c, sp.id.as_str(), &sp.sender, ctx.now) {
+            return Ok(Err(r));
+        }
     }
     if sp.sensitivity > eff.sensitivity_ceiling {
         return Ok(Err(ReasonCode::SensitivityAboveCeiling));
     }
-    if sp.class == Class::Health && standoff::trigger_in_standoff(ctx.zones, sp)? {
+    if sp.class.is_health() && standoff::trigger_in_standoff(ctx.zones, sp)? {
         return Ok(Err(ReasonCode::TriggerInStandoff));
     }
     Ok(Ok(prepared))
@@ -571,7 +616,7 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
 /// Event filters F20-F24. A dropped event is consumed, never retried.
 fn event_filter(
     ctx: &Ctx<'_>,
-    book: &CapsBook,
+    book: &Books,
     last_fire_ms: Option<i64>,
     sp: &Signpost,
     ev: &Event,

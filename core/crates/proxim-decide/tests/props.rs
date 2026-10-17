@@ -363,6 +363,7 @@ fn hostile_state(rng: &mut Splitmix) -> State {
             }),
             h_t_ms: rng.chance(50).then(|| wild(rng)),
             det,
+            facility: Default::default(),
         },
         controls: Default::default(),
         rotation: Default::default(),

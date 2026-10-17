@@ -237,7 +237,32 @@ pub struct CategoryAffinity {
 #[serde(rename_all = "snake_case")]
 pub enum Class {
     General,
+    /// engine_spec 1 health class; read as [`Class::HealthFacility`], the strictest (6.5).
     Health,
+    /// Gyms, pharmacies, wellness events (PLAN 6.5): health gating, ordinary caps.
+    HealthAdjacent,
+    /// Hospitals, clinics, public-health outreach (PLAN 6.5): health gating and nothing about
+    /// it persisted on the device (I7; owner decision Option A).
+    HealthFacility,
+    /// Never served (R4).
+    ProhibitedAnchor,
+}
+
+impl Class {
+    /// Any health class: consent receipt, health path floor, standoff rules (F15, F19).
+    #[must_use]
+    pub const fn is_health(self) -> bool {
+        matches!(
+            self,
+            Self::Health | Self::HealthAdjacent | Self::HealthFacility
+        )
+    }
+
+    /// Kept out of every persisted part of the state (I7, engine spec 7.4).
+    #[must_use]
+    pub const fn is_facility(self) -> bool {
+        matches!(self, Self::Health | Self::HealthFacility)
+    }
 }
 
 /// `exit` is internal and not authorable; `cross dwell pass sequence` are reserved (spec 10).
@@ -524,9 +549,23 @@ impl Controls {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Control {
-    Dismiss { id: Id },
-    Hide { id: Id },
-    Report { sender: String },
+    /// `memory_only`: the SDK sets it for a `health_facility` advert, so the action is kept in
+    /// memory and never persisted (I7, engine spec 7.4).
+    Dismiss {
+        id: Id,
+        #[serde(default, skip_serializing_if = "core::ops::Not::not")]
+        memory_only: bool,
+    },
+    Hide {
+        id: Id,
+        #[serde(default, skip_serializing_if = "core::ops::Not::not")]
+        memory_only: bool,
+    },
+    Report {
+        sender: String,
+        #[serde(default, skip_serializing_if = "core::ops::Not::not")]
+        memory_only: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -605,6 +644,37 @@ pub struct Mem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub h_t_ms: Option<i64>,
     pub det: Vec<DetEntry>,
+    /// `health_facility` caps, wordings and controls (engine spec 7.4, I7, Option A): memory
+    /// only like the rest of `mem`, so a restart resets them and nothing is written to disk.
+    #[serde(default, skip_serializing_if = "Volatile::is_empty")]
+    pub facility: Volatile,
+}
+
+/// What the device keeps about `health_facility` adverts, in memory only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Volatile {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_fire_ms: Option<i64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signposts: Vec<SignpostCaps>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub senders: Vec<SenderCaps>,
+    #[serde(default, skip_serializing_if = "Rotation::is_empty")]
+    pub rotation: Rotation,
+    #[serde(default, skip_serializing_if = "Controls::is_empty")]
+    pub controls: Controls,
+}
+
+impl Volatile {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.last_fire_ms.is_none()
+            && self.signposts.is_empty()
+            && self.senders.is_empty()
+            && self.rotation.is_empty()
+            && self.controls.is_empty()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

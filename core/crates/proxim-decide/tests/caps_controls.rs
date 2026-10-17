@@ -124,6 +124,7 @@ fn dismiss_rests_the_family_for_seven_days() {
         &sim.state,
         &Control::Dismiss {
             id: Id::new("a").unwrap(),
+            memory_only: false,
         },
         &clock(at),
     )
@@ -152,6 +153,7 @@ fn hide_is_permanent_for_the_signpost_only() {
         &sim.state,
         &Control::Hide {
             id: Id::new("a").unwrap(),
+            memory_only: false,
         },
         &clock(T0),
     )
@@ -170,6 +172,7 @@ fn report_is_permanent_for_every_signpost_of_that_sender() {
         &sim.state,
         &Control::Report {
             sender: "s1".into(),
+            memory_only: false,
         },
         &clock(T0),
     )
@@ -191,6 +194,7 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
             &st,
             &Control::Hide {
                 id: Id::new(id).unwrap(),
+                memory_only: false,
             },
             &c,
         )
@@ -202,7 +206,8 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
         apply(
             &st,
             &Control::Report {
-                sender: String::new()
+                sender: String::new(),
+                memory_only: false
             },
             &c
         )
@@ -213,6 +218,7 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
         &st,
         &Control::Dismiss {
             id: Id::new("a").unwrap(),
+            memory_only: false,
         },
         &c,
     )
@@ -221,6 +227,7 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
         &st,
         &Control::Dismiss {
             id: Id::new("a").unwrap(),
+            memory_only: false,
         },
         &clock(T0 + 1000),
     )
@@ -234,6 +241,7 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
             &full,
             &Control::Dismiss {
                 id: Id::new(&format!("d{k:04}")).unwrap(),
+                memory_only: false,
             },
             &clock(T0 + k as i64),
         )
@@ -243,6 +251,7 @@ fn controls_are_sorted_unique_bounded_and_survive_a_restart() {
         &full,
         &Control::Dismiss {
             id: Id::new("new").unwrap(),
+            memory_only: false,
         },
         &clock(T0 + 10_000),
     )
