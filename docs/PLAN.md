@@ -42,6 +42,20 @@ Base: proposal #2 (partner-DX-first, on-device kernel, signed tile packs). Graft
 - A very small team (possibly one person with an AI coding agent). Every choice below optimizes for what such a team can build, test and operate.
 - Counsel review is a launch gate for health, not an engineering deliverable. Nothing here is a legal conclusion.
 
+### 1.1 Fair access: the "democracy in advertising" rules (added 2026-10-17)
+
+Owner's vision (Advertising.md, 2026-10-16): programmatic advertising loses 28 to 40% of each dollar to intermediaries (DSP, exchange, SSP, resellers, fraud) and prices small advertisers out. Proxim's answer is a direct, transparent path that a local business can use on the same terms as a large one. These are product rules for v1; the owner may revise them.
+
+1. **Direct path only.** Sender to Proxim to partner app. No DSP, SSP, ad exchange or reseller sits in the path, and Proxim never resells partner inventory to third-party ad networks. Signed packs are the delivery mechanism (section 5.2).
+2. **One public rate card.** A single published CPM per place tier and surface class, the same for every sender. No volume discounts or private rates; any pilot discount is a flat per-campaign credit (A02-D1).
+3. **Money never buys rank.** Selection on the device uses relevance only (path confidence, app context, category weight, rotation). `rank_milli` is set by the pack compiler from those inputs and never from price, budget or sender size. Budget decides how long a signpost runs, not whether it beats another one. Auctions stay deferred (section 8).
+4. **Published fee split.** Every sender statement shows gross spend, the partner share and Proxim's fee; every partner statement shows the same split from the other side. Target: partner share 65 to 70%, total intermediary take (Proxim's fee plus payment processing) at most 35%, against 28 to 40% plus fraud in programmatic.
+5. **Low entry.** Prepaid credits, minimum campaign budget $10 (N-13 [U]), billed per campaign-week with the 20-view minimum (A02-D1). Self-serve sign-up at verification tier 0 to 1; the pilot stays invite-only (A02-D4).
+6. **Same review for everyone.** Every sender, large or small, gets the same human review, the same quality gates and the same response promise. Verification tier depends on evidence, not spend.
+7. **No user data for sale.** Senders and partners see only released aggregate counts; Proxim sells placement in a place, never people (billboard principle).
+
+What this rules out, on purpose: behavioural targeting, retargeting, DMP/CDP or clean-room products, user-level attribution, and paid priority. What it needs that is not yet built: the rate card and fee split in `ledger_*` and statements (M9), and a compiler rule that keeps price out of `rank_milli` (M2 pack compiler, with a test).
+
 ---
 
 ## 2. Stack (committed)

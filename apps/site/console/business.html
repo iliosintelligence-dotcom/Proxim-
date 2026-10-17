@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proxim · Business dashboard</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ff751f">
+<link rel="icon" href="../logo-orange.png">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="console.css">
+<script src="console.js" defer></script>
+</head>
+<body class="console">
+<header class="c-top">
+  <div class="wrap">
+    <a class="logo" href="/"><img src="../logo-white.png" alt="Proxim" width="408" height="176"></a>
+    <nav class="c-nav" aria-label="Dashboard"><a class="pill" href="business" aria-current="page">Overview</a><a class="pill" href="new">New message</a><a class="pill" href="apps">App makers</a></nav>
+    <span class="demo-flag">Preview · example data</span>
+  </div>
+</header>
+<main class="wrap c-main">
+  <div class="c-head">
+    <div><p class="who">Rosa's Café</p><h1>Good morning, Rosa.</h1></div>
+    <div><a class="btn" href="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> New message</a></div>
+  </div>
+  <section class="plane" aria-label="This week">
+    <div class="stats">
+      <div class="stat"><p class="label">People who saw your messages</p><p class="value">1,545</p><p class="note2">This week, Monday to Sunday</p></div>
+      <div class="stat"><p class="label">Spent this week</p><p class="value">$0.46</p><p class="note2">of your $5.00 weekly budget</p></div>
+      <div class="stat"><p class="label">Messages live</p><p class="value">1</p><p class="note2">1 waiting for review</p></div>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="plane">
+      <h2>Views by day</h2>
+      <p class="sub">How many people in your areas saw a message each day.</p>
+      <div class="bars" role="img" aria-label="Views this week: Mon 212, Tue 248, Wed 231, Thu 266, Fri 318, Sat 174, Sun 96"><div class="bar"><span class="n">212</span><span class="col" data-h="67"></span><span class="d">Mon</span></div><div class="bar"><span class="n">248</span><span class="col" data-h="78"></span><span class="d">Tue</span></div><div class="bar"><span class="n">231</span><span class="col" data-h="73"></span><span class="d">Wed</span></div><div class="bar"><span class="n">266</span><span class="col" data-h="84"></span><span class="d">Thu</span></div><div class="bar"><span class="n">318</span><span class="col" data-h="100"></span><span class="d">Fri</span></div><div class="bar"><span class="n">174</span><span class="col" data-h="55"></span><span class="d">Sat</span></div><div class="bar"><span class="n">96</span><span class="col" data-h="30"></span><span class="d">Sun</span></div></div>
+    </section>
+    <section class="plane">
+      <h2>Your messages</h2>
+      <p class="sub">Every message is checked by a person before it goes live.</p>
+      <div class="list">
+        <div class="row"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M16 9h2a3 3 0 0 1 0 6h-2"/><path d="M8 3v2M12 3v2"/></svg></span><div><b>Fresh coffee, 2 min ahead</b><span class="meta">Weekdays 7:00 to 11:00 · Road outside</span></div><span class="status live">Live</span></div>
+        <div class="row"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><div><b>Lunch deal: soup and bread</b><span class="meta">Weekdays 11:30 to 14:00 · Front door</span></div><span class="status review">In review</span></div>
+        <div class="row"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b>Weekend brunch until 2</b><span class="meta">Sat and Sun · Mall entrance</span></div><span class="status draft">Draft</span></div>
+      </div>
+    </section>
+  </div>
+
+  <p class="foot-note">This is a design preview with made-up example data. Nothing here is live, and nothing you type is sent anywhere.</p>
+</main>
+</body>
+</html>

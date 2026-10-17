@@ -42,8 +42,13 @@ Not yet answered by the owner. Owner mode and resorts are parked (2026-10-10: *"
 
 - **A01-D6** (pending): 6. Evidence and policy defaults: counsel timing (hosted at M5 exit, owner at LOI) and device/venue funding; sub-150 m only for verified claims on public-access places; armed exit for owner mode only, dwell Stage 3; 'Public information' label stays OFF; I16 buffer unchanged (no pharmacy exclusion without a counsel memo). Recommended: yes to all.
 
+## Fair-access rules (PLAN 1.1) - ACCEPTED 2026-10-17
+
+Owner message: *"go ahead and change PRD. then continue building"*, after reviewing the feasibility doc on the advertising vision. PLAN section 1.1 adds seven v1 product rules: direct path only, one public rate card, money never buys rank, a published fee split, low entry, the same review for everyone, no user data for sale. Defaults chosen where the owner had not answered: "democracy" means both lower intermediary fees and equal access for small senders, and the fee split is shown on every statement. The domain name mentioned by the owner is still to be supplied.
+
 ## Other standing instructions
 
 - 2026-10-10: advertising only; resorts / owner mode parked.
 - 2026-10-11: start M0 and M1 (monorepo, CI, toolchain spike, geometry/path/decide kernel, location simulator).
 - Creating a new Supabase project (cost, organisation, region) needs explicit owner confirmation and is NOT part of the M0/M1 build until given. The existing 'ilios Healthcare' project must never be used (CI guard).
+- 2026-10-17: website hero badge says "The cheapest way to advertise" (owner chose this over a softer "built to be the cheapest" wording). Advertising rules (ASA/CAP in the UK, FTC in the US) require evidence for a "cheapest" claim, so current price comparisons must be on file before the site is made public.

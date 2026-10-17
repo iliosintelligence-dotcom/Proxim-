@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proxim · App maker dashboard</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ff751f">
+<link rel="icon" href="../logo-orange.png">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="console.css">
+<script src="console.js" defer></script>
+</head>
+<body class="console">
+<header class="c-top">
+  <div class="wrap">
+    <a class="logo" href="/"><img src="../logo-white.png" alt="Proxim" width="408" height="176"></a>
+    <nav class="c-nav" aria-label="Dashboard"><a class="pill" href="business">Businesses</a><a class="pill" href="apps" aria-current="page">App makers</a></nav>
+    <span class="demo-flag">Preview · example data</span>
+  </div>
+</header>
+<main class="wrap c-main">
+  <div class="c-head">
+    <div><p class="who">CityBus app</p><h1>Your earnings</h1></div>
+    <div></div>
+  </div>
+  <section class="plane" aria-label="This month">
+    <div class="stats">
+      <div class="stat"><p class="label">You earned</p><p class="value">$37.58</p><p class="note2">This month so far</p></div>
+      <div class="stat"><p class="label">Ad views in your app</p><p class="value">184,200</p><p class="note2">Each person sees an ad at most 3 times a week</p></div>
+      <div class="stat"><p class="label">Businesses spent</p><p class="value">$55.26</p><p class="note2">At the example price of $0.30 per 1,000 views</p></div>
+    </div>
+    <div class="split-bar" role="img" aria-label="Split: you 68 percent, Proxim 32 percent"><div class="you" data-w="68">You keep 68%</div><div class="us" data-w="32">Proxim 32%</div></div>
+    <p class="note2 sub">Every statement shows this split. $37.58 to you, $17.68 to Proxim.</p>
+  </section>
+
+  <div class="grid2">
+    <section class="plane">
+      <h2>Ads you allow</h2>
+      <p class="sub">Pick the kinds of business that suit your users. Switch any of them off at any time.</p>
+      <div class="list">
+        <div class="toggle"><div><b>Food and drink</b><span class="meta">Cafés, bakeries, restaurants</span></div><button type="button" class="switch-btn" role="switch" aria-checked="true" aria-label="Food and drink"></button></div>
+        <div class="toggle"><div><b>Shops</b><span class="meta">Local stores and markets</span></div><button type="button" class="switch-btn" role="switch" aria-checked="true" aria-label="Shops"></button></div>
+        <div class="toggle"><div><b>Events and culture</b><span class="meta">Concerts, museums, festivals</span></div><button type="button" class="switch-btn" role="switch" aria-checked="true" aria-label="Events and culture"></button></div>
+        <div class="toggle"><div><b>Travel and transport</b><span class="meta">Bike hire, taxis, parking</span></div><button type="button" class="switch-btn" role="switch" aria-checked="true" aria-label="Travel and transport"></button></div>
+        <div class="toggle"><div><b>Services</b><span class="meta">Hairdressers, repairs, gyms</span></div><button type="button" class="switch-btn" role="switch" aria-checked="false" aria-label="Services"></button></div>
+        <div class="toggle"><div><b>Health</b><span class="meta">Not available yet</span></div><button type="button" class="switch-btn" role="switch" aria-checked="false" aria-label="Health" disabled></button></div>
+      </div>
+    </section>
+    <section class="plane">
+      <h2>Add the toolkit</h2>
+      <p class="sub">Connect your app in a few steps. Example code only: the toolkit is not released yet.</p>
+      <div class="tabs" role="tablist" aria-label="Platform">
+        <button class="chip" role="tab" aria-pressed="true" data-code="web">Website</button>
+        <button class="chip" role="tab" aria-pressed="false" data-code="android">Android</button>
+        <button class="chip" role="tab" aria-pressed="false" data-code="ios">iPhone</button>
+      </div>
+      <pre class="code" data-panel="web"><span class="k">import</span> { Proxim } <span class="k">from</span> <span class="s">"@proxim/web"</span>
+
+Proxim.start({ key: <span class="s">"pk_example_••••"</span> })
+Proxim.showIn(<span class="s">"#proxim-slot"</span>)</pre>
+      <pre class="code" data-panel="android" hidden>Proxim.start(context, <span class="s">"pk_example_••••"</span>)
+Proxim.showIn(proximSlotView)</pre>
+      <pre class="code" data-panel="ios" hidden>Proxim.start(key: <span class="s">"pk_example_••••"</span>)
+Proxim.show(in: proximSlot)</pre>
+    </section>
+  </div>
+
+  <p class="foot-note">This is a design preview with made-up example data. Nothing here is live, and nothing you type is sent anywhere.</p>
+</main>
+</body>
+</html>
