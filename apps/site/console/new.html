@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proxim · New message</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ff751f">
+<link rel="icon" href="../logo-orange.png">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="console.css">
+<script src="console.js" defer></script>
+</head>
+<body class="console">
+<header class="c-top">
+  <div class="wrap">
+    <a class="logo" href="/"><img src="../logo-white.png" alt="Proxim" width="408" height="176"></a>
+    <nav class="c-nav" aria-label="Dashboard"><a class="pill" href="business">Overview</a><a class="pill" href="new" aria-current="page">New message</a><a class="pill" href="apps">App makers</a></nav>
+    <span class="demo-flag">Preview · example data</span>
+  </div>
+</header>
+<main class="wrap c-main">
+  <div class="c-head">
+    <div><p class="who">Rosa's Café</p><h1>New message</h1></div>
+    <div></div>
+  </div>
+  <div class="steps-nav" role="tablist" aria-label="Steps">
+    <button role="tab" id="t1" aria-controls="p1" aria-selected="true">1. Message</button>
+    <button role="tab" id="t2" aria-controls="p2" aria-selected="false">2. Place</button>
+    <button role="tab" id="t3" aria-controls="p3" aria-selected="false">3. Time and budget</button>
+    <button role="tab" id="t4" aria-controls="p4" aria-selected="false">4. Check and send</button>
+  </div>
+  <div class="flow">
+    <div class="plane">
+      <section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+        <h2>Write your message</h2>
+        <p class="sub">Short and clear works best. People see it at a glance.</p>
+        <div class="field"><label for="f-head">Headline</label><input type="text" id="f-head" maxlength="40" value="Rosa's Café"><span class="count" data-for="f-head">11 / 40</span></div>
+        <div class="field"><label for="f-body">Message</label><textarea id="f-body" rows="3" maxlength="90">Fresh coffee, 2 minutes ahead on your left.</textarea><span class="count" data-for="f-body">44 / 90</span></div>
+      </section>
+      <section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+        <h2>Mark your spot</h2>
+        <p class="sub">People inside the circle can see your message.</p>
+        <div class="mini-map" role="img" aria-label="Map with your café and the area around it">
+          <svg viewBox="0 0 400 300">
+            <g><rect class="blk" x="20" y="15" width="70" height="70" rx="14"/><rect class="blk" x="20" y="110" width="70" height="70" rx="14"/><rect class="blk" x="20" y="205" width="70" height="70" rx="14"/><rect class="blk" x="115" y="15" width="70" height="70" rx="14"/><rect class="blk" x="115" y="110" width="70" height="70" rx="14"/><rect class="blk" x="115" y="205" width="70" height="70" rx="14"/><rect class="blk" x="210" y="15" width="70" height="70" rx="14"/><rect class="blk" x="210" y="110" width="70" height="70" rx="14"/><rect class="blk" x="210" y="205" width="70" height="70" rx="14"/><rect class="blk" x="305" y="15" width="70" height="70" rx="14"/><rect class="blk" x="305" y="110" width="70" height="70" rx="14"/><rect class="blk" x="305" y="205" width="70" height="70" rx="14"/></g>
+            <circle class="zone" id="zone" cx="200" cy="150" r="60"/>
+            <path class="pinp" d="M200 156 C190 142 178 132 178 120 A22 22 0 1 1 222 120 C222 132 210 142 200 156Z"/>
+            <circle class="pinh" cx="200" cy="120" r="8"/>
+          </svg>
+        </div>
+        <div class="field"><label for="f-radius">How far around your shop: <span id="radius-out">150 m</span></label><input type="range" id="f-radius" min="50" max="400" step="25" value="150"><span class="hint">About a two-minute walk.</span></div>
+      </section>
+      <section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+        <h2>Choose when it runs</h2>
+        <p class="sub">Your message only shows on these days and hours.</p>
+        <div class="field"><span class="label-b"><b>Days</b></span><div class="chips"><button type="button" class="chip" aria-pressed="true" data-day="Mon">Mon</button><button type="button" class="chip" aria-pressed="true" data-day="Tue">Tue</button><button type="button" class="chip" aria-pressed="true" data-day="Wed">Wed</button><button type="button" class="chip" aria-pressed="true" data-day="Thu">Thu</button><button type="button" class="chip" aria-pressed="true" data-day="Fri">Fri</button><button type="button" class="chip" aria-pressed="false" data-day="Sat">Sat</button><button type="button" class="chip" aria-pressed="false" data-day="Sun">Sun</button></div></div>
+        <div class="field"><label for="f-from">From <span id="from-out">7:00</span> to <span id="to-out">11:00</span></label><input type="range" id="f-from" min="5" max="22" value="7" aria-label="Start hour"><input type="range" id="f-to" min="6" max="23" value="11" aria-label="End hour"></div>
+        <div class="field"><label for="f-budget">Weekly budget: <span id="budget-out">$15</span></label><input type="range" id="f-budget" min="5" max="100" step="5" value="15"><span class="hint">About <b id="views-out">3,000</b> views a week at the example price of $5 per 1,000 views. Same price for every business.</span></div>
+      </section>
+      <section class="panel" id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+        <h2>Check and send</h2>
+        <p class="sub">A person checks every message before it goes live.</p>
+        <dl class="summary">
+          <div><dt>Headline</dt><dd id="s-head"></dd></div>
+          <div><dt>Message</dt><dd id="s-body"></dd></div>
+          <div><dt>Area</dt><dd id="s-area"></dd></div>
+          <div><dt>When</dt><dd id="s-when"></dd></div>
+          <div><dt>Budget</dt><dd id="s-budget"></dd></div>
+        </dl>
+        <p class="sub" id="sent-msg" hidden><b>This is a preview, so nothing was sent.</b> In the real dashboard your message would now wait for review.</p>
+      </section>
+      <div class="flow-foot">
+        <button type="button" class="btn quiet" id="prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg> Back</button>
+        <button type="button" class="btn" id="next">Next <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    <aside class="preview-wrap">
+      <div class="phone" aria-label="Live preview of your message">
+          <div class="screen">
+            <p class="screen-app">Your bus app</p>
+            <p class="screen-line">Next bus: 4 min</p>
+            <div class="note"><span class="note-tag">Ad · nearby</span><strong id="pv-head">Rosa's Café</strong><span id="pv-body">Fresh coffee, 2 minutes ahead on your left.</span></div>
+            <p class="screen-line">Next bus: 12 min</p>
+          </div>
+        </div>
+      <p class="preview-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> What people will see</p>
+    </aside>
+  </div>
+
+  <p class="foot-note">This is a design preview with made-up example data. Nothing here is live, and nothing you type is sent anywhere.</p>
+</main>
+</body>
+</html>
