@@ -216,10 +216,12 @@ pub struct Policy {
     pub max_acc_mm: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub standoff_zones: Vec<StandoffZone>,
-    #[serde(default, skip_serializing)]
-    pub rot_lane: Reserved,
-    #[serde(default, skip_serializing)]
-    pub rot_lanes: Reserved,
+    /// Public rotation lane of this partner app (signed per-app config, Addendum 02 5.1), with
+    /// `rot_lanes` lanes in all; defaults 0 of 1. engine_spec 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rot_lane: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rot_lanes: Option<u32>,
 }
 
 /// A partner's relevance weight for a category pattern (spec 7.1). `weight_milli` multiplies the
@@ -351,11 +353,28 @@ pub struct Signpost {
     pub cooldown_s: Reserved,
     #[serde(default, skip_serializing)]
     pub creatives: Reserved,
-    #[serde(default, skip_serializing)]
-    pub rot_days: Reserved,
+    /// Signed weekday mask of the schedule for rotation, bit 0 = Monday, 0 or absent = every day
+    /// (Addendum 02 5.1; engine_spec 2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rot_days: Option<u8>,
+    /// The family's wordings as verified by the pack layer (engine_spec 2): never part of the
+    /// signed core (the pack layer refuses a core that carries it) and filled in from the entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wordings: Option<Wordings>,
     /// Signed by the pack layer (I17, `docs/pack-format.md`); ignored by `decide`.
     #[serde(default, skip_serializing)]
     pub pack_kind: Reserved,
+}
+
+/// The declared creatives of a family (envelope v2): every digest in index order, and which ones
+/// may be shown (shipped, not variant-revoked, locale-matching).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Wordings {
+    /// 64 lowercase hex characters each, 1 to 8 entries, pairwise distinct first 4 bytes.
+    pub digests: Vec<String>,
+    /// Bit i = wording i available; bit 0 must be set.
+    pub avail_mask: u8,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -389,6 +408,10 @@ pub struct Decision {
     pub d_rem_mm: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub t_hat_ms: Option<i64>,
+    /// On a fire of a family with wordings: the index of the wording to show (step 7b). Local to
+    /// the host; never part of any event (Addendum 02 4.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wording: Option<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -593,6 +616,46 @@ pub struct State {
     /// engine_spec 2; absent when empty, so an engine_spec 1 state reads unchanged.
     #[serde(default, skip_serializing_if = "Controls::is_empty")]
     pub controls: Controls,
+    /// The wording ledger (Addendum 02 5.2); persisted like `caps`, wiped on consent withdrawal.
+    #[serde(default, skip_serializing_if = "Rotation::is_empty")]
+    pub rotation: Rotation,
+}
+
+/// One wording's exposure count (Addendum 02 5.2 `variant_ledger`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RotRow {
+    pub id: Id,
+    pub vid: u32,
+    pub count: u32,
+    pub last_day: i64,
+}
+
+/// A family's recent wordings (Addendum 02 5.2 `family_state`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RotFamily {
+    pub id: Id,
+    /// Newest last, at most 4.
+    pub recent: Vec<u32>,
+    pub last_day: i64,
+}
+
+/// `rows` by `(id, vid)`, `families` by `id`; days are rotation days (since 1970-01-05).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Rotation {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rows: Vec<RotRow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub families: Vec<RotFamily>,
+}
+
+impl Rotation {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.rows.is_empty() && self.families.is_empty()
+    }
 }
 
 impl State {
@@ -604,6 +667,7 @@ impl State {
             caps: Caps::default(),
             mem: Mem::default(),
             controls: Controls::default(),
+            rotation: Rotation::default(),
         }
     }
 }
@@ -637,7 +701,11 @@ mod tests {
             serde_json::from_str::<Fix>(r#"{"t_ms":1,"lat_e7":1,"lon_e7":1,"acc_mm":1,"bogus":1}"#)
                 .is_err()
         );
-        assert!(serde_json::from_str::<Policy>(r#"{"rot_lane":{"x":[1,2]}}"#).is_ok());
+        assert!(
+            serde_json::from_str::<Policy>(r#"{"rot_lane":{"x":[1,2]}}"#).is_err(),
+            "typed from engine_spec 2"
+        );
+        assert!(serde_json::from_str::<Policy>(r#"{"rot_lane":1,"rot_lanes":2}"#).is_ok());
     }
 
     #[test]

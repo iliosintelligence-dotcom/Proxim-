@@ -24,6 +24,7 @@ pub(crate) fn state(s: &State) -> Result<(), EngineError> {
         return Err(EngineError::Limit);
     }
     crate::controls::validate(&s.controls)?;
+    crate::rotation::validate(&s.rotation)?;
     if !s
         .caps
         .senders

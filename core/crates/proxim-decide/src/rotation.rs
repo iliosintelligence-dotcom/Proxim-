@@ -384,3 +384,168 @@ pub fn mark_shown(
     };
     (mark, expired)
 }
+
+/// Rotation day: days since 1970-01-05 (a Monday) from the engine's local `day_idx` (days since
+/// 1970-01-01, a Thursday).
+#[must_use]
+pub const fn rot_day(day_idx: i64) -> i64 {
+    day_idx.saturating_sub(4)
+}
+
+/// Parse a signpost's verified wordings into the rotation inputs.
+///
+/// # Errors
+/// [`EngineError::Parse`] for a malformed digest, more than 8 or no wordings, a vid collision or
+/// an availability mask without wording 0 or with bits beyond the family.
+pub fn family_of(id: &str, w: &proxim_types::Wordings) -> Result<Family, EngineError> {
+    let mut digests: Vec<[u8; 32]> = Vec::with_capacity(w.digests.len());
+    for h in &w.digests {
+        digests.push(parse_digest(h).ok_or(EngineError::Parse)?);
+    }
+    let n = digests.len();
+    if w.avail_mask & 1 == 0 || (n < 8 && u16::from(w.avail_mask) >> n != 0) {
+        return Err(EngineError::Parse);
+    }
+    derive(id.as_bytes(), &digests)
+}
+
+fn parse_digest(h: &str) -> Option<[u8; 32]> {
+    let b = h.as_bytes();
+    if b.len() != 64 {
+        return None;
+    }
+    let nib = |c: u8| match c {
+        b'0'..=b'9' => Some(c - b'0'),
+        b'a'..=b'f' => Some(c - b'a' + 10),
+        _ => None,
+    };
+    let mut out = [0u8; 32];
+    for (o, pair) in out.iter_mut().zip(b.chunks_exact(2)) {
+        let [hi, lo] = pair else { return None };
+        *o = (nib(*hi)? << 4) | nib(*lo)?;
+    }
+    Some(out)
+}
+
+/// All families' ledgers as held in `State.rotation`, with one global row limit
+/// ([`LRU_DEFAULT`], Addendum 02 5.2): eviction removes the row with the smallest `last_day`,
+/// then the smallest vid, then the smallest id, and never the row just written.
+pub(crate) struct Book {
+    rows: BTreeMap<(alloc::string::String, u32), (u32, i64)>,
+    families: BTreeMap<alloc::string::String, (Vec<u32>, i64)>,
+}
+
+impl Book {
+    /// Load, dropping what reads as absent at `day` anyway (rows and family state older than
+    /// 90 days): deletion is lazy and unobservable (5.2).
+    pub fn load(r: &proxim_types::Rotation, day: i64) -> Self {
+        let fresh = |last: i64| day.saturating_sub(last) <= MAX_AGE;
+        Self {
+            rows: r
+                .rows
+                .iter()
+                .filter(|x| fresh(x.last_day))
+                .map(|x| ((x.id.as_str().into(), x.vid), (x.count, x.last_day)))
+                .collect(),
+            families: r
+                .families
+                .iter()
+                .filter(|f| fresh(f.last_day))
+                .map(|f| (f.id.as_str().into(), (f.recent.clone(), f.last_day)))
+                .collect(),
+        }
+    }
+
+    /// The ledger of one family, as the kernel sees it.
+    pub fn view(&self, id: &str) -> Ledger {
+        let rows = self
+            .rows
+            .range((id.into(), 0)..=(id.into(), u32::MAX))
+            .map(|((_, vid), v)| (*vid, *v))
+            .collect();
+        let (recent, last_day) = self
+            .families
+            .get(id)
+            .map_or((Vec::new(), None), |(r, d)| (r.clone(), Some(*d)));
+        Ledger {
+            rows,
+            recent,
+            last_day,
+            // The global limit is applied by `store`.
+            lru: usize::MAX,
+        }
+    }
+
+    /// Write a family's ledger back; `written` is the vid the kernel just wrote, if any.
+    pub fn store(&mut self, id: &proxim_types::Id, led: &Ledger, written: Option<u32>) {
+        let key: alloc::string::String = id.as_str().into();
+        self.rows.retain(|(fid, _), _| fid.as_str() != id.as_str());
+        for (vid, v) in &led.rows {
+            self.rows.insert((key.clone(), *vid), *v);
+        }
+        match led.last_day {
+            Some(d) => {
+                self.families.insert(key.clone(), (led.recent.clone(), d));
+            }
+            None => {
+                self.families.remove(&key);
+            }
+        }
+        while self.rows.len() > LRU_DEFAULT {
+            let victim = self
+                .rows
+                .iter()
+                .filter(|((fid, vid), _)| !(fid == &key && Some(*vid) == written))
+                .min_by_key(|((fid, vid), (_, d))| (*d, *vid, fid.clone()))
+                .map(|(k, _)| k.clone());
+            match victim {
+                Some(k) => {
+                    self.rows.remove(&k);
+                }
+                None => break,
+            }
+        }
+    }
+
+    pub fn into_rotation(self) -> Result<proxim_types::Rotation, EngineError> {
+        let mut rows = Vec::with_capacity(self.rows.len());
+        for ((id, vid), (count, last_day)) in self.rows {
+            rows.push(proxim_types::RotRow {
+                id: proxim_types::Id::new(&id)?,
+                vid,
+                count,
+                last_day,
+            });
+        }
+        let mut families = Vec::with_capacity(self.families.len());
+        for (id, (recent, last_day)) in self.families {
+            families.push(proxim_types::RotFamily {
+                id: proxim_types::Id::new(&id)?,
+                recent,
+                last_day,
+            });
+        }
+        Ok(proxim_types::Rotation { rows, families })
+    }
+}
+
+/// Structure of `State.rotation`: sorted and unique, within bounds.
+pub(crate) fn validate(r: &proxim_types::Rotation) -> Result<(), EngineError> {
+    if r.rows.len() > LRU_DEFAULT || r.families.len() > proxim_types::defaults::MAX_SIGNPOSTS {
+        return Err(EngineError::Limit);
+    }
+    let rows_ok = r
+        .rows
+        .windows(2)
+        .all(|w| matches!(w, [a, b] if (&a.id, a.vid) < (&b.id, b.vid)));
+    let fams_ok = r
+        .families
+        .windows(2)
+        .all(|w| matches!(w, [a, b] if a.id < b.id))
+        && r.families.iter().all(|f| f.recent.len() <= RECENT_MAX);
+    if rows_ok && fams_ok {
+        Ok(())
+    } else {
+        Err(EngineError::Parse)
+    }
+}

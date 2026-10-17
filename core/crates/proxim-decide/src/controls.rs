@@ -22,6 +22,17 @@ pub fn apply(state: &State, control: &Control, clock: &Clock) -> Result<State, E
     let c = &mut next.controls;
     match control {
         Control::Dismiss { id } => {
+            // The wording last shown goes to the back of the queue (Addendum 02 5.1, `dismiss`).
+            let day =
+                crate::rotation::rot_day(crate::calendar::day_week(now, clock.tz_offset_min).0);
+            let mut book = crate::rotation::Book::load(&state.rotation, day);
+            let mut led = book.view(id.as_str());
+            if let Some(&vid) = led.recent.last() {
+                crate::rotation::dismiss(&mut led, vid, day);
+                book.store(id, &led, Some(vid));
+                next.rotation = book.into_rotation()?;
+            }
+            let c = &mut next.controls;
             let until_ms = now.saturating_add(DISMISS_COOLDOWN_MS);
             match c.dismissed.binary_search_by(|d| d.id.cmp(id)) {
                 Ok(i) => {
