@@ -27,6 +27,8 @@ pub(crate) struct Eff<'a> {
     pub cap_app_day: u32,
     pub rot_lane: u32,
     pub rot_lanes: u32,
+    pub driving: proxim_types::Driving,
+    pub quiet_hours: &'a [proxim_types::Window],
     pub slots: usize,
     pub max_acc_mm: u32,
     pub categories_blocked: BTreeSet<&'a str>,
@@ -52,6 +54,9 @@ impl<'a> Eff<'a> {
         let rot_lanes = p.rot_lanes.unwrap_or(1);
         let rot_lane = p.rot_lane.unwrap_or(0);
         if rot_lanes == 0 || rot_lane >= rot_lanes {
+            return Err(EngineError::Parse);
+        }
+        if !crate::timewin::valid(&p.quiet_hours) {
             return Err(EngineError::Parse);
         }
         let mut categories_accepted = BTreeSet::new();
@@ -109,6 +114,8 @@ impl<'a> Eff<'a> {
             cap_app_day: p.cap_app_day.unwrap_or(CAP_APP_DAY).min(CAP_APP_DAY_MAX),
             rot_lane,
             rot_lanes,
+            driving: p.driving.unwrap_or_default(),
+            quiet_hours: &p.quiet_hours,
             slots: usize::from(p.slots.unwrap_or(SLOTS).min(SLOTS_CEILING)),
             max_acc_mm: p.max_acc_mm.unwrap_or(MAX_ACC_MM).min(MAX_ACC_MM),
             categories_blocked: p.categories_blocked.iter().map(String::as_str).collect(),

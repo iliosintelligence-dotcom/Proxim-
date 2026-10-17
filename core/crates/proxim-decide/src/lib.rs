@@ -28,6 +28,7 @@ pub mod params;
 pub mod rotation;
 pub mod sha256;
 mod standoff;
+mod timewin;
 mod validate;
 
 use alloc::collections::{BTreeMap, BTreeSet};
@@ -36,10 +37,10 @@ use alloc::vec::Vec;
 use caps::{Books, CapsBook};
 use eff::Eff;
 use params::{
-    DET_PRUNE_MS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M, FIX_FUTURE_SLACK_MS,
-    FIX_MAX_AGE_MS, JUMP_MARGIN_MM, JUMP_MAX_SPEED_MMPS, JUMP_RESET_AT, JUMP_WINDOW_MS,
-    P_SERVE_MAX_MILLI, PACE_BUCKET_MS, PACE_DOMAIN, QUALITY_MAX_MILLI, QUALITY_MIN_MILLI,
-    RANK_DEFAULT_MILLI, RANK_MAX_MILLI, TIMING_FLOOR_MILLI,
+    DET_PRUNE_MS, DRIVING_MMPS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M,
+    FIX_FUTURE_SLACK_MS, FIX_MAX_AGE_MS, JUMP_MARGIN_MM, JUMP_MAX_SPEED_MMPS, JUMP_RESET_AT,
+    JUMP_WINDOW_MS, P_SERVE_MAX_MILLI, PACE_BUCKET_MS, PACE_DOMAIN, QUALITY_MAX_MILLI,
+    QUALITY_MIN_MILLI, RANK_DEFAULT_MILLI, RANK_MAX_MILLI, TIMING_FLOOR_MILLI,
 };
 use proxim_detect::{Event, Prepared};
 use proxim_geo::{acc_eff_mm, dist_mm, frame_for};
@@ -178,6 +179,8 @@ pub fn decide(
         det.remove(*id);
     }
 
+    let (local_minute, local_dow) = timewin::local(now, clock.tz_offset_min);
+    let moving = summary.info.speed_mmps.is_some_and(|v| v > DRIVING_MMPS);
     let controls = controls::prune(&state.controls, now);
     let fac_controls = controls::prune(&fac.controls, now);
     let ctx = Ctx {
@@ -185,6 +188,9 @@ pub fn decide(
         consent,
         controls: &controls,
         fac_controls: &fac_controls,
+        minute: local_minute,
+        dow: local_dow,
+        moving,
         zones: &zones,
         now,
     };
@@ -331,8 +337,14 @@ pub fn decide(
                 }
                 None => None,
             };
+            // 7.6: while moving, glanceable only (or the inbox, for a surface that is not safe).
+            let format = moving.then_some(match eff.driving {
+                proxim_types::Driving::Inbox => proxim_types::Format::Inbox,
+                _ => proxim_types::Format::Glanceable,
+            });
             fires.push(Decision {
                 wording,
+                format,
                 ..fire_decision(c.sp, &c.ev)
             });
         } else {
@@ -426,6 +438,11 @@ struct Ctx<'a> {
     eff: &'a Eff<'a>,
     consent: &'a Consent,
     controls: &'a proxim_types::Controls,
+    /// Local minute and weekday of `now` (7.6).
+    minute: u16,
+    dow: u8,
+    /// The filtered speed is above 5 m/s (PLAN 5.6 driving-safe format, 7.6).
+    moving: bool,
     /// Memory-only controls on `health_facility` adverts (7.4).
     fac_controls: &'a proxim_types::Controls,
     zones: &'a [standoff::Zone],
@@ -638,6 +655,25 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
     if ctx.now >= sp.valid_until_ms {
         return Ok(Err(ReasonCode::Expired));
     }
+    // F14a / F14b (7.6): the advert's signed dayparts, then the partner's quiet hours.
+    if let Some(parts) = &sp.dayparts {
+        if parts.is_empty() || !timewin::valid(parts) {
+            return Ok(Err(ReasonCode::TriggerInvalid));
+        }
+        if !parts
+            .iter()
+            .any(|w| timewin::contains(w, ctx.minute, ctx.dow))
+        {
+            return Ok(Err(ReasonCode::OutsideDaypart));
+        }
+    }
+    if eff
+        .quiet_hours
+        .iter()
+        .any(|w| timewin::contains(w, ctx.minute, ctx.dow))
+    {
+        return Ok(Err(ReasonCode::QuietHours));
+    }
     // F15 (I12): health needs the consent flag and a receipt (M1: non-empty; the SDK issues it).
     if sp.class.is_health() {
         let receipt = ctx
@@ -711,6 +747,10 @@ fn event_filter(
     if book.app_day_count() >= ctx.eff.cap_app_day {
         return Some(ReasonCode::CapAppDay);
     }
+    // F24b (7.6): a partner that delivers nothing while moving.
+    if ctx.moving && ctx.eff.driving == proxim_types::Driving::Off {
+        return Some(ReasonCode::DrivingUnsafeFormat);
+    }
     None
 }
 
@@ -728,6 +768,7 @@ fn drop_decision(sp: &Signpost, reason: ReasonCode, t_ms: i64) -> Decision {
         d_rem_mm: None,
         t_hat_ms: None,
         wording: None,
+        format: None,
     }
 }
 
@@ -745,6 +786,7 @@ fn event_drop(sp: &Signpost, ev: &Event, reason: ReasonCode) -> Decision {
         d_rem_mm: ev.d_rem_mm,
         t_hat_ms: ev.t_hat_ms,
         wording: None,
+        format: None,
     }
 }
 
@@ -812,6 +854,7 @@ pub(crate) mod tests_support {
             wordings: None,
             quality_milli: None,
             p_serve_milli: None,
+            dayparts: None,
             pack_kind: Reserved::default(),
         }
     }
