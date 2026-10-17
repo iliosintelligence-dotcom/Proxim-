@@ -216,6 +216,12 @@ pub struct Policy {
     pub max_acc_mm: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub standoff_zones: Vec<StandoffZone>,
+    /// Driving-safe override, stricter only (PLAN 5.6; engine spec 7.6); default `glanceable`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driving: Option<Driving>,
+    /// The partner's quiet hours, local time (engine spec 7.6): no advert fires inside them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub quiet_hours: Vec<Window>,
     /// Public rotation lane of this partner app (signed per-app config, Addendum 02 5.1), with
     /// `rot_lanes` lanes in all; defaults 0 of 1. engine_spec 2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -391,6 +397,10 @@ pub struct Signpost {
     /// (Addendum 02 5.1; engine_spec 2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rot_days: Option<u8>,
+    /// Signed time-of-day windows of the campaign schedule (PLAN 5.6 step 4; engine spec 7.6),
+    /// local time; absent = always. Outside every window the advert is `OUTSIDE_DAYPART`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dayparts: Option<Vec<Window>>,
     /// The family's wordings as verified by the pack layer (engine_spec 2): never part of the
     /// signed core (the pack layer refuses a core that carries it) and filled in from the entry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -398,6 +408,40 @@ pub struct Signpost {
     /// Signed by the pack layer (I17, `docs/pack-format.md`); ignored by `decide`.
     #[serde(default, skip_serializing)]
     pub pack_kind: Reserved,
+}
+
+/// A local time window (engine spec 7.6): on the weekdays of `days` (bit 0 = Monday, 0 = every
+/// day), from `start_min` to `end_min` (minutes after local midnight, 0..=1440). `start > end` runs
+/// past midnight into the next day; `start == end` is the whole day.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Window {
+    #[serde(default)]
+    pub days: u8,
+    pub start_min: u16,
+    pub end_min: u16,
+}
+
+/// What a partner surface does while the device is moving faster than 5 m/s (PLAN 5.6; Addendum 02
+/// 9.2; engine spec 7.6). A partner may only make it stricter.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Driving {
+    /// Show the glanceable only: at most 7 words and an icon, at least 3 s, no tap target.
+    #[default]
+    Glanceable,
+    /// The surface is not driving-safe: queue to the inbox, taps disabled while moving.
+    Inbox,
+    /// Nothing is delivered while moving (`DRIVING_UNSAFE_FORMAT`).
+    Off,
+}
+
+/// How a fire must be rendered when the device is moving (engine spec 7.6); absent when it is not.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Format {
+    Glanceable,
+    Inbox,
 }
 
 /// The declared creatives of a family (envelope v2): every digest in index order, and which ones
@@ -446,6 +490,9 @@ pub struct Decision {
     /// the host; never part of any event (Addendum 02 4.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wording: Option<u8>,
+    /// On a fire while the device moves faster than 5 m/s: glanceable only, or inbox (7.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format: Option<Format>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -21,8 +21,8 @@ The living record across sessions. Update it at the end of every session that ch
 | 2 | Wording rotation wired into `decide` (step 7b), with the chosen wording in the output | **Done** (E-ROT-WIRE); the SDK pending window (5.3) is still to come |
 | 3 | Health classes `health_adjacent`, `health_facility` (memory-only, Option A), `prohibited_anchor` (R4) | **Done** (E-HEALTH-CLASSES). R3 destination suppression waits for the route input |
 | 4 | Score V x Q x R x P, pacing draw (`PACED_OUT`), up to 3 slots | **Done** (E-SCORE). The 30% small-sender share is a server rule and waits for the owner's definition of "small"; the R bonuses (surface tags, Preference Center) wait for those inputs |
-| 5 (next) | Driving-safe format, daypart and quiet hours | Planned |
-| 6 | Policy matrix as data with exhaustive tests | Planned |
+| 5 | Driving-safe format, dayparts and quiet hours | **Done** (E-DRIVE-TIME); counsel item A17 (distracted driving) stays open |
+| 6 (next) | Policy matrix as data with exhaustive tests | Planned |
 | 7 | `privacy-lint`, egress audit, write-spy harness | Planned |
 
 The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a thin sender console and ledger, then a one-town pilot.
@@ -65,6 +65,7 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
   - M3 slice 2: rotation wired into `decide`; the full engine reproduces the approved reference.
   - M3 slice 3: health classes; `health_facility` leaves nothing on disk (Option A); the simulator's I6 oracle caught facility memory surviving a standoff, now fixed.
   - M3 slice 4: full score, pacing draw, up to 3 slots; a test caught the default slot count briefly following the new ceiling (fixed before commit).
+  - M3 slice 5: driving-safe format (glanceable / inbox / off), dayparts, quiet hours.
 - **2026-10-17:**
   - Pull request 4 merged (M2 core).
   - OI-ROT-1 committed: `golden_v2.json` (unchanged), `tools/rotation-ref/`, the `new_count` supplement, the Rust rotation port, and the M2 entry layout aligned to the vectors.

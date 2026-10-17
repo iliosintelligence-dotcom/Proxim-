@@ -46,3 +46,6 @@ pub const TIMING_FLOOR_MILLI: u64 = 500;
 pub const PACE_BUCKET_MS: i64 = 900_000;
 pub const P_SERVE_MAX_MILLI: u16 = 1000;
 pub const PACE_DOMAIN: &[u8] = b"PROXIM-PACE-V1\x00";
+
+/// Driving-safe format (PLAN 5.6): above this filtered speed only the glanceable is shown.
+pub const DRIVING_MMPS: u32 = 5000;

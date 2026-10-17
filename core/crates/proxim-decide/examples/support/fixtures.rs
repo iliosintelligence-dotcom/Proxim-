@@ -144,6 +144,7 @@ pub fn signpost(id: &str, event: EventKind, trigger: Trigger) -> Signpost {
         wordings: None,
         quality_milli: None,
         p_serve_milli: None,
+        dayparts: None,
         pack_kind: Reserved::default(),
     }
 }

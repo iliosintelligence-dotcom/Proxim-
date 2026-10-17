@@ -38,10 +38,12 @@ fn scale() -> u64 {
         .unwrap_or(1)
 }
 
-const DECISION_KEYS: [&str; 11] = [
+// engine_spec 2 adds `format` (7.6) and `wording` (7.3) on fires; neither is location-derived.
+const DECISION_KEYS: [&str; 13] = [
     "copy",
     "d_rem_mm",
     "event",
+    "format",
     "outcome",
     "path_conf_milli",
     "path_tier",
@@ -50,6 +52,7 @@ const DECISION_KEYS: [&str; 11] = [
     "signpost",
     "t_hat_ms",
     "t_ms",
+    "wording",
 ];
 
 /// Every output obeys the structural privacy contract of spec 3.3.
