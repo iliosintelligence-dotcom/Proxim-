@@ -55,3 +55,23 @@ strong { font-weight: 650; }
 a { color: var(--accent); }
 .foot { margin-top: 64px; padding-top: 24px; padding-bottom: 40px; border-top: 1px solid var(--line); color: var(--muted); }
 .small { font-size: 14px; }
+h3 { font-size: 18px; margin: 0 0 6px; }
+.example { display: grid; gap: 20px; align-items: center; }
+@media (min-width: 640px) { .example { grid-template-columns: 260px 1fr; } }
+.phone {
+  background: var(--card); border: 1px solid var(--line); border-radius: 28px;
+  padding: 20px 16px; max-width: 260px; display: grid; gap: 10px;
+}
+.phone p { margin: 0; }
+.phone-app { font-weight: 650; font-size: 15px; }
+.phone-line { font-size: 14px; color: var(--muted); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.note {
+  display: grid; gap: 2px; font-size: 14px; line-height: 1.4;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent);
+}
+.note-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); font-weight: 700; }
+.example-text { margin: 0; min-width: 0; }
+.who { display: grid; gap: 12px; }
+@media (min-width: 640px) { .who { grid-template-columns: repeat(3, 1fr); } }
+.who > div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.who p { margin: 0; font-size: 16px; }
