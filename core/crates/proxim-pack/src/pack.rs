@@ -110,6 +110,8 @@ struct RawEntry<'a> {
 }
 
 /// Parse one entry record and recompute the digests of shipped bodies (pack-format 4.1 and step a).
+/// Layout (golden_v2 envelope): the digests of unshipped creatives in index order, then the
+/// shipped bodies in index order.
 fn parse_entry(bytes: &[u8]) -> PackResult<RawEntry<'_>> {
     let bad = ReasonCode::SignatureInvalid;
     let mut r = Reader::new(bytes);
@@ -123,37 +125,59 @@ fn parse_entry(bytes: &[u8]) -> PackResult<RawEntry<'_>> {
     if n == 0 || n > MAX_CREATIVES || mask & 1 == 0 || u16::from(mask) >> n != 0 {
         return Err(bad);
     }
+    let shipped = |i: u8| mask & (1 << i) != 0;
     let mut slots: Vec<Slot<'_>> = Vec::with_capacity(usize::from(n));
     for i in 0..n {
-        let slot = if mask & (1 << i) != 0 {
+        let digest = if shipped(i) { [0; 32] } else { r.array()? };
+        slots.push(Slot { body: None, digest });
+    }
+    for (i, slot) in (0u8..).zip(slots.iter_mut()) {
+        if shipped(i) {
             let len = r.u16()?;
             if len == 0 || len > MAX_BODY_BYTES {
                 return Err(bad);
             }
             let body = r.take(usize::from(len))?;
-            Slot {
-                body: Some(body),
-                digest: crypto::sha256(&[CREATIVE_DOMAIN, body]),
-            }
-        } else {
-            Slot {
-                body: None,
-                digest: r.array()?,
-            }
-        };
-        // vid = first 4 bytes of the digest; pairwise distinct (Addendum 02 4.1).
-        if slots
-            .iter()
-            .any(|s| s.digest.get(..4) == slot.digest.get(..4))
-        {
-            return Err(bad);
+            slot.body = Some(body);
+            slot.digest = crypto::sha256(&[CREATIVE_DOMAIN, body]);
         }
-        slots.push(slot);
     }
     if !r.is_empty() {
         return Err(bad);
     }
+    // vid = first 4 bytes of the digest; pairwise distinct (Addendum 02 4.1).
+    let mut vids: Vec<&[u8]> = slots.iter().filter_map(|s| s.digest.get(..4)).collect();
+    vids.sort_unstable();
+    if vids.windows(2).any(|w| w.first() == w.get(1)) {
+        return Err(bad);
+    }
     Ok(RawEntry { core, slots })
+}
+
+/// A verified envelope: the signed core and the shipped bodies by creative index.
+pub type Envelope<'a> = (&'a [u8], Vec<(u8, &'a [u8])>);
+
+/// Steps a and c for one entry with its signature: parse, recompute digests, verify ES256 over the
+/// envelope v2 message. Returns the core and the shipped bodies by index. Used by the golden_v2
+/// envelope vectors (`core/testdata/golden/rotation/`), whose entries carry the signature inline.
+///
+/// # Errors
+/// [`ReasonCode::SignatureInvalid`] for any parse, duplicate-vid or signature failure.
+pub fn verify_envelope<'a>(
+    key: &p256::ecdsa::VerifyingKey,
+    entry: &'a [u8],
+    sig: &[u8],
+) -> PackResult<Envelope<'a>> {
+    let raw = parse_entry(entry)?;
+    let digests: Vec<[u8; 32]> = raw.slots.iter().map(|s| s.digest).collect();
+    if !crypto::verify_es256(key, &signed_message(raw.core, &digests)?, sig) {
+        return Err(ReasonCode::SignatureInvalid);
+    }
+    let bodies = (0u8..)
+        .zip(&raw.slots)
+        .filter_map(|(i, s)| s.body.map(|b| (i, b)))
+        .collect();
+    Ok((raw.core, bodies))
 }
 
 /// Read the pack-layer fields of a core: `pack_kind` (required, must match) and `live_at_ms`.

@@ -310,20 +310,37 @@ function parseEntry(bytes: Buffer): { core: Buffer; slots: Slot[] } {
   const n = r.u8();
   const mask = r.u8();
   if (n === 0 || n > LIMITS.creatives || !(mask & 1) || mask >> n !== 0) bad();
+  const shipped = (i: number) => (mask & (1 << i)) !== 0;
   const slots: Slot[] = [];
+  for (let i = 0; i < n; i++) slots.push({ digest: shipped(i) ? Buffer.alloc(0) : r.take(32) });
   for (let i = 0; i < n; i++) {
-    let slot: Slot;
-    if (mask & (1 << i)) {
-      const len = r.u16();
-      if (len === 0 || len > LIMITS.bodyBytes) bad();
-      const body = r.take(len);
-      slot = { body, digest: creativeDigest(body) };
-    } else slot = { digest: r.take(32) };
-    if (slots.some((s) => s.digest.subarray(0, 4).equals(slot.digest.subarray(0, 4)))) bad();
-    slots.push(slot);
+    if (!shipped(i)) continue;
+    const len = r.u16();
+    if (len === 0 || len > LIMITS.bodyBytes) bad();
+    const body = r.take(len);
+    slots[i] = { body, digest: creativeDigest(body) };
   }
+  const vids = slots.map((s) => hex(s.digest.subarray(0, 4)));
+  if (new Set(vids).size !== vids.length) bad();
   if (!r.empty) bad();
   return { core, slots };
+}
+
+/** Steps a and c for one entry plus its signature (the golden_v2 envelope vectors). */
+export function verifyEnvelope(key: KeyObject, entry: Uint8Array, sig: Uint8Array): { core: Buffer; bodies: [number, Buffer][] } {
+  let raw: { core: Buffer; slots: Slot[] };
+  try {
+    raw = parseEntry(Buffer.from(entry));
+  } catch (e) {
+    if (e instanceof FormatError) return bad();
+    throw e;
+  }
+  if (!verifyEs256(key, signedMessage(raw.core, raw.slots.map((x) => x.digest)), sig)) bad();
+  const bodies: [number, Buffer][] = [];
+  raw.slots.forEach((s, i) => {
+    if (s.body) bodies.push([i, s.body]);
+  });
+  return { core: raw.core, bodies };
 }
 
 export function openPack(bytes: Uint8Array, m: Manifest, tier: number, ks: Keyset, rl: Revocations, now: bigint): Opened {
