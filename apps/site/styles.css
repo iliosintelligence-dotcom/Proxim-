@@ -307,6 +307,8 @@ p { margin: 0; }
 .q-side.us figcaption b { color: var(--brand); }
 .q-far { fill: #c9b4a4; }
 .q-near { fill: var(--brand); filter: drop-shadow(2px 3px 2px rgba(90, 35, 0, 0.25)); }
-.q-ring { fill: rgba(255, 117, 31, 0.12); stroke: var(--brand); stroke-width: 3; stroke-dasharray: 8 8; }
+.q-blk { fill: #ffd2b3; }
+.q-zone { fill: rgba(255, 117, 31, 0.16); stroke: var(--brand); stroke-width: 3; stroke-dasharray: 8 7; stroke-linejoin: round; }
+.q-vtx { fill: #fff; stroke: var(--brand); stroke-width: 2.5; }
 .q-pin path { fill: var(--brand-ink); }
 .q-pin-h { fill: #fff; }

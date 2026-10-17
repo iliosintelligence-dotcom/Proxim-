@@ -27,8 +27,48 @@
   var tabs = $$('[role="tab"][aria-controls]');
   if (!tabs.length) return;
   var step = 0;
-  var head = $("#f-head"), body = $("#f-body"), radius = $("#f-radius"),
+  var head = $("#f-head"), body = $("#f-body"),
       from = $("#f-from"), to = $("#f-to"), budget = $("#f-budget");
+
+  // Area: the business draws a shape (a road, an entrance, a junction) instead of a circle.
+  var SHAPES = {
+    road: { label: "Road outside your café", pts: [[200, 178], [292, 178], [298, 207], [194, 207]] },
+    door: { label: "Your front door", pts: [[226, 156], [266, 156], [272, 184], [220, 184]] },
+    junction: { label: "The junction by your café", pts: [[185, 168], [210, 168], [222, 180], [222, 205], [210, 217], [185, 217], [173, 205], [173, 180]] }
+  };
+  var shape = "road", pts = SHAPES.road.pts.slice();
+  var svgNS = "http://www.w3.org/2000/svg";
+  function shapeLabel() {
+    if (shape !== "own") return SHAPES[shape].label;
+    return pts.length < 3 ? "Tap the map to add at least 3 corners" : "Your own shape, " + pts.length + " corners";
+  }
+  function drawShape() {
+    $("#zone").setAttribute("points", pts.map(function (p) { return p.join(","); }).join(" "));
+    var g = $("#vtx");
+    while (g.firstChild) g.removeChild(g.firstChild);
+    pts.forEach(function (p) {
+      var c = document.createElementNS(svgNS, "circle");
+      c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); c.setAttribute("r", "6"); c.setAttribute("class", "vtx");
+      g.appendChild(c);
+    });
+    $("#shape-out").textContent = shapeLabel();
+  }
+  function pick(name) {
+    shape = name;
+    pts = name === "own" ? [] : SHAPES[name].pts.slice();
+    $$(".chip[data-shape]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.shape === name)); });
+    drawShape(); update();
+  }
+  $$(".chip[data-shape]").forEach(function (b) { b.addEventListener("click", function () { pick(b.dataset.shape); }); });
+  $("#clear-shape").addEventListener("click", function () { pick("own"); });
+  $("#map svg").addEventListener("click", function (e) {
+    var svg = e.currentTarget, pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    var p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    if (shape !== "own") { shape = "own"; pts = []; $$(".chip[data-shape]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.shape === "own")); }); }
+    pts.push([Math.round(p.x), Math.round(p.y)]);
+    drawShape(); update();
+  });
 
   function hour(h) { return h + ":00"; }
   // Example price: ₦500 per 1,000 views, so each naira buys two views.
@@ -45,8 +85,6 @@
       var f = document.getElementById(c.dataset.for);
       c.textContent = f.value.length + " / " + f.maxLength;
     });
-    $("#radius-out").textContent = radius.value + " m";
-    $("#zone").setAttribute("r", String(20 + radius.value * 0.27));
     if (+to.value <= +from.value) to.value = String(+from.value + 1);
     $("#from-out").textContent = hour(from.value);
     $("#to-out").textContent = hour(to.value);
@@ -54,7 +92,7 @@
     $("#views-out").textContent = (budget.value * 2).toLocaleString("en-US");
     $("#s-head").textContent = head.value;
     $("#s-body").textContent = body.value;
-    $("#s-area").textContent = radius.value + " m around Rosa's Café";
+    $("#s-area").textContent = shapeLabel();
     $("#s-when").textContent = days() + ", " + hour(from.value) + " to " + hour(to.value);
     $("#s-budget").textContent = naira(budget.value) + " a week, about " + (budget.value * 2).toLocaleString("en-US") + " views";
   }
@@ -74,8 +112,9 @@
     if (step === tabs.length - 1) { $("#sent-msg").hidden = false; return; }
     show(step + 1);
   });
-  [head, body, radius, from, to, budget].forEach(function (el) { el.addEventListener("input", update); });
+  [head, body, from, to, budget].forEach(function (el) { el.addEventListener("input", update); });
   $$(".chip[data-day]").forEach(function (b) { b.addEventListener("click", update); });
+  drawShape();
   update();
   show(0);
 })();
