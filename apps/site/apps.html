@@ -7,8 +7,9 @@
 <meta name="description" content="Earn from your phone, web, smart TV or desktop app with short, labelled local ads. App makers keep 65 to 70% of spend, and user location never leaves the device.">
 <meta name="theme-color" content="#ff751f">
 <link rel="icon" href="logo-orange.png">
-<link rel="preload" href="fonts/league-spartan-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/titan-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
+<script src="site.js" defer></script>
 </head>
 <body>
 <header class="hero">
@@ -17,7 +18,7 @@
     <nav class="switch" aria-label="Choose a page"><a class="pill" href="/">For businesses</a><a class="pill" href="/apps" aria-current="page">For app makers</a></nav>
   </div>
   <div class="wrap">
-    <h1 class="headline"><span class="l">Your app.</span><span class="r">Your rules.</span><span class="l">Your revenue.</span></h1>
+    <h1 class="headline"><span class="line l"><span class="w">Your</span> <span class="w">app.</span></span><span class="line r"><span class="w">Your</span> <span class="w">rules.</span></span><span class="line l"><span class="w">Your</span> <span class="w">revenue.</span></span></h1>
   </div>
   <div class="wrap hero-foot">
     <div class="tokens" aria-hidden="true"><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span class="token dark bob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="10" rx="1"/><path d="M2 19h20"/></svg></span><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9c0-1-1.3-1.6-3-1.6S9 8.2 9 9.4s1.3 1.6 3 2 3 .9 3 2.2-1.3 2-3 2-3-.7-3-1.7"/></svg></span></div>
@@ -29,67 +30,73 @@
 </header>
 
 <main>
-  <div class="wrap chain" aria-hidden="true"><span class="pill">Not repetitive</span><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="pill">Not invasive</span><span class="pill">Always relevant</span></div>
+  <section class="wrap statement">
+    <h2>Turn the places your users pass into <em>income</em> for your app.</h2>
+    <div class="chain" aria-hidden="true"><span class="pill">Not repetitive</span><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="pill">Not invasive</span><span class="pill">Always relevant</span></div>
+  </section>
 
-  <section class="wrap" id="earn">
-    <p class="eyebrow">You keep most of the money</p>
-    <div class="share">
-      <p class="share-big">65&ndash;70%</p>
-      <div>
-        <h2>Of what businesses spend goes to you.</h2>
-        <p class="intro">That is the share we plan to pay app makers, and every statement shows the exact split. With most ad networks, a large part of the money goes to middlemen before it reaches you.</p>
-      </div>
+  <section class="night" id="earn">
+    <div class="wrap">
+      <p class="eyebrow">You keep most of the money</p>
+      <p class="big-number">65&ndash;70%</p>
+      <h2>Of what businesses spend goes to you.</h2>
+      <p>That is the share we plan to pay app makers, and every statement shows the exact split. With most ad networks, a large part of the money goes to middlemen before it reaches you.</p>
     </div>
   </section>
 
-  <section class="wrap">
-    <p class="eyebrow">Why your users won't mind</p>
-    <h2>Ads that feel like help, not noise.</h2>
-    <div class="value">
-      <div class="spin" aria-hidden="true">
+  <section class="wrap value-sec">
+    <div class="value-head">
+      <p class="eyebrow">Why your users won't mind</p>
+      <h2>Ads that feel like help, not noise.</h2>
+    </div>
+    <div class="orbit"><div class="col"><div class="point"><h3>Not repetitive</h3><p>The same ad is not shown over and over. Each person sees it a limited number of times.</p></div><div class="point"><h3>Not invasive</h3><p>Short, clearly labelled text inside your app. No pop-ups, no autoplay video, no sound.</p></div></div><div class="spin" aria-hidden="true">
         <svg viewBox="0 0 320 320">
-          <defs><path id="ring" d="M160,160 m-140,0 a140,140 0 1,1 280,0 a140,140 0 1,1 -280,0"/></defs>
-          <g class="ring"><text><textPath href="#ring" textLength="870" lengthAdjust="spacing">Not repetitive · Not invasive · Always relevant · Not repetitive · Not invasive · Always relevant · </textPath></text></g>
-          <path class="pin" d="M160 252 C132 210 92 180 92 142 A68 68 0 1 1 228 142 C228 180 188 210 160 252Z"/>
-          <circle class="hole" cx="160" cy="142" r="26"/>
+          <defs><path id="ring" d="M160,160 m-146,0 a146,146 0 1,1 292,0 a146,146 0 1,1 -292,0"/></defs>
+          <g class="ring"><text><textPath href="#ring" textLength="905" lengthAdjust="spacing">Not repetitive · Not invasive · Always relevant · Not repetitive · Not invasive · Always relevant · </textPath></text></g>
+          <g class="float">
+            <path class="pin-shade" d="M166 258 C138 216 98 186 98 148 A68 68 0 1 1 234 148 C234 186 194 216 166 258Z"/>
+            <path class="pin" d="M160 252 C132 210 92 180 92 142 A68 68 0 1 1 228 142 C228 180 188 210 160 252Z"/>
+            <circle class="hole" cx="160" cy="142" r="26"/>
+          </g>
         </svg>
+      </div><div class="col"><div class="point"><h3>Relevant to your app</h3><p>You choose which kinds of business and offers are allowed, so every ad fits your app, your content and your users.</p></div><div class="point"><h3>Private by design</h3><p>Your users&rsquo; location stays on their device. We never receive it, and nothing about your users is shared or sold.</p></div></div></div>
+  </section>
+
+  <section class="steps-sec">
+    <div class="wrap">
+      <p class="eyebrow center">Works wherever your app runs</p>
+      <div class="platforms">
+        <div class="platform"><span class="token"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span><h3>Phone apps</h3></div>
+        <div class="platform"><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><h3>Websites</h3></div>
+        <div class="platform"><span class="token dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span><h3>Smart TV apps</h3></div>
+        <div class="platform"><span class="token"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="10" rx="1"/><path d="M2 19h20"/></svg></span><h3>Desktop apps</h3></div>
       </div>
-      <ul class="cards two"><li><span class="tag">Repetition</span><h3>Not repetitive</h3><p>The same ad is not shown over and over. Each person sees it a limited number of times.</p></li><li><span class="tag">Comfort</span><h3>Not invasive</h3><p>Short, clearly labelled text inside your app. No pop-ups, no autoplay video, no sound.</p></li><li><span class="tag">Relevance</span><h3>Relevant to your app</h3><p>You choose which kinds of business and offers are allowed, so every ad fits your app, your content and your users.</p></li><li><span class="tag">Privacy</span><h3>Private by design</h3><p>Your users&rsquo; location stays on their device. We never receive it, and nothing about your users is shared or sold.</p></li></ul>
+      <p class="soon">We are starting with phone apps and websites. Smart TV and desktop apps come next.</p>
     </div>
   </section>
 
-  <section class="wrap">
-    <p class="eyebrow">Works wherever your app runs</p>
-    <h2>Phone, web, TV and desktop.</h2>
-    <div class="platforms">
-      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Phone apps</span>
-      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Websites</span>
-      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>Smart TV apps</span>
-      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="10" rx="1"/><path d="M2 19h20"/></svg>Desktop apps</span>
+  <section class="value-sec" id="how">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2 class="steps-title">Three steps to your first payout.</h2>
+      <ol class="steps">
+        <li><h3>Add our toolkit</h3><p>Connect your app to Proxim.</p></li>
+        <li><h3>Choose what you allow</h3><p>Pick the kinds of ads that suit your users, and where they appear.</p></li>
+        <li><h3>Keep most of the money</h3><p>A simple statement shows what you earned and what we kept.</p></li>
+      </ol>
     </div>
-    <p class="small">We are starting with phone apps and websites. Smart TV and desktop apps come next.</p>
   </section>
-
-  <section class="wrap" id="how">
-    <p class="eyebrow">How it works</p>
-    <h2>Three steps to your first payout.</h2>
-    <ol class="steps"><li><h3>Add our toolkit</h3><p>Connect your app to Proxim.</p></li><li><h3>Choose what you allow</h3><p>Pick the kinds of ads that suit your users, and where they appear.</p></li><li><h3>Keep most of the money</h3><p>A simple statement shows what you earned and what we kept.</p></li></ol>
-  </section>
-
+  <div class="ticker"><div class="ticker-track"><span>You keep most of the money</span><i></i><span>No pop-ups</span><i></i><span>You choose the ads</span><i></i><span>No user data for sale</span><i></i><span>Every ad checked by a person</span><i></i><span aria-hidden="true">You keep most of the money</span><i aria-hidden="true"></i><span aria-hidden="true">No pop-ups</span><i aria-hidden="true"></i><span aria-hidden="true">You choose the ads</span><i aria-hidden="true"></i><span aria-hidden="true">No user data for sale</span><i aria-hidden="true"></i><span aria-hidden="true">Every ad checked by a person</span><i aria-hidden="true"></i></div></div>
 </main>
 
-<section class="band">
+<footer class="closing">
+  <svg class="blob" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" d="M44.7,-58.6C57.1,-47.4,65.6,-32.4,70.4,-15.6C75.2,1.2,76.3,19.8,68.6,33.9C60.9,48,44.4,57.6,27.3,64.2C10.2,70.8,-7.5,74.4,-24.6,70.2C-41.7,66,-58.2,54,-67.6,37.9C-77,21.8,-79.3,1.6,-73.9,-15.4C-68.5,-32.4,-55.4,-46.2,-40.6,-57.1C-25.8,-68,-9.3,-76,4.7,-81.6C18.7,-87.2,32.3,-69.8,44.7,-58.6Z" transform="translate(100 100)"/></svg>
   <div class="wrap">
-    <div>
-      <h2>Coming soon.</h2>
-      <p>Proxim is still being built and nothing is available yet. We plan to start with a small, invitation-only trial in one city.</p>
-    </div>
-    <a class="pill" href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built</a>
+    <h2>Coming soon.</h2>
+    <p>Proxim is still being built and nothing is available yet. We plan to start with a small, invitation-only trial in one city.</p>
+    <a class="pill" href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+    <div class="foot"><p>Proxim is open source.</p><p>This site sets no cookies and does not track you.</p></div>
   </div>
-</section>
-<footer class="wrap foot">
-  <p>Proxim is open source.</p>
-  <p>This site sets no cookies and does not track you.</p>
 </footer>
 </body>
 </html>
