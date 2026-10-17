@@ -34,4 +34,15 @@ pub const TZ_MAX_MIN: i16 = 840;
 /// Milliseconds per local day.
 pub const DAY_MS: i64 = 86_400_000;
 /// Platform ceiling for the per-app slot count in M1.
-pub const SLOTS_CEILING: u8 = 1;
+/// Most slots a partner may ask for in one call (engine spec 7.5; 1 in engine_spec 1).
+pub const SLOTS_CEILING: u8 = 3;
+
+/// Q of the score: the lowest quality prior counted, and the neutral value (engine spec 7.5).
+pub const QUALITY_MIN_MILLI: u16 = 500;
+pub const QUALITY_MAX_MILLI: u16 = 1000;
+/// Timing fit `g` of P: 1000 at the sender's lead, falling linearly to this floor one lead away.
+pub const TIMING_FLOOR_MILLI: u64 = 500;
+/// Pacing (PLAN 5.6 step 7): one draw per signpost revision per 15-minute bucket.
+pub const PACE_BUCKET_MS: i64 = 900_000;
+pub const P_SERVE_MAX_MILLI: u16 = 1000;
+pub const PACE_DOMAIN: &[u8] = b"PROXIM-PACE-V1\x00";

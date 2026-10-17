@@ -517,3 +517,15 @@ fn a_core_that_carries_its_own_wordings_is_refused() {
     let p = open_rows(&[all_shipped(&forged)]).unwrap();
     assert_eq!(reasons(&p), [(0, ReasonCode::SignatureInvalid)]);
 }
+
+#[test]
+fn a_core_that_sets_its_own_pacing_is_refused() {
+    let a = approve();
+    let forged = sign_rev(
+        &signpost("p-1", 1, &[("p_serve_milli", json!(1000))]),
+        &["Hi"],
+        &a,
+    );
+    let p = open_rows(&[all_shipped(&forged)]).unwrap();
+    assert_eq!(reasons(&p), [(0, ReasonCode::SignatureInvalid)]);
+}

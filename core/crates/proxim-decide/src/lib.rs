@@ -1,7 +1,7 @@
 //! The decision function (engine-spec 7): ordered hard filters F01-F25, caps, one-slot selection.
 //!
 //! Pure: [`decide`] is a function of its arguments only. No clock (time is `clock.now_ms`), no
-//! randomness (`seed` is carried and UNUSED in M1), no I/O, no hash-order dependence (`BTreeMap`
+//! randomness (`seed` is the caller's install salt for the deterministic pacing draw), no I/O, no hash-order dependence (`BTreeMap`
 //! and sorted vectors only). Every input is untrusted: no `unwrap`, no unchecked indexing, time
 //! arithmetic saturates and geometry arithmetic is `i128` or checked, so overflow is impossible.
 //!
@@ -38,7 +38,8 @@ use eff::Eff;
 use params::{
     DET_PRUNE_MS, EVENT_AGE_APPROACH_S, EVENT_AGE_ENTER_S, EVENT_DIST_M, FIX_FUTURE_SLACK_MS,
     FIX_MAX_AGE_MS, JUMP_MARGIN_MM, JUMP_MAX_SPEED_MMPS, JUMP_RESET_AT, JUMP_WINDOW_MS,
-    RANK_DEFAULT_MILLI, RANK_MAX_MILLI,
+    P_SERVE_MAX_MILLI, PACE_BUCKET_MS, PACE_DOMAIN, QUALITY_MAX_MILLI, QUALITY_MIN_MILLI,
+    RANK_DEFAULT_MILLI, RANK_MAX_MILLI, TIMING_FLOOR_MILLI,
 };
 use proxim_detect::{Event, Prepared};
 use proxim_geo::{acc_eff_mm, dist_mm, frame_for};
@@ -56,7 +57,8 @@ const ORIGIN: Enu = Enu { e_mm: 0, n_mm: 0 };
 
 /// `decide(state, fix, signposts, policy, consent, clock, seed) -> (Output, State)`.
 ///
-/// `seed` is carried but UNUSED in M1 (a test asserts it). A shell MUST treat any `Err` as
+/// `seed` is the install's local pacing salt (engine spec 7.5), read only by the pacing draw of a
+/// signpost with `p_serve_milli < 1000`; it never leaves the device. A shell MUST treat any `Err` as
 /// "no decision, state unchanged".
 ///
 /// # Errors
@@ -73,7 +75,7 @@ pub fn decide(
     clock: &Clock,
     seed: u64,
 ) -> Result<(Output, State), EngineError> {
-    let _ = seed; // M1: carried, never read (seed_has_no_effect_in_m1).
+    // `seed` is the install's local pacing salt (7.5): read only by the pacing draw.
     validate::state(state)?;
     validate::clock(clock)?;
     if signposts.len() > MAX_SIGNPOSTS {
@@ -238,11 +240,23 @@ pub fn decide(
         let Some(ev) = d.event else { continue };
         match event_filter(&ctx, &book, last_fire_any, sp, &ev) {
             Some(reason) => drops.push(event_drop(sp, &ev, reason)),
+            // PLAN 5.6 step 7, the pacing draw (7.5): deterministic per install, revision and
+            // 15-minute bucket, so reopening the app cannot reroll it. health_facility has no
+            // pacing (PLAN 6.5: p fixed at 1).
+            None if !sp.class.is_facility() && !pace_passes(seed, sp, now) => {
+                drops.push(event_drop(sp, &ev, ReasonCode::PacedOut));
+            }
             None => survivors.push(Cand {
                 sp,
                 ev,
                 pre,
                 affinity_milli: eff.affinity_milli(&sp.category),
+                lead_ms: i64::from(
+                    sp.trigger
+                        .lead_s
+                        .unwrap_or(LEAD_S_DEFAULT)
+                        .clamp(eff.lead_lo_s, eff.lead_hi_s),
+                ) * 1000,
             }),
         }
     }
@@ -424,21 +438,68 @@ struct Cand<'a> {
     ev: Event,
     pre: Option<DetState>,
     affinity_milli: u16,
+    /// The sender's lead after policy narrowing, for the timing fit of P (7.5).
+    lead_ms: i64,
 }
 
 impl Cand<'_> {
-    /// `rank_milli x path_conf_milli x affinity_milli / 1_000_000` (spec 7, 7.1). With the neutral
-    /// affinity 1000 this is exactly the M1 score `rank x conf / 1000`. Fits u64: below 2^32 x
-    /// 2^16 x 3000.
+    /// `S = V x Q x R x P` (PLAN 5.6 step 6; engine spec 7.5), all in milli-units:
+    /// V = `rank_milli` (at most 3000, E-D-RANK), Q = `quality_milli` (500..=1000, default 1000),
+    /// R = the partner's category affinity (7.1), P = `path_conf_milli x g / 1000` where the
+    /// timing fit `g` is 1000 when the predicted arrival `t_hat` equals the sender's lead and
+    /// falls linearly to 500 one lead away (an event without `t_hat`, an ENTER, has g = 1000).
+    /// Scaled by 1e9 so that with Q and g neutral it is exactly the engine_spec 1 score. Fits
+    /// u64: at most 3000 x 1000 x 3000 x 65535 x 1000.
     fn score(&self) -> u64 {
         let rank = self
             .sp
             .rank_milli
             .unwrap_or(RANK_DEFAULT_MILLI)
             .min(RANK_MAX_MILLI);
-        u64::from(rank) * u64::from(self.ev.path_conf_milli) * u64::from(self.affinity_milli)
-            / 1_000_000
+        let quality = self
+            .sp
+            .quality_milli
+            .unwrap_or(QUALITY_MAX_MILLI)
+            .clamp(QUALITY_MIN_MILLI, QUALITY_MAX_MILLI);
+        u64::from(rank)
+            .saturating_mul(u64::from(quality))
+            .saturating_mul(u64::from(self.affinity_milli))
+            .saturating_mul(u64::from(self.ev.path_conf_milli))
+            .saturating_mul(self.timing_fit_milli())
+            / 1_000_000_000_000
     }
+
+    /// `g` of P (7.5).
+    fn timing_fit_milli(&self) -> u64 {
+        let (Some(t_hat), true) = (self.ev.t_hat_ms, self.lead_ms > 0) else {
+            return 1000;
+        };
+        let dev = t_hat.saturating_sub(self.lead_ms).unsigned_abs();
+        let lead = u64::try_from(self.lead_ms).unwrap_or(1);
+        let drop = (TIMING_FLOOR_MILLI.saturating_mul(dev) / lead).min(1000 - TIMING_FLOOR_MILLI);
+        1000 - drop
+    }
+}
+
+/// The pacing draw (PLAN 5.6 step 7, engine spec 7.5): pass if
+/// `u32(SHA-256(PACE_DOMAIN || seed || id || rev || bucket)[0..4]) mod 1000 < p_serve_milli`, with
+/// `seed` the install's local salt (never sent) and `bucket = floor(now / 15 min)`. A `p_serve`
+/// of 1000 (the default) always passes without hashing.
+fn pace_passes(seed: u64, sp: &Signpost, now: i64) -> bool {
+    let p = sp.p_serve_milli.unwrap_or(P_SERVE_MAX_MILLI);
+    if p >= P_SERVE_MAX_MILLI {
+        return true;
+    }
+    let mut m = Vec::with_capacity(PACE_DOMAIN.len() + 8 + sp.id.as_str().len() + 12);
+    m.extend_from_slice(PACE_DOMAIN);
+    m.extend_from_slice(&seed.to_be_bytes());
+    m.extend_from_slice(sp.id.as_str().as_bytes());
+    m.push(0);
+    m.extend_from_slice(&sp.rev.to_be_bytes());
+    m.extend_from_slice(&now.div_euclid(PACE_BUCKET_MS).to_be_bytes());
+    let d = sha256::sha256(&m);
+    let draw = u32::from_be_bytes([d[0], d[1], d[2], d[3]]) % 1000;
+    draw < u32::from(p)
 }
 
 /// `t_hat` ascending, an absent value last.
@@ -749,6 +810,8 @@ pub(crate) mod tests_support {
             creatives: Reserved::default(),
             rot_days: None,
             wordings: None,
+            quality_milli: None,
+            p_serve_milli: None,
             pack_kind: Reserved::default(),
         }
     }
@@ -880,6 +943,7 @@ mod tests {
                 ev: ev(conf),
                 pre: None,
                 affinity_milli,
+                lead_ms: 40_000,
             }
             .score()
         };
@@ -901,6 +965,62 @@ mod tests {
         assert_eq!(weighted(&sp, 500, 2000), 1000);
         assert_eq!(weighted(&sp, 500, 1), 0, "floor division");
         assert_eq!(weighted(&sp, 500, 0), 0);
+        // 7.5: Q multiplies (clamped to 500..=1000).
+        sp.quality_milli = Some(600);
+        assert_eq!(score(&sp, 500), 300);
+        sp.quality_milli = Some(10);
+        assert_eq!(score(&sp, 500), 250, "Q never below 500");
+        sp.quality_milli = Some(5000);
+        assert_eq!(score(&sp, 500), 500, "Q never above 1000");
+    }
+
+    #[test]
+    fn timing_fit_peaks_at_the_lead_and_floors_at_half() {
+        let sp = general_signpost();
+        let cand = |t_hat| Cand {
+            sp: &sp,
+            ev: Event {
+                kind: EventKind::Approach,
+                t_ms: 0,
+                d_rem_mm: Some(1),
+                t_hat_ms: t_hat,
+                dist_to_shape_mm: 0,
+                path_tier: 1,
+                path_conf_milli: 1000,
+            },
+            pre: None,
+            affinity_milli: 1000,
+            lead_ms: 40_000,
+        };
+        assert_eq!(cand(Some(40_000)).timing_fit_milli(), 1000);
+        assert_eq!(cand(Some(20_000)).timing_fit_milli(), 750);
+        assert_eq!(cand(Some(60_000)).timing_fit_milli(), 750);
+        assert_eq!(cand(Some(80_000)).timing_fit_milli(), 500);
+        assert_eq!(cand(Some(400_000)).timing_fit_milli(), 500, "floor");
+        assert_eq!(cand(None).timing_fit_milli(), 1000, "no t_hat: neutral");
+        assert_eq!(cand(Some(40_000)).score(), 1000);
+        assert_eq!(cand(Some(20_000)).score(), 750);
+    }
+
+    #[test]
+    fn the_pacing_draw_is_deterministic_per_seed_revision_and_bucket() {
+        let mut sp = general_signpost();
+        assert!(
+            pace_passes(1, &sp, 0),
+            "p_serve absent = 1000 always passes"
+        );
+        sp.p_serve_milli = Some(0);
+        assert!((0..50).all(|s| !pace_passes(s, &sp, 0)), "p 0 never passes");
+        sp.p_serve_milli = Some(500);
+        let a: Vec<bool> = (0..2000u64).map(|s| pace_passes(s, &sp, 0)).collect();
+        let n = a.iter().filter(|x| **x).count();
+        assert!((900..1100).contains(&n), "about half of installs: {n}");
+        // Same install, same 15-minute bucket: same answer; the next bucket draws again.
+        assert_eq!(pace_passes(7, &sp, 1000), pace_passes(7, &sp, 899_999));
+        let changes = (0..200i64)
+            .filter(|b| pace_passes(7, &sp, b * 900_000) != pace_passes(7, &sp, (b + 1) * 900_000))
+            .count();
+        assert!(changes > 50, "{changes}");
     }
 
     #[test]

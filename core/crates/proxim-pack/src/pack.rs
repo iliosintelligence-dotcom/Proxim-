@@ -184,9 +184,11 @@ pub fn verify_envelope<'a>(
 fn core_fields(core: &[u8], pack_kind: &str) -> PackResult<Option<i64>> {
     let bad = ReasonCode::SignatureInvalid;
     let tree = parse_value(core, &JsonLimits::default()).map_err(|_| bad)?;
-    // `wordings` is filled in by this layer from the verified entry, never taken from a core.
+    // `wordings` is filled in by this layer from the verified entry and `p_serve_milli` by the SDK
+    // from the verified pace overlay; neither is ever taken from a core.
     if tree.get("pack_kind").and_then(Value::as_str) != Some(pack_kind)
         || tree.get("wordings").is_some()
+        || tree.get("p_serve_milli").is_some()
     {
         return Err(bad);
     }
