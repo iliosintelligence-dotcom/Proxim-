@@ -191,6 +191,8 @@ fn outputs_never_contain_coordinates_and_hide_reasons_without_explain() {
             rig.policy = zone_policy(explain);
             rig.consent["nearby_health_events"] = json!("granted");
             rig.consent["health_receipt"] = json!("r-1");
+            rig.policy["profile"] = json!("sealed");
+            rig.policy["health_tier"] = json!(true);
             let forbidden = coordinate_numbers(&sps, &trace);
             for (f, now) in &trace {
                 let s = rig.call(f, *now);
@@ -350,6 +352,8 @@ fn caps_hold_over_random_worlds() {
         rig.signposts = sps;
         rig.consent["nearby_health_events"] = json!("granted");
         rig.consent["health_receipt"] = json!("r-1");
+        rig.policy["profile"] = json!("sealed");
+        rig.policy["health_tier"] = json!(true);
         let mut fires: Vec<(String, i64)> = vec![];
         for (f, now) in &trace {
             let s = rig.call(f, *now);
@@ -459,7 +463,7 @@ fn child_directed_disables_everything_always() {
 fn reason_codes_match_the_section_8_table() {
     use proxim_types::ReasonCode as R;
     // transcribed from engine-spec section 8: (first id, [codes])
-    let rows: [(u16, &[&str]); 8] = [
+    let rows: [(u16, &[&str]); 9] = [
         (0, &["OK", "SUPPRESSED"]),
         (100, &["CONSENT_DENIED", "ENGINE_DISABLED"]),
         (
@@ -539,6 +543,15 @@ fn reason_codes_match_the_section_8_table() {
                 "PROHIBITED_ANCHOR",
             ],
         ),
+        (
+            600,
+            &[
+                "SURFACE_NOT_ALLOWED",
+                "HEALTH_PARTNER_NOT_ELIGIBLE",
+                "HOSTED_BACKGROUND_OFF",
+                "OWNER_MODE_OFF",
+            ],
+        ),
     ];
     let mut n = 0;
     for (first, codes) in rows {
@@ -554,9 +567,9 @@ fn reason_codes_match_the_section_8_table() {
             n += 1;
         }
     }
-    assert_eq!(n, 56);
+    assert_eq!(n, 60);
     // the M4/M11 tail of row 500 is still reserved
-    assert!(serde_json::from_str::<R>("\"HOSTED_BACKGROUND_OFF\"").is_err());
+    assert!(serde_json::from_str::<R>("\"REDUCED_ACCURACY\"").is_err());
     assert!(
         serde_json::from_str::<R>("\"ok\"").is_err(),
         "wire form is SCREAMING_SNAKE"

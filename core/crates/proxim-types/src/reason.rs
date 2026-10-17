@@ -67,6 +67,11 @@ pub enum ReasonCode {
     OutsideDaypart = 514,
     DestinationSuppressed = 515,
     ProhibitedAnchor = 516,
+    // Policy matrix (engine spec 7.7, row 600).
+    SurfaceNotAllowed = 600,
+    HealthPartnerNotEligible = 601,
+    HostedBackgroundOff = 602,
+    OwnerModeOff = 603,
 }
 
 impl ReasonCode {
@@ -91,7 +96,7 @@ mod tests {
         assert_eq!(ReasonCode::NoEvent.id(), 406);
     }
 
-    /// The whole spec section 8 table (rows 0..400 and row 500 through PROHIBITED_ANCHOR): id and wire string.
+    /// The whole spec section 8 table (rows 0..400 and rows 500 and 600): id and wire string.
     const SPEC_TABLE: &[(ReasonCode, u16, &str)] = &[
         (ReasonCode::Ok, 0, "OK"),
         (ReasonCode::Suppressed, 1, "SUPPRESSED"),
@@ -178,6 +183,18 @@ mod tests {
             "DESTINATION_SUPPRESSED",
         ),
         (ReasonCode::ProhibitedAnchor, 516, "PROHIBITED_ANCHOR"),
+        (ReasonCode::SurfaceNotAllowed, 600, "SURFACE_NOT_ALLOWED"),
+        (
+            ReasonCode::HealthPartnerNotEligible,
+            601,
+            "HEALTH_PARTNER_NOT_ELIGIBLE",
+        ),
+        (
+            ReasonCode::HostedBackgroundOff,
+            602,
+            "HOSTED_BACKGROUND_OFF",
+        ),
+        (ReasonCode::OwnerModeOff, 603, "OWNER_MODE_OFF"),
     ];
 
     #[test]
@@ -196,7 +213,7 @@ mod tests {
 
     #[test]
     fn unknown_or_reserved_names_do_not_parse() {
-        for bad in ["\"HOSTED_BACKGROUND_OFF\"", "\"ok\"", "\"\"", "7", "null"] {
+        for bad in ["\"REDUCED_ACCURACY\"", "\"ok\"", "\"\"", "7", "null"] {
             assert!(serde_json::from_str::<ReasonCode>(bad).is_err(), "{bad}");
         }
     }

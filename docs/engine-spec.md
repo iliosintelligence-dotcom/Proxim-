@@ -215,6 +215,39 @@ Then `path_update`. Then per signpost in ascending `id`:
 - **Golden vectors:** 4 decide steps gained `"format":"glanceable"` on driving fires. The scenario report moved only in its output hashes: all 33 scenarios give identical fire counts and verdicts.
 - **Tests:** `proxim-decide/tests/driving_daypart.rs` and the unit tests of `timewin`.
 
+### 7.7 Policy matrix (engine_spec 2, M3; PLAN 4 `policy_rules`, 6.5; Addendum 01 1, 5.1, 5.2)
+- **What it is:** one table, kept as data, deciding whether an advert may be delivered in a given situation. It is `proxim_decide::matrix::RULES`, an ordered list of rows; each row lists allowed values per axis (an empty list means any) and a verdict, and the first matching row decides. The published copy is `core/policy/matrix.json`: the rows plus all 256 cells expanded, with the row that decides each. A test keeps it byte-identical (regenerate with `PROXIM_BLESS=1 cargo test -p proxim-decide --test policy_matrix`). `MATRIX_VERSION` is bumped on every change to the rows.
+- **Axes:**
+  - `mode`: `hosted` or `owner`;
+  - `surface`: `in_app` or `os_notification`;
+  - `wake`: `foreground` or `background`;
+  - `class`: `general`, `health_adjacent`, `health_facility` or `prohibited_anchor` (the legacy `health` reads as `health_facility`);
+  - `profile`: `standard` or `sealed`;
+  - `health_tier`: off or on (a signed addendum);
+  - `child_directed`: no or yes.
+- **Rows, in order:**
+
+| Row | When | Verdict |
+|---|---|---|
+| `child_directed` | child-directed app | deny `ENGINE_DISABLED` (also F02) |
+| `prohibited_anchor` | class `prohibited_anchor` | deny `PROHIBITED_ANCHOR` (R4) |
+| `health_never_notification` | health class, OS notification, any mode | deny `SURFACE_NOT_ALLOWED` (R6) |
+| `sealed_no_notification` | Sealed app, OS notification, any mode | deny `SURFACE_NOT_ALLOWED` (PLAN 6.5; Addendum 01 5.2) |
+| `sealed_no_background` | Sealed app, background, any mode | deny `HOSTED_BACKGROUND_OFF` (PLAN 6.5; Addendum 01 5.1 (3)) |
+| `owner_mode_not_built` | mode `owner` | deny `OWNER_MODE_OFF` (owner mode is M15) |
+| `hosted_background_off` | hosted, background | deny `HOSTED_BACKGROUND_OFF` (Addendum 01 5.1) |
+| `hosted_notification` | hosted, OS notification | deny `SURFACE_NOT_ALLOWED` (Addendum 01 5.2, R6) |
+| `health_needs_sealed` | health class, `standard` app | deny `HEALTH_PARTNER_NOT_ELIGIBLE` (PLAN 6.5) |
+| `health_needs_tier` | health class, no health tier | deny `HEALTH_PARTNER_NOT_ELIGIBLE` (PLAN 6.5) |
+| `hosted_in_app` | hosted, in-app, foreground, any class but `prohibited_anchor` | allow |
+| `fail_closed` | anything else | deny `SURFACE_NOT_ALLOWED` |
+
+  Six of the 256 cells allow: a general advert in a hosted in-app foreground slot (4 cells, any profile and tier), and each health class in a Sealed app with the health tier (2 cells). An allow is only this gate: every other filter still applies.
+- **In `decide`, F11a:** the first static filter, replacing the engine_spec 1 prohibited-anchor check. Its inputs are `Policy.surface` (default `in_app`), `Policy.profile` (default `standard`) and `Policy.health_tier` (default off), with `mode = hosted` (`content_mode` is still reserved) and `wake = foreground` (background is M4/M11). `HOSTED_BACKGROUND_OFF` and `OWNER_MODE_OFF` are therefore defined but not yet emitted.
+- **Where the inputs come from:** `profile` and `health_tier` widen what may fire, unlike every other policy field. The SDK must take them only from the verified signed partner config, where `health_tier` is the signed `health_tier_enabled` addendum, and never from the host app. The server must never issue them to a web integration (PLAN 6.5 excludes the web SDK). `surface` is declared by the SDK from the slot it fills. What actually stops a partner from turning a fire into its own notification is SDK-owned rendering, I11 and I13, together with the partner terms. That is recorded as a gap in PROJECT-STATE.
+- **Not in the table:** jurisdiction ("EU/UK served = false", PLAN 4) is applied when packs are built on the server, which is outside `decide`. Notification consent matters only for owner mode. `intent` is still reserved.
+- **Tests:** `proxim-decide/tests/policy_matrix.rs`. Every cell is checked against an independent statement of the plan's rules. Every row decides at least one cell, and the last row is the catch-all. `decide` agrees with the table on all 64 cells it can see. The published copy matches.
+
 ### 7.1 Category matching (added 2026-10-16)
 
 Which adverts a partner app delivers is decided by the app's own policy, inside the app. No app sees another app, the engine never learns what else is installed, and matching uses no user data: only the partner's static policy and the signpost's `category`.
@@ -242,7 +275,8 @@ Stable strings and `repr(u16)` ids, never reused, consecutive from each row's fi
   - pack verification (REVOKED, SIGNATURE_INVALID, SEQ_ROLLBACK, KID_REVOKED, PACK_EXPIRED). **These are implemented in M2 by `proxim-pack` and never emitted by `decide`.**
   - the rest of PLAN 5.6, ids 505 to 516, in this order: CAP_SENDER_DAY, CAP_APP_DAY, COOLDOWN_DISMISSED, HIDDEN_BY_USER, SENDER_REPORTED, PACED_OUT, SURFACE_NOT_READY, DRIVING_UNSAFE_FORMAT, QUIET_HOURS, OUTSIDE_DAYPART, DESTINATION_SUPPRESSED, PROHIBITED_ANCHOR.
     - **Emitted (I from engine_spec 2):** every one except SURFACE_NOT_READY (the SDK's slot state) and DESTINATION_SUPPRESSED (R3, which needs the route input). See 7.2 to 7.6.
-  - still reserved: HOSTED_BACKGROUND_OFF, BACKGROUND_PERMISSION_MISSING, REDUCED_ACCURACY (M4/M11). |
+  - still reserved: BACKGROUND_PERMISSION_MISSING, REDUCED_ACCURACY (M4/M11). |
+| 600 (I) | Policy matrix (7.7): SURFACE_NOT_ALLOWED, HEALTH_PARTNER_NOT_ELIGIBLE, HOSTED_BACKGROUND_OFF, OWNER_MODE_OFF. The last two are defined but not emitted until background (M4/M11) and owner mode (M15) exist. |
 
 ## 9. Golden vectors
 
@@ -352,3 +386,4 @@ Conservative readings and clarifications; none changes a normative number. Measu
 - E-HEALTH-CLASSES Health classes (7.4, M3 slice 3). Added `health_adjacent`, `health_facility` and `prohibited_anchor`; `health` reads as `health_facility`. `health_facility` caps, wording ledger and controls are memory-only (`mem.facility`, I7, owner decision Option A), and a standoff wipes them with the rest of `mem` (I6). F11a `PROHIBITED_ANCHOR` is emitted. R3 waits for the route input. No golden vector changed, because none fires a health advert.
 - E-SCORE Score, pacing, slots (7.5, M3 slice 4). The score gains Q (`quality_milli`) and the timing fit `g` of P. The pacing draw emits `PACED_OUT`. `seed` is now the pacing salt. Slots may go up to 3. Signposts gain `quality_milli` and `p_serve_milli`; the pack layer refuses a core with `p_serve_milli`. No golden vector moved. Two tie tests were re-tuned for the timing fit, keeping their tie, and the slot tests now check the ceiling of 3.
 - E-DRIVE-TIME Driving-safe format, dayparts and quiet hours (7.6, M3 slice 5). Fires while moving carry `format`, and `driving: off` emits `DRIVING_UNSAFE_FORMAT`; `OUTSIDE_DAYPART` and `QUIET_HOURS` are emitted. The 22 decide vectors were re-blessed: the only change is `format` on 4 driving fires. The scenario report's output hashes moved with identical results.
+- E-MATRIX Policy matrix as data (7.7, M3 slice 6). F11a is now the matrix lookup; it replaces the hard-coded prohibited-anchor check. Policy gains `surface`, `profile` and `health_tier`. Reason row 600 was added, and `HOSTED_BACKGROUND_OFF` moved there from the reserved tail of row 500. **Behaviour change:** health classes now need a Sealed partner with the health tier (PLAN 6.5 "who may receive"); before this they fired in any app that held the user's health consent. The decide vectors and the scenario report were re-blessed. See PROJECT-STATE for the reviewed diff.

@@ -422,6 +422,8 @@ fn reasons_for(sp: Signpost, policy: &Policy, consent_health: bool, now: i64) ->
         sim.consent = granted();
     } else {
         sim.consent = granted_health();
+        sim.policy.profile = Some(proxim_types::Profile::Sealed);
+        sim.policy.health_tier = Some(true);
     }
     let o = sim.step_at(&still(now, 0, 0), now);
     o.decisions
@@ -635,7 +637,11 @@ fn f15_to_f18_block_lists_and_ceiling() {
     assert_eq!(
         reasons_for(
             h,
-            &p(&|p| p.categories_blocked = vec!["gambling".into()]),
+            &p(&|p| {
+                p.categories_blocked = vec!["gambling".into()];
+                p.profile = Some(proxim_types::Profile::Sealed);
+                p.health_tier = Some(true);
+            }),
             false,
             T0
         ),
@@ -656,8 +662,18 @@ fn static_filters_apply_in_spec_order() {
     let policy = Policy {
         categories_blocked: vec!["x".into()],
         senders_blocked: vec!["y".into()],
-        ..explain()
+        ..health_partner()
     };
+    // F11a, the policy matrix, comes first: in a standard app a health advert stops there.
+    let standard = Policy {
+        profile: None,
+        health_tier: None,
+        ..policy.clone()
+    };
+    assert_eq!(
+        reasons_for(sp.clone(), &standard, false, T0),
+        vec![ReasonCode::HealthPartnerNotEligible]
+    );
     type Mutation = Box<dyn Fn(&mut Signpost)>;
     let walk: Vec<(Mutation, ReasonCode)> = vec![
         (Box::new(|_| {}), ReasonCode::UnsupportedEvent),

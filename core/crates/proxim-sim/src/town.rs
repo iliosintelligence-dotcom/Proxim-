@@ -411,6 +411,9 @@ pub fn apps() -> Result<Vec<PartnerApp>, EngineError> {
                 categories_accepted: strings(&["health", "fitness", "food.healthy"]),
                 categories_blocked: restricted.clone(),
                 category_affinity: Vec::from([aff("health", 2000), aff("fitness", 1200)]),
+                // The only app here that may receive health adverts (PLAN 6.5; spec 7.7).
+                profile: Some(proxim_types::Profile::Sealed),
+                health_tier: Some(true),
                 ..Policy::default()
             },
         },

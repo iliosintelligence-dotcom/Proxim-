@@ -24,6 +24,7 @@ pub mod controls;
 mod eff;
 pub mod golden;
 pub mod json;
+pub mod matrix;
 pub mod params;
 pub mod rotation;
 pub mod sha256;
@@ -49,9 +50,9 @@ use proxim_types::defaults::{
     KAPPA_PERMILLE, LEAD_S_DEFAULT, LEAD_S_MAX, LEAD_S_MIN, MAX_DETECTORS, MAX_SIGNPOSTS,
 };
 use proxim_types::{
-    Caps, Class, Clock, Consent, ConsentValue, Decision, DetEntry, DetState, EngineError, Enu,
-    EventKind, Fix, FixStatus, Mem, Note, Outcome, Output, PathInfo, Policy, Position, ReasonCode,
-    Signpost, State, TraceFix,
+    Caps, Clock, Consent, ConsentValue, ContentMode, Decision, DetEntry, DetState, EngineError,
+    Enu, EventKind, Fix, FixStatus, Mem, Note, Outcome, Output, PathInfo, Policy, Position,
+    ReasonCode, Signpost, State, TraceFix, Wake,
 };
 
 const ORIGIN: Enu = Enu { e_mm: 0, n_mm: 0 };
@@ -613,9 +614,19 @@ fn select_revisions(signposts: &[Signpost], t_ms: i64) -> (Vec<&Signpost>, Vec<D
 /// Static filters F11-F19, then the prepared trigger. `Ok(Err(reason))` is a per-signpost drop.
 fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>, EngineError> {
     let eff = ctx.eff;
-    // F11a (R4, engine spec 7.4): a prohibited anchor is never served.
-    if sp.class == Class::ProhibitedAnchor {
-        return Ok(Err(ReasonCode::ProhibitedAnchor));
+    // F11a (engine spec 7.7): the policy matrix. Every v1 signpost is hosted (`content_mode` is
+    // reserved) and every v1 call is a foreground call (background is M4/M11).
+    let cell = matrix::Cell {
+        mode: ContentMode::Hosted,
+        surface: eff.surface,
+        wake: Wake::Foreground,
+        class: sp.class,
+        profile: eff.profile,
+        health_tier: eff.health_tier,
+        child_directed: eff.child_directed,
+    };
+    if let (_, matrix::Verdict::Deny(reason)) = matrix::lookup(&cell) {
+        return Ok(Err(reason));
     }
     // F11 (E5): everything but enter and approach is reserved and fails closed.
     if !matches!(sp.event, EventKind::Enter | EventKind::Approach) {

@@ -214,6 +214,8 @@ fn every_class_is_suppressed_and_any_zone_counts() {
     let mut sim = Sim::new(vec![health, circle_at("g-1", 5_000_000, 0, 200)]);
     sim.policy = policy;
     sim.consent = granted_health();
+    sim.policy.profile = Some(proxim_types::Profile::Sealed);
+    sim.policy.health_tier = Some(true);
     let outs = sim.run(&visit(T0, 5_000_000, 0, 6, 0));
     assert!(
         outs.iter()
@@ -338,6 +340,8 @@ fn trigger_in_standoff_drops_health_geometry_within_a_zone() {
         let mut sim = Sim::new(vec![sp]);
         sim.policy = policy.clone();
         sim.consent = granted_health();
+        sim.policy.profile = Some(proxim_types::Profile::Sealed);
+        sim.policy.health_tier = Some(true);
         // The user is 20 km away, so only F19 can act.
         let o = sim.step(&still(T0, 20_000_000, 0));
         assert_eq!(
@@ -387,6 +391,8 @@ fn trigger_in_standoff_is_inclusive_to_the_millimetre() {
             let mut sim = Sim::new(vec![mk(r)]);
             sim.policy = policy.clone();
             sim.consent = granted_health();
+            sim.policy.profile = Some(proxim_types::Profile::Sealed);
+            sim.policy.health_tier = Some(true);
             has_drop(
                 &sim.step(&still(T0, 20_000_000, 0)),
                 "h-1",
@@ -424,6 +430,8 @@ fn health_facility_emits_no_device_events() {
     sp.class = Class::HealthFacility;
     let mut sim = Sim::new(vec![sp]);
     sim.consent = granted_health();
+    sim.policy.profile = Some(proxim_types::Profile::Sealed);
+    sim.policy.health_tier = Some(true);
     let mut before = sim.state.caps.clone();
     let before_rest = to_canonical_json(&(&sim.state.controls, &sim.state.rotation)).unwrap();
     let outs = sim.run(&drive_north(T0, 1_400_000, 15_000, 40, 0));

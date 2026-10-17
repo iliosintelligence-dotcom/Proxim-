@@ -355,6 +355,10 @@ fn walker_confidence_is_capped_at_600_and_fires_at_d_lo() {
         let mut rig = Rig::new().with_signpost(sp);
         rig.consent["nearby_health_events"] = json!("granted");
         rig.consent["health_receipt"] = json!("receipt-1");
+        rig.policy["profile"] = json!("sealed");
+        rig.policy["health_tier"] = json!(true);
+        rig.policy["profile"] = json!("sealed");
+        rig.policy["health_tier"] = json!(true);
         for k in 0..600 {
             let s = rig.step(&d.fix(k));
             if let Some(f) = s.fires().into_iter().next() {

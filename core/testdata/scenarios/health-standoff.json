@@ -15,7 +15,10 @@
     "nearby_health_events": "granted",
     "health_receipt": "receipt-synthetic-1"
   },
-  "policy": {},
+  "policy": {
+    "profile": "sealed",
+    "health_tier": true
+  },
   "standoff_zones_m": [
     {
       "id": "hospital-1",

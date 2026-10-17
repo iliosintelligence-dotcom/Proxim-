@@ -96,6 +96,16 @@ pub fn explain() -> Policy {
     }
 }
 
+/// [`explain`] for a partner that may receive health classes (policy matrix, engine spec 7.7):
+/// a Sealed app with the health tier enabled.
+pub fn health_partner() -> Policy {
+    Policy {
+        profile: Some(proxim_types::Profile::Sealed),
+        health_tier: Some(true),
+        ..explain()
+    }
+}
+
 pub fn trigger(origin: Position, shape: Shape) -> Trigger {
     Trigger {
         origin,

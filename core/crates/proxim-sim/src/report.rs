@@ -13,6 +13,8 @@ fn reason_text(r: ReasonCode) -> &'static str {
         ReasonCode::PartnerCategoryBlocked => "category blocked by the app",
         ReasonCode::CategoryNotAccepted => "category not accepted by the app",
         ReasonCode::HealthConsentMissing => "no health consent in this app",
+        ReasonCode::HealthPartnerNotEligible => "this app may not show health adverts",
+        ReasonCode::SurfaceNotAllowed => "not allowed on this surface",
         ReasonCode::SenderBlocked => "sender blocked by the app",
         ReasonCode::SensitivityAboveCeiling => "too sensitive for the app",
         ReasonCode::TriggerInStandoff => "health advert placed inside a facility's 1 km standoff",

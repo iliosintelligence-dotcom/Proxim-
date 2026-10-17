@@ -7,8 +7,8 @@ use common::*;
 use proptest::prelude::*;
 use proxim_decide::decide;
 use proxim_decide::json::{decide_json, split_response};
+use proxim_types::State;
 use proxim_types::canon::to_canonical_json;
-use proxim_types::{Policy, State};
 
 struct Args {
     state: String,
@@ -295,12 +295,12 @@ proptest! {
         let signposts = world();
         let fixes = tour(T0).into_iter().take(n * 3).chain(random_walk(seed, n, T0 + 9 * 3_600_000)).collect::<Vec<_>>();
         let sps = to_canonical_json(&signposts).unwrap();
-        let pol = to_canonical_json(&Policy { explain: Some(true), ..Policy::default() }).unwrap();
+        let pol = to_canonical_json(&health_partner()).unwrap();
         let con = to_canonical_json(&granted_health()).unwrap();
         let mut typed = State::empty();
         let mut text = to_canonical_json(&typed).unwrap();
         for f in &fixes {
-            let (o, s) = decide(&typed, f, &signposts, &explain(), &granted_health(), &clock(f.t_ms), seed).unwrap();
+            let (o, s) = decide(&typed, f, &signposts, &health_partner(), &granted_health(), &clock(f.t_ms), seed).unwrap();
             let r = decide_json(&text, &to_canonical_json(f).unwrap(), &sps, &pol, &con,
                 &to_canonical_json(&clock(f.t_ms)).unwrap(), seed);
             let (jo, js) = split_response(&r).unwrap();

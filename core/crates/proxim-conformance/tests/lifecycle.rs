@@ -303,6 +303,8 @@ fn health_run(acc_mm: u32, course: u16) -> bool {
     let mut rig = Rig::new().with_signpost(sp);
     rig.consent["nearby_health_events"] = json!("granted");
     rig.consent["health_receipt"] = json!("receipt-1");
+    rig.policy["profile"] = json!("sealed");
+    rig.policy["health_tier"] = json!(true);
     let mut d = Drive::new(2500, 15_000);
     d.acc_mm = acc_mm;
     d.course = Some(course);

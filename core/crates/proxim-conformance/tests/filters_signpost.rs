@@ -53,9 +53,55 @@ fn assert_not_dropped(c: &Call) {
     assert!(s.det("c-1").is_some(), "a live signpost is tracked");
 }
 
+/// A partner that may receive health classes (spec 7.7): a Sealed app with the health tier.
+fn health_partner(c: &mut Call) {
+    c.policy["profile"] = json!("sealed");
+    c.policy["health_tier"] = json!(true);
+}
+
+/// The health consent and receipt, in a partner that may receive health classes.
 fn health_ok_consent(c: &mut Call) {
+    health_partner(c);
     c.consent["nearby_health_events"] = json!("granted");
     c.consent["health_receipt"] = json!("receipt-1");
+}
+
+// ---- F11a: the policy matrix (spec 7.7) ------------------------------------------------------
+
+#[test]
+fn f11a_policy_matrix_comes_before_every_other_static_filter() {
+    // A health advert in a standard app stops at the matrix, even with consent and a bad event.
+    for class in ["health", "health_adjacent", "health_facility"] {
+        let mut sp = enter_circle("c-1", 200);
+        sp["class"] = json!(class);
+        sp["event"] = json!("dwell");
+        let mut c = call_for(sp);
+        c.consent["nearby_health_events"] = json!("granted");
+        c.consent["health_receipt"] = json!("receipt-1");
+        assert_drop(&c, "HEALTH_PARTNER_NOT_ELIGIBLE");
+        c.policy["profile"] = json!("sealed");
+        assert_drop(&c, "HEALTH_PARTNER_NOT_ELIGIBLE");
+        c.policy["health_tier"] = json!(true);
+        assert_drop(&c, "UNSUPPORTED_EVENT");
+    }
+    // No hosted advert, of any class, is an OS notification.
+    for class in ["general", "health_adjacent"] {
+        let mut sp = enter_circle("c-1", 200);
+        sp["class"] = json!(class);
+        let mut c = call_for(sp);
+        health_ok_consent(&mut c);
+        c.policy["surface"] = json!("os_notification");
+        assert_drop(&c, "SURFACE_NOT_ALLOWED");
+        c.policy["surface"] = json!("in_app");
+        let s = c.run();
+        assert!(s.is_ok() && s.drops("c-1").is_empty(), "{}", s.text);
+    }
+    // Unknown surface or profile values are a parse error, never a guess.
+    for (k, v) in [("surface", "lock_screen"), ("profile", "open")] {
+        let mut c = call_for(enter_circle("c-1", 200));
+        c.policy[k] = json!(v);
+        assert!(!c.run().is_ok(), "{k}={v}");
+    }
 }
 
 // ---- F11 --------------------------------------------------------------------------------------
@@ -424,6 +470,7 @@ fn f15_health_needs_nearby_health_events_granted_and_a_receipt() {
     let mut sp = enter_circle("c-1", 200);
     sp["class"] = json!("health");
     let mut c = call_for(sp);
+    health_partner(&mut c);
     assert_drop(&c, "HEALTH_CONSENT_MISSING");
     // granted without receipt
     c.consent["nearby_health_events"] = json!("granted");
@@ -604,6 +651,7 @@ fn f19_polygon_and_route_shapes() {
     assert_drop(&c, "TRIGGER_IN_STANDOFF");
     // zone centre INSIDE the polygon: distance 0
     c.policy = zone_east(100);
+    health_partner(&mut c);
     // the fix at the origin is now inside the zone standoff; move the fix away to the east edge
     // outside 1010 m instead, so only F19 can fire: put the fix 1500 m south
     c.fix = fix_at(BASE_T, offset(ORIGIN, 0, -1_500_000));
@@ -669,6 +717,7 @@ fn code_of(f: u8) -> &'static str {
 
 fn defect_call(set_of: &[u8]) -> Call {
     let mut c = Call::base();
+    health_partner(&mut c);
     // a health grant is present unless F15 is among the defects (so F19 alone passes F15)
     if !set_of.contains(&15) {
         health_ok_consent(&mut c);

@@ -10,6 +10,11 @@
     "profile": "open_sky"
   },
   "seeds": 5,
+  "policy": {
+    "explain": true,
+    "profile": "sealed",
+    "health_tier": true
+  },
   "consent": {
     "location_matching": "granted",
     "nearby_health_events": "granted"

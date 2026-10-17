@@ -126,6 +126,7 @@ fn health_circle() -> proxim_types::Signpost {
 fn health_fires(consent: Consent) -> (bool, Vec<ReasonCode>) {
     let mut sim = Sim::new(vec![health_circle()]);
     sim.consent = consent;
+    sim.policy = health_partner();
     let outs = sim.run(&visit(T0, 0, 0, 5, 0));
     let fired = outs.iter().any(|o| !fires(o).is_empty());
     let reasons = outs

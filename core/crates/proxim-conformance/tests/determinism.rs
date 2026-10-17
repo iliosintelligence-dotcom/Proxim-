@@ -38,6 +38,8 @@ fn run_all(sps: &[Value], trace: &[(Value, i64)], policy: &Value, seed: u64) -> 
     rig.seed = seed;
     rig.consent["nearby_health_events"] = json!("granted");
     rig.consent["health_receipt"] = json!("receipt-1");
+    rig.policy["profile"] = json!("sealed");
+    rig.policy["health_tier"] = json!(true);
     trace.iter().map(|(f, n)| rig.call(f, *n).text).collect()
 }
 

@@ -94,6 +94,8 @@ fn health_facility_is_never_paced() {
     route_sp.p_serve_milli = Some(0);
     let mut sim = Sim::new(vec![route_sp]);
     sim.consent = granted_health();
+    sim.policy.profile = Some(proxim_types::Profile::Sealed);
+    sim.policy.health_tier = Some(true);
     let outs = sim.run(&drive_north(T0, 1_400_000, 15_000, 40, 0));
     assert_eq!(fire_indices(&outs).len(), 1, "PLAN 6.5: p fixed at 1");
 }

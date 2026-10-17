@@ -275,6 +275,8 @@ fn health_receipt_must_be_non_empty_to_unlock_health() {
     c.signposts = vec![sp];
     c.consent["nearby_health_events"] = json!("granted");
     c.consent["health_receipt"] = json!("");
+    c.policy["profile"] = json!("sealed");
+    c.policy["health_tier"] = json!(true);
     let s = c.run();
     assert!(s.is_ok());
     assert_eq!(

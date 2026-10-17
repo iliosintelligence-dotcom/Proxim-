@@ -36,6 +36,7 @@ fn drive(sim: &mut Sim, t0: i64) -> (Vec<String>, Vec<(String, ReasonCode)>) {
 fn health_sim(sps: Vec<Signpost>) -> Sim {
     let mut sim = Sim::new(sps);
     sim.consent = granted_health();
+    sim.policy = health_partner();
     sim
 }
 
@@ -113,6 +114,7 @@ fn health_adjacent_is_gated_like_health_but_counted_normally() {
     assert!(sim.state.mem.facility.is_empty());
     // Without the health consent it never fires.
     let mut sim = Sim::new(vec![health_route("pharmacy", Class::HealthAdjacent)]);
+    sim.policy = health_partner();
     let (fired, drops) = drive(&mut sim, T0);
     assert!(fired.is_empty());
     assert!(drops.contains(&("pharmacy".into(), ReasonCode::HealthConsentMissing)));

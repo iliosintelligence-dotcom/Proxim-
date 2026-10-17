@@ -222,6 +222,17 @@ pub struct Policy {
     /// The partner's quiet hours, local time (engine spec 7.6): no advert fires inside them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub quiet_hours: Vec<Window>,
+    /// The surface this call delivers to (policy matrix, engine spec 7.7); default `in_app`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub surface: Option<Surface>,
+    /// The partner app's profile (PLAN 4, 6.5); default `standard`. Only from the verified signed
+    /// partner config, never from the host app: it widens what may fire.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<Profile>,
+    /// Health tier enabled by a signed addendum (PLAN 6.5); default off. Only from the verified
+    /// signed partner config (`health_tier_enabled`), never from the host app.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub health_tier: Option<bool>,
     /// Public rotation lane of this partner app (signed per-app config, Addendum 02 5.1), with
     /// `rot_lanes` lanes in all; defaults 0 of 1. engine_spec 2.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -434,6 +445,47 @@ pub enum Driving {
     Inbox,
     /// Nothing is delivered while moving (`DRIVING_UNSAFE_FORMAT`).
     Off,
+}
+
+/// Who authored the advert (Addendum 01 1): `hosted` third-party adverts, or the app's `owner`
+/// content (Stage 2, M15). An axis of the policy matrix (engine spec 7.7); every v1 signpost is
+/// hosted (`content_mode` is still reserved).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ContentMode {
+    Hosted,
+    Owner,
+}
+
+/// Where a fire is delivered (policy matrix, engine spec 7.7).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Surface {
+    /// A slot inside the partner app, drawn by the SDK.
+    #[default]
+    InApp,
+    /// An OS notification (or lock screen): denied for every hosted advert (Addendum 01 5.2).
+    OsNotification,
+}
+
+/// Whether the app is on screen when the fix is evaluated (policy matrix, engine spec 7.7). Every
+/// v1 call is a foreground call; background evaluation arrives with M4/M11.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Wake {
+    Foreground,
+    Background,
+}
+
+/// The partner app's profile (PLAN 4 `partner_apps.profile`, 6.5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Profile {
+    #[default]
+    Standard,
+    /// The only profile that may receive health classes (PLAN 6.5): no background, no
+    /// notifications.
+    Sealed,
 }
 
 /// How a fire must be rendered when the device is moving (engine spec 7.6); absent when it is not.

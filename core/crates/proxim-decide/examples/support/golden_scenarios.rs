@@ -361,7 +361,7 @@ pub fn scenarios() -> Vec<Scenario> {
         vec![h.clone(), h2.clone()],
         Policy {
             standoff_zones: vec![near_zone.clone()],
-            ..explain()
+            ..health_partner()
         },
         granted(),
         steps(&fixes[..3], 0),
@@ -371,7 +371,7 @@ pub fn scenarios() -> Vec<Scenario> {
         vec![h, h2],
         Policy {
             standoff_zones: vec![near_zone],
-            ..explain()
+            ..health_partner()
         },
         granted_health(),
         steps(&fixes, 0),
@@ -434,7 +434,7 @@ pub fn scenarios() -> Vec<Scenario> {
     v.push(scenario(
         "world_tour",
         world(),
-        explain(),
+        health_partner(),
         granted_health(),
         steps(&fixes, 0),
     ));

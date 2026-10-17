@@ -33,6 +33,7 @@ Live health-category traffic requires ALL of: written counsel sign-off recorded 
 | C10 | ODbL derivative database question for public packs of derived shapes | Later |
 | C11 | Pilot terms: invite-only, partner weekly server-side impression count clause (A02-D4) | Pilot |
 | C12 | Sensitive-buffer policy for pharmacies (Addendum 01 A01-D6) | Owner mode, parked |
+| C13 | Whether pharmacies, gyms and wellness venues count as "in-person health care services" under Washington RCW 19.373.010 and .080 (and the Connecticut and Nevada equivalents). If they do, `health_adjacent` adverts cannot be loosened to ordinary apps (engine spec 7.7), and those venues may themselves need standoff zones | Health gate |
 
 EU and UK are deferred pending a DPIA and counsel; US-only at launch.
 

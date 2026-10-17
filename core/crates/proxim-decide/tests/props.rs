@@ -175,7 +175,7 @@ proptest! {
         tz in -720i16..=840,
     ) {
         let fixes = schedule(seed, 9);
-        let r = run_with(&world(), &explain(), &granted_health(), tz, fixes, &|_, t| t);
+        let r = run_with(&world(), &health_partner(), &granted_health(), tz, fixes, &|_, t| t);
         check_state_invariants(&r);
         check_caps_and_pacing(&r, tz);
     }
@@ -193,7 +193,7 @@ proptest! {
             let mut g = Splitmix(skew_seed ^ (i as u64).wrapping_mul(0x9E37_79B9));
             if g.chance(30) { t + g.range(-2 * DAY, 2 * DAY) } else { t }
         };
-        let r = run_with(&world(), &explain(), &granted_health(), 60, fixes, &skew);
+        let r = run_with(&world(), &health_partner(), &granted_health(), 60, fixes, &skew);
         check_state_invariants(&r);
         check_caps_and_pacing(&r, 60);
     }
@@ -207,7 +207,7 @@ proptest! {
             _ => granted_health(),
         };
         let fixes = schedule(seed, 2);
-        let r = run_with(&world(), &explain(), &consent, 0, fixes, &|_, t| t);
+        let r = run_with(&world(), &health_partner(), &consent, 0, fixes, &|_, t| t);
         if which < 3 {
             prop_assert_eq!(fire_total(&r), 0);
             for (o, s) in r.outs.iter().zip(&r.states) {
@@ -223,7 +223,7 @@ proptest! {
     #[test]
     fn prop_output_never_contains_a_position(seed in any::<u64>()) {
         let fixes = schedule(seed, 2);
-        let r = run_with(&world(), &explain(), &granted_health(), 0, fixes, &|_, t| t);
+        let r = run_with(&world(), &health_partner(), &granted_health(), 0, fixes, &|_, t| t);
         for (o, f) in r.outs.iter().zip(&r.fixes) {
             let text = to_canonical_json(o).unwrap();
             prop_assert!(!text.contains("lat") && !text.contains("lon"));
@@ -241,7 +241,7 @@ proptest! {
         // A zone over the circle and the square of `world()`.
         let policy = Policy {
             standoff_zones: vec![StandoffZone { id: Id::new("z").unwrap(), center: pos(500_000, 0), standoff_m: Some(1500) }],
-            ..explain()
+            ..health_partner()
         };
         let fixes = schedule(seed, 3);
         let mut state = State::empty();

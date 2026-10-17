@@ -22,8 +22,8 @@ The living record across sessions. Update it at the end of every session that ch
 | 3 | Health classes `health_adjacent`, `health_facility` (memory-only, Option A), `prohibited_anchor` (R4) | **Done** (E-HEALTH-CLASSES). R3 destination suppression waits for the route input |
 | 4 | Score V x Q x R x P, pacing draw (`PACED_OUT`), up to 3 slots | **Done** (E-SCORE). The 30% small-sender share is a server rule and waits for the owner's definition of "small"; the R bonuses (surface tags, Preference Center) wait for those inputs |
 | 5 | Driving-safe format, dayparts and quiet hours | **Done** (E-DRIVE-TIME); counsel item A17 (distracted driving) stays open |
-| 6 (next) | Policy matrix as data with exhaustive tests | Planned |
-| 7 | `privacy-lint`, egress audit, write-spy harness | Planned |
+| 6 | Policy matrix as data with exhaustive tests | **Done** (E-MATRIX). Health classes now need a Sealed partner with the health tier (PLAN 6.5). Background and owner rows are in the table but not reachable until M4/M11 and M15 |
+| 7 (next) | `privacy-lint`, egress audit, write-spy harness | Planned |
 
 The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a thin sender console and ledger, then a one-town pilot.
 
@@ -46,6 +46,13 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
   - The Addendum 01 5.3 ledger row applies only to owner-mode notifications, which may not carry health classes (Addendum 01 R6), so there is no conflict. Built in M3 slice 3.
 - Standoff measured from the facility perimeter (needs the M5 registry), not the centre.
 - Pharmacies as `health_adjacent`.
+- **Health only in Sealed health-tier apps (M3 slice 6, built as the safe default).** PLAN 6.5 says health adverts may be received only by a Sealed partner app with the health tier enabled by a signed addendum. The engine now applies this to both health classes. Owner question: should `health_adjacent` adverts (gyms, pharmacies, wellness) also be allowed in ordinary apps? Today they are not.
+- **Gaps recorded by the slice 6 privacy review (SDK, server and counsel work):**
+  - `profile` and `health_tier` must come only from the verified signed partner config, never from the host app.
+  - The server must never give them to a web integration.
+  - A planned test should prove that host-supplied values are ignored.
+  - `surface` is declared by the SDK, and the engine trusts it. Nothing yet stops a host app from re-posting a fire as its own notification. That needs SDK-owned rendering with no advert text handed to host code before display (I11, I13, both still planned) and a clause in the partner terms (counsel).
+  - Counsel item C13 in `docs/legal-gates.md`: do pharmacies and gyms count as health care under Washington's My Health My Data Act? The answer decides whether `health_adjacent` can ever be loosened.
 - Counsel on foot routes that end on a clinic's street.
 
 **M2 open items**
@@ -66,6 +73,7 @@ The recommended path after M2 is in `docs/ADVERTISING-STRATEGY.md`: M3, then a t
   - M3 slice 3: health classes; `health_facility` leaves nothing on disk (Option A); the simulator's I6 oracle caught facility memory surviving a standoff, now fixed.
   - M3 slice 4: full score, pacing draw, up to 3 slots; a test caught the default slot count briefly following the new ceiling (fixed before commit).
   - M3 slice 5: driving-safe format (glanceable / inbox / off), dayparts, quiet hours.
+  - M3 slice 6: policy matrix as data (`core/policy/matrix.json`, 256 cells, 6 allow). Health now needs a Sealed health-tier partner. The decide vectors changed only in their policy inputs, with no output or state change.
 - **2026-10-17:**
   - Pull request 4 merged (M2 core).
   - OI-ROT-1 committed: `golden_v2.json` (unchanged), `tools/rotation-ref/`, the `new_count` supplement, the Rust rotation port, and the M2 entry layout aligned to the vectors.

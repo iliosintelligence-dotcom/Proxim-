@@ -40,7 +40,7 @@ fn run_trace(
 fn decide_is_a_pure_function_of_its_arguments() {
     // Same arguments, same result, call after call, from clones, and the inputs are untouched.
     let signposts = world();
-    let policy = explain();
+    let policy = health_partner();
     let consent = granted_health();
     let mut fixes = tour(T0);
     fixes.extend(random_walk(7, 60, T0 + 8 * 3_600_000));
@@ -71,7 +71,7 @@ fn decide_is_a_pure_function_of_its_arguments() {
 fn replay_from_text_gives_identical_bytes() {
     // The canonical text of a state is a complete description: restarting from it is invisible.
     let signposts = world();
-    let policy = explain();
+    let policy = health_partner();
     let mut fixes = tour(T0);
     fixes.extend(random_walk(11, 40, T0 + 8 * 3_600_000));
     let (full_outs, full_state) = run_trace(&signposts, &policy, 0, &fixes);
@@ -110,7 +110,7 @@ fn permutation(n: usize, seed: u64) -> Vec<usize> {
 #[test]
 fn decide_ignores_input_order() {
     let signposts = world();
-    let policy = explain();
+    let policy = health_partner();
     let mut fixes = tour(T0);
     fixes.extend(random_walk(21, 80, T0 + 8 * 3_600_000));
     let reference = run_trace(&signposts, &policy, 0, &fixes);
@@ -143,11 +143,14 @@ fn decide_ignores_input_order_with_revisions_and_duplicates() {
     let b1_twin = circle("b", 300);
     let set = vec![a1, a2, b1, b1_twin];
     let fixes: Vec<_> = (0..8).map(|i| still(T0 + i * 4000, 0, 0)).collect();
-    let reference = run_trace(&set, &explain(), 0, &fixes);
+    let reference = run_trace(&set, &health_partner(), 0, &fixes);
     for seed in 0..24 {
         let perm = permutation(set.len(), seed);
         let shuffled: Vec<Signpost> = perm.iter().map(|&i| set[i].clone()).collect();
-        assert_eq!(run_trace(&shuffled, &explain(), 0, &fixes), reference);
+        assert_eq!(
+            run_trace(&shuffled, &health_partner(), 0, &fixes),
+            reference
+        );
     }
 }
 
@@ -156,7 +159,7 @@ fn decide_ignores_input_order_with_revisions_and_duplicates() {
 #[test]
 fn seed_has_no_effect_without_pacing() {
     let signposts = world();
-    let policy = explain();
+    let policy = health_partner();
     let mut fixes = tour(T0);
     fixes.extend(random_walk(33, 50, T0 + 8 * 3_600_000));
     let reference = run_trace(&signposts, &policy, 0, &fixes);
@@ -174,8 +177,11 @@ fn explain_changes_only_the_output_never_the_state() {
     let signposts = world();
     let mut fixes = tour(T0);
     fixes.extend(random_walk(44, 80, T0 + 8 * 3_600_000));
-    let quiet = Policy::default();
-    let loud = explain();
+    let quiet = Policy {
+        explain: None,
+        ..health_partner()
+    };
+    let loud = health_partner();
     let mut sq = State::empty();
     let mut sl = State::empty();
     let mut quiet_fires = 0;
@@ -226,8 +232,8 @@ proptest! {
         let signposts = world();
         let mut fixes = tour(T0);
         fixes.extend(random_walk(seed, n, T0 + 8 * 3_600_000));
-        let a = run_trace(&signposts, &explain(), 5, &fixes);
-        let b = run_trace(&signposts, &explain(), 5, &fixes);
+        let a = run_trace(&signposts, &health_partner(), 5, &fixes);
+        let b = run_trace(&signposts, &health_partner(), 5, &fixes);
         prop_assert_eq!(a, b);
     }
 
@@ -236,9 +242,9 @@ proptest! {
         let signposts = world();
         let mut fixes = tour(T0);
         fixes.extend(random_walk(seed, 40, T0 + 8 * 3_600_000));
-        let reference = run_trace(&signposts, &explain(), 0, &fixes);
+        let reference = run_trace(&signposts, &health_partner(), 0, &fixes);
         let perm = permutation(signposts.len(), perm_seed);
         let shuffled: Vec<Signpost> = perm.iter().map(|&i| signposts[i].clone()).collect();
-        prop_assert_eq!(run_trace(&shuffled, &explain(), call_seed, &fixes), reference);
+        prop_assert_eq!(run_trace(&shuffled, &health_partner(), call_seed, &fixes), reference);
     }
 }

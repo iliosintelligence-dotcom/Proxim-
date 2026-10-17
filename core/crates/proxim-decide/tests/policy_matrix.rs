@@ -1,11 +1,18 @@
-//! Policy narrowing and the I9 kernel rule: a child-directed app disables the engine.
+//! Policy narrowing, the I9 kernel rule (a child-directed app disables the engine) and, from
+//! engine spec 7.7 (engine_spec 2, M3 slice 6), the policy matrix as data, tested exhaustively:
+//! 1. every cell of the table matches an independent statement of the plan's rules;
+//! 2. every row decides at least one cell, and the last row is the fail-closed catch-all;
+//! 3. `decide` agrees with the table on every cell it can see today;
+//! 4. the published copy `core/policy/matrix.json` is byte-identical to the table.
 #![allow(clippy::unwrap_used, clippy::indexing_slicing, clippy::expect_used)]
 
 mod common;
 
 use common::*;
+use proxim_decide::matrix::{self, Cell, RULES, Verdict};
 use proxim_types::canon::to_canonical_json;
-use proxim_types::{Mem, Policy, ReasonCode};
+use proxim_types::{Class, ContentMode, Mem, Outcome, Policy, Profile, ReasonCode, Surface, Wake};
+use std::path::PathBuf;
 
 #[test]
 fn child_directed_app_disables_engine() {
@@ -139,4 +146,186 @@ fn reserved_policy_and_signpost_fields_are_accepted_and_ignored() {
     assert_eq!(fire_indices(&outs), vec![3]);
     let text = to_canonical_json(&sim.state).unwrap();
     assert!(!text.contains("rot_lane") && !text.contains("creatives"));
+}
+
+/// The plan's rules, written out on their own (PLAN 6.5, 6.6; Addendum 01 1, 5.1, 5.2; R4, R6).
+/// Not derived from `RULES`: if the two disagree on any cell, one of them is wrong.
+fn oracle(c: &Cell) -> bool {
+    let health = matches!(c.class, Class::HealthAdjacent | Class::HealthFacility);
+    !c.child_directed
+        && c.class != Class::ProhibitedAnchor
+        && c.mode == ContentMode::Hosted
+        && c.wake == Wake::Foreground
+        && c.surface == Surface::InApp
+        && (!health || (c.profile == Profile::Sealed && c.health_tier))
+}
+
+#[test]
+fn every_cell_matches_the_plan() {
+    let cells = matrix::cells();
+    assert_eq!(cells.len(), 2 * 2 * 2 * 4 * 2 * 2 * 2, "every combination");
+    let mut allowed = 0;
+    for c in &cells {
+        let (rule, v) = matrix::lookup(c);
+        assert_eq!(v == Verdict::Allow, oracle(c), "{c:?} decided by {rule}");
+        allowed += usize::from(v == Verdict::Allow);
+    }
+    // General: 4 (profile x tier) in-app foreground hosted cells; health: 2 classes x 1.
+    assert_eq!(allowed, 6);
+}
+
+#[test]
+fn the_hard_rules_hold_in_every_cell() {
+    for c in matrix::cells() {
+        let v = matrix::lookup(&c).1;
+        let health = matches!(c.class, Class::HealthAdjacent | Class::HealthFacility);
+        if c.class == Class::ProhibitedAnchor || c.child_directed {
+            assert_ne!(v, Verdict::Allow, "{c:?}");
+        }
+        if c.surface == Surface::OsNotification && (c.mode == ContentMode::Hosted || health) {
+            assert_ne!(v, Verdict::Allow, "no hosted or health notification: {c:?}");
+        }
+        if c.mode == ContentMode::Hosted && c.wake == Wake::Background {
+            assert_ne!(v, Verdict::Allow, "hosted background is off: {c:?}");
+        }
+        if c.profile == Profile::Sealed
+            && (c.surface == Surface::OsNotification || c.wake == Wake::Background)
+        {
+            assert_ne!(
+                v,
+                Verdict::Allow,
+                "a Sealed app: no notification, no background: {c:?}"
+            );
+        }
+        if health && (c.profile != Profile::Sealed || !c.health_tier) {
+            assert_ne!(
+                v,
+                Verdict::Allow,
+                "health only in a Sealed health-tier app: {c:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_row_decides_a_cell_and_the_last_row_fails_closed() {
+    let cells = matrix::cells();
+    let last = RULES.last().unwrap();
+    assert_eq!(last.id, "fail_closed");
+    assert!(
+        cells.iter().all(|c| last.matches(c)),
+        "the catch-all matches every cell"
+    );
+    assert!(matches!(last.verdict, Verdict::Deny(_)));
+    for r in &RULES[..RULES.len() - 1] {
+        assert!(
+            cells.iter().any(|c| matrix::lookup(c).0 == r.id),
+            "row {} decides nothing (shadowed)",
+            r.id
+        );
+    }
+    let mut ids: Vec<_> = RULES.iter().map(|r| r.id).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), RULES.len(), "row ids are unique");
+}
+
+#[test]
+fn the_legacy_health_class_reads_as_health_facility() {
+    for c in matrix::cells()
+        .into_iter()
+        .filter(|c| c.class == Class::HealthFacility)
+    {
+        let legacy = Cell {
+            class: Class::Health,
+            ..c
+        };
+        assert_eq!(matrix::lookup(&legacy), matrix::lookup(&c));
+    }
+}
+
+/// One approach drive past a signpost of `class` in a partner app with this policy: whether it
+/// fired, the drop reasons, and the call-level reason of the first fix.
+fn drive(class: Class, policy: Policy) -> (bool, Vec<ReasonCode>, ReasonCode) {
+    let mut sp = route("s", 2500, 30);
+    sp.class = class;
+    sp.category = "health.clinic".into();
+    let mut sim = Sim::new(vec![sp]);
+    sim.consent = granted_health();
+    sim.policy = policy;
+    let outs = sim.run(&drive_north(T0, 1_400_000, 15_000, 40, 0));
+    let fired = outs
+        .iter()
+        .any(|o| o.decisions.iter().any(|d| d.outcome == Outcome::Fire));
+    let drops = outs.iter().flat_map(drop_reasons).map(|(_, r)| r).collect();
+    (fired, drops, outs[0].fix.reason)
+}
+
+#[test]
+fn decide_agrees_with_the_table_on_every_cell_it_can_see() {
+    // v1: every signpost is hosted and every call is a foreground call.
+    let mut seen = 0;
+    for c in matrix::cells()
+        .into_iter()
+        .filter(|c| c.mode == ContentMode::Hosted && c.wake == Wake::Foreground)
+    {
+        let policy = Policy {
+            surface: Some(c.surface),
+            profile: Some(c.profile),
+            health_tier: Some(c.health_tier),
+            child_directed: Some(c.child_directed),
+            ..explain()
+        };
+        let (fired, drops, call) = drive(c.class, policy);
+        match matrix::lookup(&c).1 {
+            Verdict::Allow => assert!(fired, "{c:?}: {drops:?}"),
+            Verdict::Deny(ReasonCode::EngineDisabled) => {
+                assert!(!fired);
+                assert_eq!(call, ReasonCode::EngineDisabled, "{c:?}");
+            }
+            Verdict::Deny(reason) => {
+                assert!(!fired, "{c:?}");
+                assert!(
+                    !drops.is_empty() && drops.iter().all(|r| *r == reason),
+                    "{c:?}: {drops:?}"
+                );
+            }
+        }
+        seen += 1;
+    }
+    assert_eq!(seen, 2 * 4 * 2 * 2 * 2);
+}
+
+#[test]
+fn defaults_are_an_in_app_standard_partner_without_the_health_tier() {
+    let (fired, _, _) = drive(Class::General, explain());
+    assert!(fired);
+    let (fired, drops, _) = drive(Class::HealthAdjacent, explain());
+    assert!(!fired && drops.contains(&ReasonCode::HealthPartnerNotEligible));
+    assert!(drive(Class::HealthAdjacent, health_partner()).0);
+    let notify = Policy {
+        surface: Some(Surface::OsNotification),
+        ..explain()
+    };
+    let (fired, drops, _) = drive(Class::General, notify);
+    assert!(!fired && drops.contains(&ReasonCode::SurfaceNotAllowed));
+}
+
+#[test]
+fn the_published_copy_is_byte_identical() {
+    let path = std::env::var_os("PROXIM_CORE_DIR")
+        .map_or_else(
+            || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."),
+            PathBuf::from,
+        )
+        .join("policy/matrix.json");
+    let want = matrix::published_json().unwrap() + "\n";
+    if std::env::var_os("PROXIM_BLESS").is_some() {
+        std::fs::write(&path, &want).unwrap();
+    }
+    let got = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        got == want,
+        "core/policy/matrix.json is stale: regenerate with PROXIM_BLESS=1 and review the diff"
+    );
 }
