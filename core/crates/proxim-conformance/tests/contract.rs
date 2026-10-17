@@ -102,7 +102,7 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
     let root = golden_dir();
     let manifest: Value =
         serde_json::from_slice(&std::fs::read(root.join("MANIFEST.json")).unwrap()).unwrap();
-    assert_eq!(manifest["engine_spec"], 1);
+    assert_eq!(manifest["engine_spec"], proxim_types::ENGINE_SPEC);
     assert_eq!(manifest["format"], "proxim-golden-manifest/1");
     let listed: std::collections::BTreeMap<String, String> = manifest["vectors"]
         .as_array()
@@ -152,7 +152,17 @@ fn every_golden_file_is_canonical_synthetic_and_listed_in_the_manifest() {
             &v
         };
         assert_eq!(h["format"], "proxim-golden/1", "{rel}");
-        assert_eq!(h["engine_spec"], 1, "{rel}");
+        // The header records the spec a vector was made under (engine spec 9, E-SPEC2): decide
+        // vectors must match the current spec; other kinds stay valid until their behaviour moves.
+        let made_under = h["engine_spec"].as_u64().unwrap();
+        if rel.starts_with("decide/") {
+            assert_eq!(made_under, u64::from(proxim_types::ENGINE_SPEC), "{rel}");
+        } else {
+            assert!(
+                (1..=u64::from(proxim_types::ENGINE_SPEC)).contains(&made_under),
+                "{rel}"
+            );
+        }
         assert_eq!(
             h["synthetic"], true,
             "{rel}: golden data must be synthetic (I2)"

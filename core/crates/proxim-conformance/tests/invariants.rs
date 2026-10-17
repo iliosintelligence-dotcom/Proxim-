@@ -323,11 +323,25 @@ fn state_is_always_well_formed() {
 #[test]
 fn caps_hold_over_random_worlds() {
     // per-signpost: never more than 2 fires per local day or 5 per week; never two fires of the
-    // app within 1800 s; one fire per call.
+    // app within 1800 s; one fire per call. engine_spec 2 (7.2): never more than 3 fires of one
+    // sender or 4 of the app in a local day.
     let mut total_fires = 0;
     for seed in 500..(504 + 4 * scale()) {
         let mut rng = Rng::new(seed);
-        let sps = mixed_signposts(&mut rng);
+        let mut sps = mixed_signposts(&mut rng);
+        // Three senders, so the sender cap binds sometimes but not always.
+        for (k, sp) in sps.iter_mut().enumerate() {
+            sp["sender"] = json!(format!("sender-{}", k % 3));
+        }
+        let sender_of: std::collections::BTreeMap<String, String> = sps
+            .iter()
+            .map(|sp| {
+                (
+                    sp["id"].as_str().unwrap().to_string(),
+                    sp["sender"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
         let trace = scripted_trace(&mut rng, &sps, 24);
         let mut rig = Rig::new();
         rig.signposts = sps;
@@ -354,6 +368,22 @@ fn caps_hold_over_random_worlds() {
                 "seed {seed}: fires {w:?} within the app interval"
             );
         }
+        let mut sender_days: std::collections::BTreeMap<(String, i64), i64> = Default::default();
+        let mut app_days: std::collections::BTreeMap<i64, i64> = Default::default();
+        for (id, t) in &fires {
+            *sender_days
+                .entry((sender_of[id].clone(), day_idx(*t, 0)))
+                .or_default() += 1;
+            *app_days.entry(day_idx(*t, 0)).or_default() += 1;
+        }
+        assert!(
+            sender_days.values().all(|&n| n <= 3),
+            "seed {seed}: {sender_days:?}"
+        );
+        assert!(
+            app_days.values().all(|&n| n <= 4),
+            "seed {seed}: {app_days:?}"
+        );
         let mut per: std::collections::BTreeMap<String, Vec<i64>> = Default::default();
         for (id, t) in &fires {
             per.entry(id.clone()).or_default().push(*t);
@@ -492,6 +522,18 @@ fn reason_codes_match_the_section_8_table() {
                 "SEQ_ROLLBACK",
                 "KID_REVOKED",
                 "PACK_EXPIRED",
+                "CAP_SENDER_DAY",
+                "CAP_APP_DAY",
+                "COOLDOWN_DISMISSED",
+                "HIDDEN_BY_USER",
+                "SENDER_REPORTED",
+                "PACED_OUT",
+                "SURFACE_NOT_READY",
+                "DRIVING_UNSAFE_FORMAT",
+                "QUIET_HOURS",
+                "OUTSIDE_DAYPART",
+                "DESTINATION_SUPPRESSED",
+                "PROHIBITED_ANCHOR",
             ],
         ),
     ];
@@ -509,9 +551,9 @@ fn reason_codes_match_the_section_8_table() {
             n += 1;
         }
     }
-    assert_eq!(n, 44);
-    // the rest of row 500 (PLAN 5.6 codes, M3) is still reserved
-    assert!(serde_json::from_str::<R>("\"CAP_SENDER_DAY\"").is_err());
+    assert_eq!(n, 56);
+    // the M4/M11 tail of row 500 is still reserved
+    assert!(serde_json::from_str::<R>("\"HOSTED_BACKGROUND_OFF\"").is_err());
     assert!(
         serde_json::from_str::<R>("\"ok\"").is_err(),
         "wire form is SCREAMING_SNAKE"

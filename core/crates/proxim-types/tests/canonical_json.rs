@@ -63,6 +63,12 @@ fn state_with_every_detector_tag_round_trips() {
                 week_n: 3,
                 tz_offset_min: None,
             }],
+            senders: vec![proxim_types::SenderCaps {
+                sender: "s-1".into(),
+                day_idx: 19_000,
+                day_n: 1,
+                tz_offset_min: 0,
+            }],
         },
         mem: Mem {
             last_t_ms: Some(5),
@@ -119,6 +125,14 @@ fn state_with_every_detector_tag_round_trips() {
                     },
                 },
             ],
+        },
+        controls: proxim_types::Controls {
+            dismissed: vec![proxim_types::Dismissal {
+                id: Id::new("a").unwrap(),
+                until_ms: 9,
+            }],
+            hidden: vec![Id::new("b").unwrap()],
+            reported: vec!["s-2".into()],
         },
     };
     let j = to_canonical_json(&st).unwrap();

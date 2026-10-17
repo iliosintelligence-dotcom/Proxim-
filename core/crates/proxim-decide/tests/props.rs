@@ -343,6 +343,7 @@ fn hostile_state(rng: &mut Splitmix) -> State {
             hwm_ms: wild(rng),
             last_fire_ms: rng.chance(50).then(|| wild(rng)),
             signposts: caps,
+            senders: vec![],
         },
         mem: Mem {
             last_t_ms: trace
@@ -363,6 +364,7 @@ fn hostile_state(rng: &mut Splitmix) -> State {
             h_t_ms: rng.chance(50).then(|| wild(rng)),
             det,
         },
+        controls: Default::default(),
     }
 }
 

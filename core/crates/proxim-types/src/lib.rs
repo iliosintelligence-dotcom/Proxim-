@@ -21,4 +21,4 @@ pub use model::*;
 pub use reason::ReasonCode;
 
 /// Engine specification version carried in golden headers (spec 9).
-pub const ENGINE_SPEC: u32 = 1;
+pub const ENGINE_SPEC: u32 = 2;
