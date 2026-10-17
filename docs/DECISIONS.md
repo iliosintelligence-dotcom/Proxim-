@@ -51,3 +51,4 @@ Owner message: *"go ahead and change PRD. then continue building"*, after review
 - 2026-10-10: advertising only; resorts / owner mode parked.
 - 2026-10-11: start M0 and M1 (monorepo, CI, toolchain spike, geometry/path/decide kernel, location simulator).
 - Creating a new Supabase project (cost, organisation, region) needs explicit owner confirmation and is NOT part of the M0/M1 build until given. The existing 'ilios Healthcare' project must never be used (CI guard).
+- 2026-10-17: website hero badge says "The cheapest way to advertise" (owner chose this over a softer "built to be the cheapest" wording). Advertising rules (ASA/CAP in the UK, FTC in the US) require evidence for a "cheapest" claim, so current price comparisons must be on file before the site is made public.
