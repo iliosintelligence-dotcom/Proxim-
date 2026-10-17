@@ -80,3 +80,5 @@ h3 { font-size: 18px; margin: 0 0 6px; }
 @media (min-width: 640px) { .who { grid-template-columns: repeat(3, 1fr); } }
 .who > div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
 .who p { margin: 0; font-size: 16px; }
+@media (min-width: 640px) { .who-4 { grid-template-columns: repeat(2, 1fr); } }
+.note-small { font-size: 15px; color: var(--muted); margin: 12px 0 0; }
