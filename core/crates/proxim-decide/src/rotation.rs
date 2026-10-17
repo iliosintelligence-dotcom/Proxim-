@@ -267,6 +267,8 @@ pub enum Done {
 pub struct Pending {
     pub sel: Selection,
     pub t_ms: i64,
+    /// The day the decision was made; every commit of it is written with this day.
+    pub day: i64,
     pub done: Done,
 }
 
@@ -295,66 +297,90 @@ impl Mark {
     }
 }
 
-/// Ask for a wording. Inside the window an open decision is returned again; otherwise `choose`
-/// decides and its selection is held until commit.
+/// Write a pending decision's selection to the ledger under its decision day.
+fn commit_pending(led: &mut Ledger, vids: &[u32], cur: &Pending) {
+    if let Some(&vid) = vids.get(cur.sel.idx) {
+        commit(led, vid, cur.day, cur.sel.new_count);
+    }
+}
+
+/// Window expiry (5.3 rule 3), applied on every call (R-2026-10-17): an open decision whose
+/// window has passed is committed as an emission. Returns whether it committed.
+pub fn tick(p: &mut Option<Pending>, now_ms: i64, led: &mut Ledger, vids: &[u32]) -> bool {
+    match p {
+        Some(cur) if cur.done == Done::Open && now_ms.saturating_sub(cur.t_ms) >= W_EMIT_MS => {
+            cur.done = Done::Emitted;
+            commit_pending(led, vids, cur);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Ask for a wording on `day` (rule 1): inside the window an open decision is returned again.
+/// Otherwise an expired open decision is first committed, then `choose` decides on the updated
+/// ledger and its selection is held until commit. Returns the index and whether the expiry
+/// committed.
 pub fn emit(
     p: &mut Option<Pending>,
     now_ms: i64,
-    choose: impl FnOnce() -> Option<Selection>,
-) -> Option<usize> {
+    day: i64,
+    led: &mut Ledger,
+    vids: &[u32],
+    choose: impl FnOnce(&Ledger) -> Option<Selection>,
+) -> (Option<usize>, bool) {
     if let Some(cur) = p
         && cur.done == Done::Open
         && now_ms.saturating_sub(cur.t_ms) < W_EMIT_MS
     {
-        return Some(cur.sel.idx);
+        return (Some(cur.sel.idx), false);
     }
-    let sel = choose()?;
+    let expired = tick(p, now_ms, led, vids);
+    let Some(sel) = choose(led) else {
+        return (None, expired);
+    };
     *p = Some(Pending {
         sel,
         t_ms: now_ms,
+        day,
         done: Done::Open,
     });
-    Some(sel.idx)
+    (Some(sel.idx), expired)
 }
 
-/// Window expiry: returns the selection to commit, once.
-pub fn tick(p: &mut Option<Pending>, now_ms: i64) -> Option<Selection> {
-    let cur = p.as_mut()?;
-    if cur.done == Done::Open && now_ms.saturating_sub(cur.t_ms) >= W_EMIT_MS {
-        cur.done = Done::Emitted;
-        return Some(cur.sel);
-    }
-    None
-}
-
-/// The host reports the wording was on screen for `visible_ms`. Returns the outcome and, when this
-/// call commits, the selection to commit. Billing happens at most once per decision.
+/// The host reports the wording was on screen for `visible_ms`. Expiry is applied first, so a
+/// report after the window can only bill (rule 4: within [`LATE_MS`], viewable, once) and never
+/// commits a second time. Returns the outcome and whether the expiry committed.
 pub fn mark_shown(
     p: &mut Option<Pending>,
     now_ms: i64,
     visible_ms: i64,
-) -> (Mark, Option<Selection>) {
+    led: &mut Ledger,
+    vids: &[u32],
+) -> (Mark, bool) {
+    let expired = tick(p, now_ms, led, vids);
     let Some(cur) = p.as_mut() else {
-        return (Mark::Ignored, None);
+        return (Mark::Ignored, expired);
     };
-    match cur.done {
-        Done::Marked => (Mark::Duplicate, None),
+    let mark = match cur.done {
+        Done::Marked => Mark::Duplicate,
         Done::Open => {
             cur.done = Done::Marked;
-            let m = if visible_ms >= VIEWABLE_MS {
+            commit_pending(led, vids, cur);
+            if visible_ms >= VIEWABLE_MS {
                 Mark::Billed
             } else {
                 Mark::CommittedNotViewable
-            };
-            (m, Some(cur.sel))
+            }
         }
         Done::Emitted => {
             if now_ms.saturating_sub(cur.t_ms) <= LATE_MS && visible_ms >= VIEWABLE_MS {
                 cur.done = Done::Marked;
-                (Mark::BilledLate, None)
+                Mark::BilledLate
             } else {
-                (Mark::TooLate, None)
+                Mark::TooLate
             }
         }
-    }
+    };
+    (mark, expired)
 }

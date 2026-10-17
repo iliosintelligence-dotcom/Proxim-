@@ -6,6 +6,7 @@ golden_v2.json itself is frozen; this file adds traces in its `select` schema:
   * a six-wording family revoked down to one available wording (avail mask with one bit), where
     new_count = min(SAT, cn + ONE) ignores the higher counts of the unavailable members;
   * the same ledger with every wording available, for contrast (new_count = max(cn + ONE, top + 1));
+  * R-2026-10-17: window expiry applied on every call (re-ask and markShown after the window, no tick);
   * boundary cases found by the independent review (2026-10-17): a dismissal 60 days after the
     showing (dismiss reads the decayed count), LRU eviction never removing the row just written,
     and the pending window at exactly W_EMIT_MS, LATE_MS and a 1,000 ms view.
@@ -89,9 +90,9 @@ def pending_case(name, evs, start_day=5):
     vids, pos, phi = R.derive(bytes.fromhex(f["signpost_id_hex"]), [bytes.fromhex(x) for x in f["digests_hex"]])
     led = R.Ledger(); P = R.Pending(); log = []; day = start_day
     choose = lambda: R.select(led, day, vids, pos, phi, 0b111111, 0x1F, 0, 1)
-    do_commit = lambda idx, nc: R.commit(led, vids[idx], day, nc)
+    do_commit = lambda idx, nc, d: R.commit(led, vids[idx], d, nc)
     for ev in evs:
-        if ev[0] == "emit": log.append(["emit", ev[1], P.emit("f", ev[1], choose)])
+        if ev[0] == "emit": log.append(["emit", ev[1], P.emit("f", ev[1], choose, do_commit, day)])
         elif ev[0] == "tick": P.tick("f", ev[1], do_commit); log.append(["tick", ev[1], len(P.log)])
         elif ev[0] == "mark": log.append(["mark", ev[1], P.mark_shown("f", ev[1], ev[2], do_commit)])
         elif ev[0] == "day": day = ev[1]
@@ -106,6 +107,12 @@ pending = [
     pending_case("late_mark_one_ms_too_late", [["emit", 0], ["tick", 60000], ["mark", 600001, 3500]]),
     pending_case("view_of_exactly_1000_ms_bills", [["emit", 0], ["mark", 1000, 1000]]),
     pending_case("view_of_999_ms_does_not_bill", [["emit", 0], ["mark", 1000, 999]]),
+    # R-2026-10-17 (5.3 rules 3 and 4): expiry applies on every call, not only on tick.
+    pending_case("reask_after_window_commits_the_expired_decision_first", [["emit", 0], ["emit", 60000], ["tick", 130000]]),
+    pending_case("reask_long_after_window_without_tick", [["emit", 0], ["day", 6], ["emit", 86400000]]),
+    pending_case("mark_after_window_without_tick_bills_late_only", [["emit", 0], ["mark", 70000, 3500], ["mark", 80000, 3500]]),
+    pending_case("mark_after_late_window_without_tick_is_too_late", [["emit", 0], ["mark", 700000, 3500]]),
+    pending_case("short_view_after_window_without_tick", [["emit", 0], ["mark", 70000, 400]]),
 ]
 doc = {"header": {"format": "proxim-golden/1", "kind": "rotation", "id": "golden_v2_newcount", "engine_spec": 1, "synthetic": True},
        "source": "tools/rotation-ref/gen_newcount.py (refkernel.py); companion to golden_v2.json (frozen)",

@@ -88,24 +88,34 @@ def dismiss(led, vid, day):
 
 
 class Pending:
-    """SDK-level state machine for S12. Memory-only. src of commit: 'mark' (markShown) or 'emit' (window expiry). Billing only on markShown."""
+    """SDK-level state machine for S12. Memory-only. src of commit: 'mark' (markShown) or 'emit' (window expiry). Billing only on markShown.
+
+    R-2026-10-17 (owner decision, Addendum 02 5.3): window expiry is applied on EVERY call, not only on tick. A decision
+    whose window has passed is committed as an emission (rule 3) before a re-ask makes a new decision, and before a
+    markShown is judged, so a late markShown can only bill (rule 4), never commit and bill as if it were in the window.
+    Every commit is written with the day the decision was made (stored with it), whenever the commit happens.
+    do_commit(idx, new_count, day)."""
     def __init__(self): self.p = {}; self.log = []
-    def emit(self, fam, now_ms, choose):
-        cur = self.p.get(fam)
-        if cur and not cur["done"] and now_ms - cur["t"] < W_EMIT_MS: return cur["idx"]      # re-ask inside the window: same decision
-        idx, base = choose()
-        self.p[fam] = dict(idx=idx, base=base, t=now_ms, done=None)   # `base` = new_count fixed at decision time
-        return idx
-    def tick(self, fam, now_ms, do_commit):
+    def _expire(self, fam, now_ms, do_commit):
         cur = self.p.get(fam)
         if cur and not cur["done"] and now_ms - cur["t"] >= W_EMIT_MS:
-            do_commit(cur["idx"], cur["base"]); cur["done"] = "emit"; self.log.append(("commit_emit", now_ms))
+            do_commit(cur["idx"], cur["base"], cur["day"]); cur["done"] = "emit"; self.log.append(("commit_emit", now_ms))
+    def emit(self, fam, now_ms, choose, do_commit, day):
+        cur = self.p.get(fam)
+        if cur and not cur["done"] and now_ms - cur["t"] < W_EMIT_MS: return cur["idx"]      # re-ask inside the window: same decision
+        self._expire(fam, now_ms, do_commit)
+        idx, base = choose()
+        self.p[fam] = dict(idx=idx, base=base, t=now_ms, day=day, done=None)   # `base` = new_count fixed at decision time
+        return idx
+    def tick(self, fam, now_ms, do_commit):
+        self._expire(fam, now_ms, do_commit)
     def mark_shown(self, fam, now_ms, visible_ms, do_commit):
+        self._expire(fam, now_ms, do_commit)
         cur = self.p.get(fam); bill = False
         if not cur: return "ignored"
         if cur["done"] == "mark": return "duplicate"
         if cur["done"] is None:
-            do_commit(cur["idx"], cur["base"]); cur["done"] = "mark"; self.log.append(("commit_mark", now_ms))
+            do_commit(cur["idx"], cur["base"], cur["day"]); cur["done"] = "mark"; self.log.append(("commit_mark", now_ms))
             return "billed" if visible_ms >= 1000 else "committed_not_viewable"
         # already emission-committed: billing only, never a second charge
         if now_ms - cur["t"] <= LATE_MS and visible_ms >= 1000:

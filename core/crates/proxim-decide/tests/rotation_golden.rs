@@ -132,50 +132,38 @@ fn replay_select(t: &Value) -> usize {
 fn replay_pending(case: &Value) {
     let fam = family(case);
     let name = case["name"].as_str().unwrap();
+    let dow = u8_of(&case["dow_mask"]);
     let mut led = Ledger::default();
     let mut day = case["start_day"].as_i64().unwrap();
     let mut p: Option<Pending> = None;
-    let mut commits = 0u32;
+    // Mirrors the reference's log length: commits by expiry or mark, plus late bills.
+    let mut logged = 0u32;
     let mut out = vec![];
     for ev in case["events"].as_array().unwrap() {
         let now = ev[1].as_i64().unwrap();
         match ev[0].as_str().unwrap() {
             "emit" => {
-                let idx = rotation::emit(&mut p, now, || {
-                    rotation::select(
-                        &led,
-                        day,
-                        &fam,
-                        0b11_1111,
-                        case["dow_mask"]
-                            .as_u64()
-                            .map_or(0x1f, |m| u8::try_from(m).unwrap()),
-                        0,
-                        1,
-                    )
-                })
-                .unwrap();
-                out.push(json!(["emit", now, idx]));
+                let (idx, expired) = rotation::emit(&mut p, now, day, &mut led, &fam.vids, |l| {
+                    rotation::select(l, day, &fam, 0b11_1111, dow, 0, 1)
+                });
+                logged += u32::from(expired);
+                out.push(json!(["emit", now, idx.unwrap()]));
             }
             "tick" => {
-                if let Some(s) = rotation::tick(&mut p, now) {
-                    rotation::commit(&mut led, fam.vids[s.idx], day, s.new_count);
-                    commits += 1;
-                }
-                out.push(json!(["tick", now, commits]));
+                logged += u32::from(rotation::tick(&mut p, now, &mut led, &fam.vids));
+                out.push(json!(["tick", now, logged]));
             }
             "mark" => {
-                let (m, c) = rotation::mark_shown(&mut p, now, ev[2].as_i64().unwrap());
-                if let Some(s) = c {
-                    rotation::commit(&mut led, fam.vids[s.idx], day, s.new_count);
-                }
+                let (m, expired) =
+                    rotation::mark_shown(&mut p, now, ev[2].as_i64().unwrap(), &mut led, &fam.vids);
+                logged += u32::from(expired);
                 if matches!(
                     m,
                     rotation::Mark::Billed
                         | rotation::Mark::CommittedNotViewable
                         | rotation::Mark::BilledLate
                 ) {
-                    commits += 1;
+                    logged += 1;
                 }
                 out.push(json!(["mark", now, m.name()]));
             }
@@ -185,6 +173,11 @@ fn replay_pending(case: &Value) {
     }
     assert_eq!(Value::Array(out), case["expect_log"], "{name}: log");
     assert_eq!(snapshot(&led), case["expect_ledger"], "{name}: ledger");
+    assert_eq!(
+        usize::try_from(logged).unwrap(),
+        case["pending_log"].as_array().unwrap().len(),
+        "{name}: pending log length"
+    );
 }
 
 #[test]
@@ -283,7 +276,7 @@ fn new_count_supplement_replays() {
     });
     let pending = g["pending"].as_array().unwrap();
     pending.iter().for_each(replay_pending);
-    assert_eq!((traces.len(), pending.len()), (7, 5));
+    assert_eq!((traces.len(), pending.len()), (7, 10));
 }
 
 #[test]

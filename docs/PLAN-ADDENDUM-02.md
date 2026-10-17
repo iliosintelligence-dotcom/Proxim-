@@ -218,6 +218,12 @@ new_count(i) = min(65535, max(cn[i] + 256, 1 + max cn over the other members of 
 commit (5.3): count = new_count, last_day = day, recent = last 4 vids; skipped inside any sensitive buffer (R2/I6)
 dismiss: count = min(65535, cn + 512)
 ```
+- **Edge rules (R-2026-10-17, as the reference kernel implements them):**
+  - A row read before its `last_day` (a clock moved back) counts as age 0.
+  - `lanes = 0` reads as 1.
+  - The weekday mask is counted as stored, including a set bit 7, which the compiler never writes.
+  - A dismissal writes the row with the day of the dismissal.
+  - LRU eviction removes the row with the oldest day, then the smallest vid, and never the row just written (5.2).
 - **Public lane config.** Lanes are public, signed per-partner-app configuration (a constant of the app, not of the person). Pilot partners get explicit lanes; two co-installed pilot partners must differ (config lint); there is no implicit lane 0. Non-pilot apps use a hashed lane, which behaves like the first draft (5.4).
 - **Hard property (test, not statistic).** Inside one install the pick is never the last shown wording (|A| >= 2) and never one of the last 3 (|A| >= 4), whatever the open pattern (N-38).
 - With one app opened on every scheduled day this is the round-robin cycle. The date prior matters only when opens are irregular or two apps share a phone. The `new_count` rule stops a freshly added wording from being shown 2-3 times before old ones return (repeats in the first 6 showings after a 3-of-6 refresh: 3.0 for per-install LRS without the rule, 0.49 for LRS with the rule, and 1.0 for policy H as specified here, which is also 1.0 after a single added wording where LRS with the rule gives 0.0 [MODEL, rotation2/scen2_out.txt as read by the verifier]).
@@ -237,6 +243,11 @@ dismiss: count = min(65535, cn + 512)
   5. Billing, reports and partner payout stay on `markShown` only; a host that never calls it is never billed and its partner earns nothing, but its emissions still consume caps.
   6. The sensitive-buffer rule applies to the step-3 commit; a process killed inside the window loses the pending decision.
   7. TestKit counts emit-commits and fails the scripted walk when more than 5 percent of decisions expire unconfirmed; partner-fed integrations must pass that sandbox gate (at least 95 percent confirmed) to go live.
+  - **Expiry on every call (owner decision R-2026-10-17).** Expiry is checked on every call, not only when the SDK's timer fires. Before a re-ask or a `markShown` is handled, an open decision whose window has passed is committed as in rule 3.
+    - A re-ask after the window therefore always commits the old decision first, so caps are never skipped.
+    - A `markShown` after the window can only do what rule 4 allows.
+    - Every commit is written with the day the decision was made.
+    - Vectors: `golden_v2_newcount.json` (`pending`). The frozen `golden_v2.json` cases are unchanged under this rule.
   Headless host, two passes a day, caps 1/day and 5/week: first draft 9.78 emissions a week, 100 percent of days over cap, 100 percent repeats; with this rule 4.89, 0 and 0 (N-39) [MODEL; W_EMIT and L are [U]]. Caps now count committed decisions (tightened, 9.2).
 - **Decay** (PLAN 5.6 step 7) is a per-wording ranking weight with a 14-day half-life (integer table, 91 entries). Across families it is only a ranking factor, never a gate and never a `p_serve` multiplier. Read literally as a gate it gives about 5.3 / 4.8 / 4.0 exposures in 60 days against 44 / 30.8 / 17.6 opened commute days [MODEL]. Labelled LOOSENED in 9.2; caps carry frequency control.
 - **User controls survive rotation.** Dismiss (7 days; the whole family rests) and hide (permanent for that signpost) key on the family; report stays permanent for that sender on that device (PLAN 5.6 step 5, unchanged); all are checked before wording choice. The selector can never re-enable a suppressed family. A dismissed wording goes to the back of the queue and returns after at least N-1 other showings (6 at N=6, measured), not "about two".
@@ -566,7 +577,7 @@ Gates: **G-V** (pilot gate: families, release, billing, one code) and per-org fe
 | M13.1 (G-1.1) | Addendum 01 items only. Sender items: see M14 | Per item |
 | M14 (G-1.1S) | Items G11S-01 to G11S-13 of Appendix A, each behind its own gate with pilot evidence and counsel; effort 21.25 to 40.50 pw [U], not scheduled | Per item; flipping a `guards` entry needs a passing test and a cited Appendix A id |
 
-**Open item OI-ROT-1 (blocker; owner: rotation-kernel lead, to name; approver: a reviewer who is not the author).** The normative rotation and envelope vectors `golden_v2.json` and the Python reference kernel exist only as a specialist's scratchpad working copy, which is neither in the repository nor linked and is not an authority. Before any M3 work starts (and before M2 exits, whose envelope checks use the same file), commit them unchanged to `core/testdata/golden/rotation/golden_v2.json` and `tools/rotation-ref/`, list them in `core/testdata/golden/MANIFEST.json`, add the one-wording and revoked-to-one `new_count` cases (5.1), and reproduce them with the Rust port; from then on the file is never regenerated (`golden-regen-diff`). If the working copy cannot be recovered, it is rebuilt from 4.3 and 5.1 and re-reviewed, and the [M] evidence of N-35 is downgraded to [U]. Status: **COMMITTED 2026-10-17, awaiting the approver's sign-off.**
+**Open item OI-ROT-1 (blocker; owner: **Ilios Digital** (named 2026-10-17); approver: a reviewer who is not the author, to be named).** The normative rotation and envelope vectors `golden_v2.json` and the Python reference kernel exist only as a specialist's scratchpad working copy, which is neither in the repository nor linked and is not an authority. Before any M3 work starts (and before M2 exits, whose envelope checks use the same file), commit them unchanged to `core/testdata/golden/rotation/golden_v2.json` and `tools/rotation-ref/`, list them in `core/testdata/golden/MANIFEST.json`, add the one-wording and revoked-to-one `new_count` cases (5.1), and reproduce them with the Rust port; from then on the file is never regenerated (`golden-regen-diff`). If the working copy cannot be recovered, it is rebuilt from 4.3 and 5.1 and re-reviewed, and the [M] evidence of N-35 is downgraded to [U]. Status: **COMMITTED 2026-10-17, awaiting the approver's sign-off.**
 - The working copy was recovered and committed unchanged (SHA-256 `3a57baae…e6b5`) at `core/testdata/golden/rotation/golden_v2.json`, with the reference kernel under `tools/rotation-ref/`.
 - It is listed in MANIFEST.json, and the [M] evidence of N-35 stands.
 - The one-wording and revoked-to-one `new_count` cases are in `golden_v2_newcount.json`.
@@ -648,6 +659,7 @@ Gates: **G-V** (pilot gate: families, release, billing, one code) and per-org fe
 | R-2026-10-16-5 Billing CHECK cannot be built | Resolved: SECURITY DEFINER settlement function plus deferred constraint trigger, as for ledger balance (PLAN 4) | 12 |
 | R-2026-10-16-6 Required vectors unavailable | Open item OI-ROT-1 (blocker for M2 exit and M3 entry, owner to name): commit golden_v2.json and the reference kernel at named repo paths; scratchpad copy is evidence only | Banner, 4.3, 5.1, 13, 16, 18 (N-35) |
 | R-2026-10-16-7 AI gate loses an option (legal-gates.md) | Resolved in `docs/legal-gates.md`: G-AI keeps both paths (ZDR in force, or owner's explicit acceptance of the stated retention terms), counsel sign-off for either; N-68 aligned with 3.4 | legal-gates.md, 18 (N-68) |
+| R-2026-10-17-1 Reference kernel against 5.3 (from the independent review) | Owner decision: the text wins. Expiry is applied on every call, so a re-ask after the window commits the old decision and a late `markShown` only bills (rules 3 and 4). Commits use the decision's day. `refkernel.py` and `proxim-decide::rotation` were changed to match. The frozen golden_v2 vectors are unaffected; new vectors are in `golden_v2_newcount.json`. The 5.1 edge rules are now written down | 5.1, 5.3, OI-ROT-1 |
 
 ---
 

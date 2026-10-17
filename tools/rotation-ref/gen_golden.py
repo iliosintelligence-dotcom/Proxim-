@@ -1,4 +1,5 @@
-"""Generate golden_v2.json from the NORMATIVE python reference (refkernel.py, envelope.py). Deterministic except ECDSA signatures (random k);
+"""ARCHIVAL (2026-10-10): calls the Pending API as it was before R-2026-10-17 and is never run again.
+Generate golden_v2.json from the NORMATIVE python reference (refkernel.py, envelope.py). Deterministic except ECDSA signatures (random k);
 signatures are stored, verifiers check, nobody regenerates them in CI."""
 import json, hashlib, random, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

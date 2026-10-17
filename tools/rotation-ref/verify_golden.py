@@ -40,7 +40,20 @@ for e in g["envelope"]["entries"]:
     ok, out = E.verify_entry(pub, bytes.fromhex(e["wire_hex"]))
     if ("accept" if ok else "reject") != e["expect"]: fails.append(("envelope", e["name"]))
     if ok and sorted(out) != e["shipped_idx"]: fails.append(("envelope shipped", e["name"]))
+# Pending window (added with R-2026-10-17; the working copy's gate did not replay these): the
+# corrected kernel still reproduces the frozen cases.
+for c in g["pending"]:
+    vids, pos, phi = R.derive(bytes.fromhex(c["signpost_id_hex"]), [bytes.fromhex(x) for x in c["digests_hex"]])
+    led = R.Ledger(); P = R.Pending(); log = []; day = c["start_day"]
+    choose = lambda: R.select(led, day, vids, pos, phi, 0b111111, c["dow_mask"], 0, 1)
+    do_commit = lambda i, nc, d: R.commit(led, vids[i], d, nc)
+    for ev in c["events"]:
+        if ev[0] == "emit": log.append(["emit", ev[1], P.emit("f", ev[1], choose, do_commit, day)])
+        elif ev[0] == "tick": P.tick("f", ev[1], do_commit); log.append(["tick", ev[1], len(P.log)])
+        elif ev[0] == "mark": log.append(["mark", ev[1], P.mark_shown("f", ev[1], ev[2], do_commit)])
+        elif ev[0] == "day": day = ev[1]
+    if log != c["expect_log"] or led.snapshot() != c["expect_ledger"]: fails.append(("pending", c["name"]))
 fx = g["envelope"]["vid_collision"]
 if E.vid_of(E.digest(bytes.fromhex(fx["legit_hex"]))) != E.vid_of(E.digest(bytes.fromhex(fx["forged_hex"]))): fails.append("vid fixture")
-print("python gate:", "OK" if not fails else fails, f"({len(g['select'])} traces, {nops} ops, {len(g['envelope']['entries'])} envelope entries)")
+print("python gate:", "OK" if not fails else fails, f"({len(g['select'])} traces, {nops} ops, {len(g['pending'])} pending cases, {len(g['envelope']['entries'])} envelope entries)")
 sys.exit(1 if fails else 0)
