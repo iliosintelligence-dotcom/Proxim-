@@ -72,7 +72,7 @@ centre, or the polygon's bounding-box centre.
 - **Context.** `consent` (default: location granted), `consent_changes [{at_s, consent}]`,
   `policy` (engine JSON, default `{"explain": true}`), `standoff_zones_m [{id, center_m,
   standoff_m?}]`, `clock {tz_offset_min, lag_ms, events [{at_s, shift_ms, tz_offset_min}]}`, and
-  `restarts_s` (process restarts: only `caps` survives).
+  `restarts_s` (process restarts: only the persisted `caps` and `controls` survive).
 - **Expectations per signpost.** `fires [min, max]` per run. These must hold at every fire:
   `true_d_rem_m [lo, hi]` and `true_xt_max_m` (routes), `true_depth_min_m` and `latency_s [lo, hi]`
   after the true entry (zones), `fire_time_s`, `t_hat_min_s` and `min_gap_s`. These must hold at

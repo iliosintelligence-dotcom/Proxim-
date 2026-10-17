@@ -2,7 +2,7 @@
 //! A defect here is an `Err` (whole call is "no decision, state unchanged").
 
 use crate::params::TZ_MAX_MIN;
-use proxim_types::defaults::{MAX_DETECTORS, MAX_SIGNPOSTS, MAX_TRACE};
+use proxim_types::defaults::{MAX_DETECTORS, MAX_SENDERS, MAX_SIGNPOSTS, MAX_TRACE};
 use proxim_types::{Clock, EngineError, Fix, State};
 
 /// Largest magnitude of a Q30 unit-vector component.
@@ -17,8 +17,23 @@ pub(crate) fn state(s: &State) -> Result<(), EngineError> {
     if s.v != 1 || s.caps.hwm_ms < 0 {
         return Err(EngineError::Parse);
     }
-    if s.caps.signposts.len() > MAX_SIGNPOSTS || s.mem.det.len() > MAX_DETECTORS {
+    if s.caps.signposts.len() > MAX_SIGNPOSTS
+        || s.caps.senders.len() > MAX_SENDERS
+        || s.mem.det.len() > MAX_DETECTORS
+    {
         return Err(EngineError::Limit);
+    }
+    crate::controls::validate(&s.controls)?;
+    if !s
+        .caps
+        .senders
+        .windows(2)
+        .all(|w| matches!(w, [a, b] if a.sender < b.sender))
+        || s.caps.senders.iter().any(|x| {
+            x.sender.is_empty() || x.tz_offset_min.unsigned_abs() > TZ_MAX_MIN.unsigned_abs()
+        })
+    {
+        return Err(EngineError::Parse);
     }
     if s.mem.trace.len() > MAX_TRACE {
         return Err(EngineError::Limit);

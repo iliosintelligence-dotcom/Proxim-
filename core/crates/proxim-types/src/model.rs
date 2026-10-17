@@ -204,6 +204,12 @@ pub struct Policy {
     pub cap_signpost_week: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_min_interval_s: Option<u32>,
+    /// Lower only (engine_spec 2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cap_sender_day: Option<u32>,
+    /// Lower, or raise up to 8 (engine_spec 2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cap_app_day: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub slots: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -445,6 +451,59 @@ pub struct Caps {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_fire_ms: Option<i64>,
     pub signposts: Vec<SignpostCaps>,
+    /// Per-sender day counts, ascending `sender` (engine_spec 2; absent when empty).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub senders: Vec<SenderCaps>,
+}
+
+/// Fires of one sender in one local day (judged in its own zone, like [`SignpostCaps`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SenderCaps {
+    pub sender: String,
+    pub day_idx: i64,
+    pub day_n: u32,
+    pub tz_offset_min: i16,
+}
+
+/// A dismissed family and when its rest ends.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dismissal {
+    pub id: Id,
+    pub until_ms: i64,
+}
+
+/// The person's own controls (PLAN 5.6 step 5), local to the install and lost on reinstall.
+/// Lists are sorted ascending and unique.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Controls {
+    /// Dismiss: the family rests for 7 days.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dismissed: Vec<Dismissal>,
+    /// Hide: permanent for that signpost.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hidden: Vec<Id>,
+    /// Report: permanent for that sender on this device.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reported: Vec<String>,
+}
+
+impl Controls {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.dismissed.is_empty() && self.hidden.is_empty() && self.reported.is_empty()
+    }
+}
+
+/// A user action on a shown advert, applied with `proxim_decide::controls::apply`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
+pub enum Control {
+    Dismiss { id: Id },
+    Hide { id: Id },
+    Report { sender: String },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -531,6 +590,9 @@ pub struct State {
     pub v: u8,
     pub caps: Caps,
     pub mem: Mem,
+    /// engine_spec 2; absent when empty, so an engine_spec 1 state reads unchanged.
+    #[serde(default, skip_serializing_if = "Controls::is_empty")]
+    pub controls: Controls,
 }
 
 impl State {
@@ -541,6 +603,7 @@ impl State {
             v: 1,
             caps: Caps::default(),
             mem: Mem::default(),
+            controls: Controls::default(),
         }
     }
 }

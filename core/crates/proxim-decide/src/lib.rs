@@ -20,6 +20,7 @@ extern crate std;
 
 mod calendar;
 mod caps;
+pub mod controls;
 mod eff;
 pub mod golden;
 pub mod json;
@@ -150,9 +151,11 @@ pub fn decide(
         det.remove(*id);
     }
 
+    let controls = controls::prune(&state.controls, now);
     let ctx = Ctx {
         eff: &eff,
         consent,
+        controls: &controls,
         zones: &zones,
         now,
     };
@@ -228,9 +231,26 @@ pub fn decide(
     let mut fires: Vec<Decision> = Vec::new();
     let mut last_fire_ms = state.caps.last_fire_ms;
     let mut path_info = summary.info;
-    for (rank, c) in survivors.iter().enumerate() {
-        if rank < eff.slots {
-            book.record_fire(&c.sp.id);
+    let mut taken = 0usize;
+    for c in &survivors {
+        // With more than one slot, an earlier winner in this call can use up the sender's or the
+        // app's day: such a candidate is consumed with that cap code and takes no slot (7.2).
+        let cap_now = if book.sender_day_count(&c.sp.sender) >= eff.cap_sender_day {
+            Some(ReasonCode::CapSenderDay)
+        } else if book.app_day_count() >= eff.cap_app_day {
+            Some(ReasonCode::CapAppDay)
+        } else {
+            None
+        };
+        if taken < eff.slots
+            && let Some(reason) = cap_now
+        {
+            drops.push(event_drop(c.sp, &c.ev, reason));
+            continue;
+        }
+        if taken < eff.slots {
+            taken += 1;
+            book.record_fire(&c.sp.id, &c.sp.sender);
             last_fire_ms = Some(now);
             path_info = PathInfo {
                 tier: c.ev.path_tier,
@@ -264,14 +284,17 @@ pub fn decide(
         return Err(EngineError::Limit);
     }
     mem.det = det.into_values().collect();
+    let (signposts_caps, senders) = book.into_parts();
     let next = State {
         v: 1,
         caps: Caps {
             hwm_ms: now,
             last_fire_ms,
-            signposts: book.into_vec(),
+            signposts: signposts_caps,
+            senders,
         },
         mem,
+        controls,
     };
     sort_decisions(&mut fires);
     sort_decisions(&mut drops);
@@ -314,6 +337,7 @@ fn sort_decisions(v: &mut [Decision]) {
 struct Ctx<'a> {
     eff: &'a Eff<'a>,
     consent: &'a Consent,
+    controls: &'a proxim_types::Controls,
     zones: &'a [standoff::Zone],
     now: i64,
 }
@@ -488,6 +512,10 @@ fn prepare(ctx: &Ctx<'_>, sp: &Signpost) -> Result<Result<Prepared, ReasonCode>,
     if eff.senders_blocked.contains(sp.sender.as_str()) {
         return Ok(Err(ReasonCode::SenderBlocked));
     }
+    // F17a-c (engine spec 7.2): the person's own controls.
+    if let Some(r) = controls::blocks(ctx.controls, sp.id.as_str(), &sp.sender, ctx.now) {
+        return Ok(Err(r));
+    }
     if sp.sensitivity > eff.sensitivity_ceiling {
         return Ok(Err(ReasonCode::SensitivityAboveCeiling));
     }
@@ -524,9 +552,15 @@ fn event_filter(
     if book.week_count(sp.id.as_str()) >= ctx.eff.cap_week {
         return Some(ReasonCode::CapSignpostWeek);
     }
+    if book.sender_day_count(&sp.sender) >= ctx.eff.cap_sender_day {
+        return Some(ReasonCode::CapSenderDay);
+    }
     // A last fire in the future of `now` (tampered state) also blocks: fail closed.
     if last_fire_ms.is_some_and(|l| ctx.now.saturating_sub(l) < ctx.eff.app_interval_ms) {
         return Some(ReasonCode::CapAppInterval);
+    }
+    if book.app_day_count() >= ctx.eff.cap_app_day {
+        return Some(ReasonCode::CapAppDay);
     }
     None
 }

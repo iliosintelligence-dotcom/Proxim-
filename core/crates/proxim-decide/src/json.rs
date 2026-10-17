@@ -96,6 +96,26 @@ fn run(
     Ok(s)
 }
 
+/// `apply_control_json(state, control, clock) -> {state}` (engine spec 7.2): a dismiss, hide or
+/// report from the person, e.g. `{"action":"dismiss","id":"sp-1"}`. Same error form as
+/// [`decide_json`]; the success form is exactly `{"state":S}` in canonical JSON.
+#[must_use]
+pub fn apply_control_json(state: &str, control: &str, clock: &str) -> String {
+    let run = || -> Result<String, Failure> {
+        let st: State = arg(state, "state", false)?;
+        let c: proxim_types::Control = arg(control, "control", false)?;
+        let clock: Clock = arg(clock, "clock", false)?;
+        let next = crate::controls::apply(&st, &c, &clock).map_err(|e| (e, None))?;
+        let st = to_canonical_json(&next).map_err(|e| (e, None))?;
+        let mut s = String::with_capacity(st.len() + 10);
+        s.push_str("{\"state\":");
+        s.push_str(&st);
+        s.push('}');
+        Ok(s)
+    };
+    run().unwrap_or_else(|(code, input)| error_object(code, input))
+}
+
 /// Split a `decide_json` success string into its canonical `output` and `state` texts.
 ///
 /// # Errors

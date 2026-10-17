@@ -244,8 +244,10 @@ fn capped_state(hwm: i64, day_idx: i64, week_idx: i64) -> State {
                 week_n: 2,
                 tz_offset_min: None,
             }],
+            senders: vec![],
         },
         mem: Default::default(),
+        controls: Default::default(),
     }
 }
 
