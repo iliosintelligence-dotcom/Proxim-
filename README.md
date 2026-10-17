@@ -8,7 +8,7 @@ A roadside billboard knows where it is, not who is looking. A Proxim signpost ma
 
 ## Status (2026-10-11)
 
-M0 (monorepo, CI, toolchain) and M1 (geometry, path and decision kernel, location simulator) are IN PROGRESS. Scope is advertising only; resorts and owner mode are parked. Nothing here is released. Of the invariants, only I1 and the repository guards are enforced by tools today; the rest are binding policy with their tests planned (see the status column in the invariants file). No networking, rotation, packs, scheduler or events outbox exist in M1 (stubs only).
+M0 (monorepo, CI, toolchain) and M1 (geometry, path and decision kernel, location simulator) are IN PROGRESS. Scope is advertising only; resorts and owner mode are parked. Nothing here is released. Of the invariants, only I1 and the repository guards are enforced by tools today; the rest are binding policy with their tests planned (see the status column in the invariants file). M2 has started: `proxim-pack` verifies signed keysets, manifests, packs and envelope v2 entries ([docs/pack-spec.md](docs/pack-spec.md)); the pack compiler and KMS signing are not built. No networking, rotation, scheduler or events outbox exist yet (stubs only).
 
 ## Repo map
 

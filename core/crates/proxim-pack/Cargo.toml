@@ -1,6 +1,6 @@
 [package]
 name = "proxim-pack"
-description = "Signed pack verification (M2, stub)"
+description = "Signed pack, manifest and keyset verification (M2; docs/pack-spec.md)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,13 @@ publish.workspace = true
 
 [dependencies]
 proxim-types = { workspace = true }
+p256 = { workspace = true }
+sha2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
 
 [lints]
 workspace = true
