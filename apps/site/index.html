@@ -2,35 +2,43 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Proxim · Local advertising for businesses</title>
 <meta name="description" content="Reach people near your business, at the right time, inside apps they already use. You pay only when people nearby see your message.">
+<meta name="theme-color" content="#ff751f">
+<link rel="icon" href="logo-orange.png">
+<link rel="preload" href="fonts/league-spartan-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="wrap top">
-  <span class="logo">Proxim</span>
-  <nav class="switch" aria-label="Choose a page"><a href="/" aria-current="page">For businesses</a><a href="/apps">For app makers</a></nav>
+<header class="hero">
+  <div class="wrap top">
+    <a class="logo" href="/"><img src="logo-white.png" alt="Proxim" width="408" height="176"></a>
+    <nav class="switch" aria-label="Choose a page"><a class="pill" href="/" aria-current="page">For businesses</a><a class="pill" href="/apps">For app makers</a></nav>
+  </div>
+  <div class="wrap">
+    <h1 class="headline"><span class="l">Right people.</span><span class="r">Right place.</span><span class="l">Right time.</span></h1>
+  </div>
+  <div class="wrap hero-foot">
+    <div class="tokens" aria-hidden="true"><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M16 9h2a3 3 0 0 1 0 6h-2"/><path d="M8 3v2M12 3v2"/></svg></span><span class="token dark bob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9c0-1-1.3-1.6-3-1.6S9 8.2 9 9.4s1.3 1.6 3 2 3 .9 3 2.2-1.3 2-3 2-3-.7-3-1.7"/></svg></span></div>
+    <div>
+      <p>Proxim shows your message to people near your business, at the moment you choose, inside apps they already use. You pay only when people nearby see it.</p>
+      <div class="actions"><a class="pill solid" href="#how">See how it works <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a></div>
+    </div>
+  </div>
 </header>
 
 <main>
-  <section class="wrap hero">
-    <p class="eyebrow">For local businesses</p>
-    <h1>Reach the right people, right outside your door, at the right time.</h1>
-    <p class="lead">Proxim puts your message in front of people who are near your business or heading your way, inside apps they already use. Show it at lunchtime, on the morning commute, or only on match days. You pay only when people near you see it.</p>
-  </section>
+  <div class="wrap chain" aria-hidden="true"><span class="pill">Near you</span><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="pill">At the right time</span><span class="pill">For a fair price</span></div>
 
   <section class="wrap">
-    <h2>What your customers see</h2>
+    <p class="eyebrow">What your customers see</p>
+    <h2>A friendly nudge, just around the corner.</h2>
     <div class="example">
-      <div class="phone" aria-label="Example of a Proxim message inside a bus app">
+      <div class="phone" role="img" aria-label="Example: a labelled message from Rosa's Café inside a bus app">
         <p class="phone-app">Your bus app</p>
         <p class="phone-line">Next bus: 4 min</p>
-        <div class="note">
-          <span class="note-tag">Ad · nearby</span>
-          <strong>Rosa's Café</strong>
-          <span>Fresh coffee, 2 minutes ahead on your left.</span>
-        </div>
+        <div class="note"><span class="note-tag">Ad · nearby</span><strong>Rosa's Café</strong><span>Fresh coffee, 2 minutes ahead on your left.</span></div>
         <p class="phone-line">Next bus: 12 min</p>
       </div>
       <p class="example-text">Someone is walking to the bus stop two minutes from your café, just before lunch. Your message appears in the app they already have open. No flyers, no wasted billboard space, and no paying to reach people on the other side of town.</p>
@@ -38,43 +46,49 @@
   </section>
 
   <section class="wrap">
-    <h2>Why it is good value</h2>
-    <ul class="rules">
-      <li><strong>Only people nearby.</strong> Your message reaches people close enough to walk in, not the whole city.</li>
-      <li><strong>Only when it matters.</strong> Choose the days and hours your offer applies, and it shows only then.</li>
-      <li><strong>Only pay for real views.</strong> You are charged when people near you see your message, not for empty airtime.</li>
-      <li><strong>Start small.</strong> Prepay a small budget and stop whenever you like. No contracts, no agency.</li>
-      <li><strong>See what you got.</strong> A simple weekly report shows how many people saw your message.</li>
-    </ul>
+    <p class="eyebrow">Why it is good value</p>
+    <h2>Your money goes further.</h2>
+    <div class="value">
+      <div class="spin" aria-hidden="true">
+        <svg viewBox="0 0 320 320">
+          <defs><path id="ring" d="M160,160 m-140,0 a140,140 0 1,1 280,0 a140,140 0 1,1 -280,0"/></defs>
+          <g class="ring"><text><textPath href="#ring" textLength="870" lengthAdjust="spacing">Right people · Right place · Right time · Right people · Right place · Right time · </textPath></text></g>
+          <path class="pin" d="M160 252 C132 210 92 180 92 142 A68 68 0 1 1 228 142 C228 180 188 210 160 252Z"/>
+          <circle class="hole" cx="160" cy="142" r="26"/>
+        </svg>
+      </div>
+      <ul class="cards two"><li><span class="tag">Reach</span><h3>Only people nearby</h3><p>Your message reaches people close enough to walk in, not the whole city.</p></li><li><span class="tag">Timing</span><h3>Only when it matters</h3><p>Choose the days and hours your offer applies, and it shows only then.</p></li><li><span class="tag">Cost</span><h3>Only pay for real views</h3><p>You are charged when people near you see your message, not for empty airtime.</p></li><li><span class="tag">Budget</span><h3>Start small</h3><p>Prepay a small budget and stop whenever you like. No contracts, no agency.</p></li></ul>
+    </div>
   </section>
 
-  <section class="wrap">
-    <h2>How it works</h2>
-    <ol class="steps">
-      <li><strong>Write a short message</strong> and mark your spot on a map.</li>
-      <li><strong>Choose when it runs</strong> and how much you want to spend.</li>
-      <li><strong>We check it and switch it on.</strong> A real person reviews every message before it goes live.</li>
-    </ol>
+  <section class="wrap" id="how">
+    <p class="eyebrow">How it works</p>
+    <h2>Up and running in three steps.</h2>
+    <ol class="steps"><li><h3>Write your message</h3><p>Keep it short, and mark your spot on a map.</p></li><li><h3>Choose when it runs</h3><p>Pick the days, the hours and how much you want to spend.</p></li><li><h3>We check it and switch it on</h3><p>A real person reviews every message, then a simple weekly report shows how many people saw it.</p></li></ol>
   </section>
 
-  <section class="wrap">
-    <h2>Fair for small businesses</h2>
-    <ul class="rules">
-      <li><strong>Same price for everyone.</strong> The corner shop pays the same rate as the big chain.</li>
-      <li><strong>Paying more does not put you on top.</strong> A bigger budget runs for longer. It does not push other businesses aside.</li>
-      <li><strong>No middlemen.</strong> You deal with us directly, so less of your money is lost along the way.</li>
-    </ul>
+  <section>
+    <div class="wrap">
+      <p class="eyebrow">Fair for every business</p>
+      <h2>The corner shop and the big chain play by the same rules.</h2>
+    </div>
+    <div class="marquee"><div class="marquee-track"><span class="pill">Same price for everyone</span><span class="pill">Paying more never puts you on top</span><span class="pill">No middlemen</span><span class="pill">Same checks for everyone</span><span class="pill">No user data for sale</span><span class="pill">Small budgets welcome</span><span class="pill" aria-hidden="true">Same price for everyone</span><span class="pill" aria-hidden="true">Paying more never puts you on top</span><span class="pill" aria-hidden="true">No middlemen</span><span class="pill" aria-hidden="true">Same checks for everyone</span><span class="pill" aria-hidden="true">No user data for sale</span><span class="pill" aria-hidden="true">Small budgets welcome</span></div></div>
   </section>
 
-  <section class="wrap">
-    <h2>Where we are</h2>
-    <p>Proxim is still being built and nothing is for sale yet. We plan to start with a small, invitation-only trial in one city.</p>
-  </section>
 </main>
 
+<section class="band">
+  <div class="wrap">
+    <div>
+      <h2>Coming soon.</h2>
+      <p>Proxim is still being built and nothing is available yet. We plan to start with a small, invitation-only trial in one city.</p>
+    </div>
+    <a class="pill" href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built</a>
+  </div>
+</section>
 <footer class="wrap foot">
-  <p>Proxim is open source. <a href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built on GitHub</a>.</p>
-  <p class="small">This site sets no cookies and does not track you.</p>
+  <p>Proxim is open source.</p>
+  <p>This site sets no cookies and does not track you.</p>
 </footer>
 </body>
 </html>

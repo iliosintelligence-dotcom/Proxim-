@@ -2,72 +2,94 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Proxim · For app makers</title>
-<meta name="description" content="Earn money from your phone, web, smart TV or desktop app with short, labelled local ads. App makers keep 65 to 70% of spend, and user location never leaves the device.">
+<meta name="description" content="Earn from your phone, web, smart TV or desktop app with short, labelled local ads. App makers keep 65 to 70% of spend, and user location never leaves the device.">
+<meta name="theme-color" content="#ff751f">
+<link rel="icon" href="logo-orange.png">
+<link rel="preload" href="fonts/league-spartan-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="wrap top">
-  <span class="logo">Proxim</span>
-  <nav class="switch" aria-label="Choose a page"><a href="/">For businesses</a><a href="/apps" aria-current="page">For app makers</a></nav>
+<header class="hero">
+  <div class="wrap top">
+    <a class="logo" href="/"><img src="logo-white.png" alt="Proxim" width="408" height="176"></a>
+    <nav class="switch" aria-label="Choose a page"><a class="pill" href="/">For businesses</a><a class="pill" href="/apps" aria-current="page">For app makers</a></nav>
+  </div>
+  <div class="wrap">
+    <h1 class="headline"><span class="l">Your app.</span><span class="r">Your rules.</span><span class="l">Your revenue.</span></h1>
+  </div>
+  <div class="wrap hero-foot">
+    <div class="tokens" aria-hidden="true"><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span class="token dark bob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span><span class="token soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="10" rx="1"/><path d="M2 19h20"/></svg></span><span class="token "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9c0-1-1.3-1.6-3-1.6S9 8.2 9 9.4s1.3 1.6 3 2 3 .9 3 2.2-1.3 2-3 2-3-.7-3-1.7"/></svg></span></div>
+    <div>
+      <p>Add Proxim to your app and show short, useful messages from businesses near your users. You keep most of the money, and your users get ads that respect them.</p>
+      <div class="actions"><a class="pill solid" href="#earn">See what you earn <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a></div>
+    </div>
+  </div>
 </header>
 
 <main>
-  <section class="wrap hero">
-    <p class="eyebrow">For app makers</p>
-    <h1>Earn money from your app with local ads your users won't mind.</h1>
-    <p class="lead">Add Proxim to your app and show short, useful messages from businesses near your users. You keep most of the money, and your users get ads that respect them.</p>
-  </section>
+  <div class="wrap chain" aria-hidden="true"><span class="pill">Not repetitive</span><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="pill">Not invasive</span><span class="pill">Always relevant</span></div>
 
-  <section class="wrap">
-    <h2>Works wherever your app runs</h2>
-    <div class="who who-4">
-      <div><h3>Phone apps</h3><p>iPhone and Android.</p></div>
-      <div><h3>Websites</h3><p>Web apps and sites.</p></div>
-      <div><h3>Smart TV apps</h3><p>Messages for the area the screen is in.</p></div>
-      <div><h3>Desktop apps</h3><p>Windows and Mac.</p></div>
-    </div>
-    <p class="note-small">We are starting with phone apps and websites. Smart TV and desktop apps come next.</p>
-  </section>
-
-  <section class="wrap">
-    <h2>You keep most of the money</h2>
+  <section class="wrap" id="earn">
+    <p class="eyebrow">You keep most of the money</p>
     <div class="share">
       <p class="share-big">65&ndash;70%</p>
-      <p>We plan to pay app makers 65 to 70% of what businesses spend, and every statement shows the exact split. With most other ad networks, a large part of the money goes to middlemen before it reaches you.</p>
+      <div>
+        <h2>Of what businesses spend goes to you.</h2>
+        <p class="intro">That is the share we plan to pay app makers, and every statement shows the exact split. With most ad networks, a large part of the money goes to middlemen before it reaches you.</p>
+      </div>
     </div>
   </section>
 
   <section class="wrap">
-    <h2>Ads your users won't mind</h2>
-    <ul class="rules">
-      <li><strong>Not repetitive.</strong> The same ad is not shown over and over. Each person sees it a limited number of times.</li>
-      <li><strong>Not invasive.</strong> Short, clearly labelled text that sits inside your app. No pop-ups, no autoplay video, no sound.</li>
-      <li><strong>Relevant to your app.</strong> You choose which kinds of business and offers are allowed, so ads fit your app and your content, and are useful to the people who use it.</li>
-      <li><strong>Checked by a person.</strong> Every ad is reviewed before it can appear in your app.</li>
-      <li><strong>Private by design.</strong> Your users' location stays on their device. We never receive it, and nothing about your users is shared or sold.</li>
-    </ul>
+    <p class="eyebrow">Why your users won't mind</p>
+    <h2>Ads that feel like help, not noise.</h2>
+    <div class="value">
+      <div class="spin" aria-hidden="true">
+        <svg viewBox="0 0 320 320">
+          <defs><path id="ring" d="M160,160 m-140,0 a140,140 0 1,1 280,0 a140,140 0 1,1 -280,0"/></defs>
+          <g class="ring"><text><textPath href="#ring" textLength="870" lengthAdjust="spacing">Not repetitive · Not invasive · Always relevant · Not repetitive · Not invasive · Always relevant · </textPath></text></g>
+          <path class="pin" d="M160 252 C132 210 92 180 92 142 A68 68 0 1 1 228 142 C228 180 188 210 160 252Z"/>
+          <circle class="hole" cx="160" cy="142" r="26"/>
+        </svg>
+      </div>
+      <ul class="cards two"><li><span class="tag">Repetition</span><h3>Not repetitive</h3><p>The same ad is not shown over and over. Each person sees it a limited number of times.</p></li><li><span class="tag">Comfort</span><h3>Not invasive</h3><p>Short, clearly labelled text inside your app. No pop-ups, no autoplay video, no sound.</p></li><li><span class="tag">Relevance</span><h3>Relevant to your app</h3><p>You choose which kinds of business and offers are allowed, so every ad fits your app, your content and your users.</p></li><li><span class="tag">Privacy</span><h3>Private by design</h3><p>Your users&rsquo; location stays on their device. We never receive it, and nothing about your users is shared or sold.</p></li></ul>
+    </div>
   </section>
 
   <section class="wrap">
-    <h2>How it works</h2>
-    <ol class="steps">
-      <li><strong>Add our toolkit</strong> to your app.</li>
-      <li><strong>Choose which kinds of ads you allow</strong> and where they appear.</li>
-      <li><strong>Keep most of the money.</strong> A simple statement shows what you earned and what we kept.</li>
-    </ol>
+    <p class="eyebrow">Works wherever your app runs</p>
+    <h2>Phone, web, TV and desktop.</h2>
+    <div class="platforms">
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Phone apps</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Websites</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>Smart TV apps</span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="10" rx="1"/><path d="M2 19h20"/></svg>Desktop apps</span>
+    </div>
+    <p class="small">We are starting with phone apps and websites. Smart TV and desktop apps come next.</p>
   </section>
 
-  <section class="wrap">
-    <h2>Where we are</h2>
-    <p>Proxim is still being built and nothing is available yet. We plan to start with a small, invitation-only trial in one city.</p>
+  <section class="wrap" id="how">
+    <p class="eyebrow">How it works</p>
+    <h2>Three steps to your first payout.</h2>
+    <ol class="steps"><li><h3>Add our toolkit</h3><p>Connect your app to Proxim.</p></li><li><h3>Choose what you allow</h3><p>Pick the kinds of ads that suit your users, and where they appear.</p></li><li><h3>Keep most of the money</h3><p>A simple statement shows what you earned and what we kept.</p></li></ol>
   </section>
+
 </main>
 
+<section class="band">
+  <div class="wrap">
+    <div>
+      <h2>Coming soon.</h2>
+      <p>Proxim is still being built and nothing is available yet. We plan to start with a small, invitation-only trial in one city.</p>
+    </div>
+    <a class="pill" href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built</a>
+  </div>
+</section>
 <footer class="wrap foot">
-  <p>Proxim is open source. <a href="https://github.com/iliosintelligence-dotcom/Proxim-">See how it is built on GitHub</a>.</p>
-  <p class="small">This site sets no cookies and does not track you.</p>
+  <p>Proxim is open source.</p>
+  <p>This site sets no cookies and does not track you.</p>
 </footer>
 </body>
 </html>
