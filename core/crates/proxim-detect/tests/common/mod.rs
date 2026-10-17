@@ -100,6 +100,8 @@ pub fn signpost(event: EventKind, trigger: Trigger) -> Signpost {
         creatives: Reserved::default(),
         rot_days: None,
         wordings: None,
+        quality_milli: None,
+        p_serve_milli: None,
         pack_kind: Reserved::default(),
     }
 }

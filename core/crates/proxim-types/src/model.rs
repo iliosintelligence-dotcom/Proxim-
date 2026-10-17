@@ -352,6 +352,15 @@ pub struct Signpost {
     pub min_path_conf_milli: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank_milli: Option<u32>,
+    /// Q of the score (PLAN 5.6 step 6): the server's quality prior, signed into the pack,
+    /// 500..=1000, absent = 1000 (engine spec 7.5; engine_spec 2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quality_milli: Option<u16>,
+    /// `p_serve` of the pacing draw (PLAN 5.6 step 7), 0..=1000, absent = 1000. Filled in by the
+    /// SDK from the verified pace overlay (halved when the overlay is over 6 h old); never part of
+    /// the signed core (engine spec 7.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub p_serve_milli: Option<u16>,
     pub trigger: Trigger,
     // Reserved, accepted and ignored (spec 10).
     #[serde(default, skip_serializing)]

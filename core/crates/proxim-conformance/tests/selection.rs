@@ -102,12 +102,13 @@ fn decisions_are_sorted_fire_first_then_by_id() {
 }
 
 #[test]
-fn slots_cannot_be_raised_by_a_partner() {
-    for slots in [2, 3, 100] {
+fn slots_are_clamped_to_three() {
+    // engine_spec 2 (7.5): up to 3 slots; two candidates here, so 2 or more slots fire both.
+    for (slots, fired) in [(1, 1), (2, 2), (3, 2), (100, 2)] {
         let mut rig = two(("a-1", 1000), ("b-1", 1000));
         rig.policy["slots"] = json!(slots);
         let s = first_event(&mut rig);
-        assert_eq!(s.fires().len(), 1, "slots={slots} clamps to 1");
+        assert_eq!(s.fires().len(), fired, "slots={slots}");
     }
 }
 

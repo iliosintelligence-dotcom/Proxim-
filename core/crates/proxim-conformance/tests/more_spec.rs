@@ -231,14 +231,15 @@ fn displacement_heading_needs_15_m_and_three_times_acc_eff() {
 
 #[test]
 fn equal_scores_prefer_an_event_with_a_t_hat_over_one_without() {
-    // approach z-1: score 1000 x 800 / 1000 = 800. enter a-1 with rank 1600: 1600 x 500 / 1000 = 800.
+    // approach z-1: t_hat 41.667 s against a 40 s lead, timing fit 980 (spec 7.5), so its score is
+    // 1000 x 800 x 980 / 1e6 = 784. enter a-1 with rank 1568: 1568 x 500 / 1000 = 784.
     // Equal scores: t_hat ascending with ABSENT LAST, so z-1 beats a-1 although its id is larger.
     let mut found = None;
     for off_m in (0..400).step_by(3) {
         let mut rig = Rig::new();
         let centre = offset(ORIGIN, 0, -(300 + off_m) * 1000);
         let mut a = enter_circle_at("a-1", centre, 300);
-        a["rank_milli"] = json!(1600);
+        a["rank_milli"] = json!(1568);
         rig.signposts = vec![a, approach_route("z-1", 2500)];
         let d = Drive::new(2500, 15_000);
         for k in 0..200 {

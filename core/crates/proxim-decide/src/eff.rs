@@ -7,7 +7,7 @@ use alloc::string::String;
 use proxim_types::defaults::{
     AFFINITY_MAX_MILLI, AFFINITY_NEUTRAL_MILLI, APP_MIN_INTERVAL_S, CAP_APP_DAY, CAP_APP_DAY_MAX,
     CAP_SENDER_DAY, CAP_SIGNPOST_DAY, CAP_SIGNPOST_WEEK, LEAD_S_MAX, LEAD_S_MIN, MAX_ACC_MM,
-    MAX_CATEGORY_RULES, MAX_STANDOFF_ZONES, SENSITIVITY_CEILING, STANDOFF_M,
+    MAX_CATEGORY_RULES, MAX_STANDOFF_ZONES, SENSITIVITY_CEILING, SLOTS, STANDOFF_M,
 };
 use proxim_types::taxonomy::{is_valid_code, prefixes};
 use proxim_types::{EngineError, Policy};
@@ -109,7 +109,7 @@ impl<'a> Eff<'a> {
             cap_app_day: p.cap_app_day.unwrap_or(CAP_APP_DAY).min(CAP_APP_DAY_MAX),
             rot_lane,
             rot_lanes,
-            slots: usize::from(p.slots.unwrap_or(SLOTS_CEILING).min(SLOTS_CEILING)),
+            slots: usize::from(p.slots.unwrap_or(SLOTS).min(SLOTS_CEILING)),
             max_acc_mm: p.max_acc_mm.unwrap_or(MAX_ACC_MM).min(MAX_ACC_MM),
             categories_blocked: p.categories_blocked.iter().map(String::as_str).collect(),
             categories_accepted,
@@ -195,7 +195,7 @@ mod tests {
                 e.max_acc_mm,
                 e.sensitivity_ceiling
             ),
-            (2, 5, 1, 100_000, 2)
+            (2, 5, 3, 100_000, 2)
         );
         assert_eq!(
             (e.lead_lo_s, e.lead_hi_s, e.app_interval_ms),

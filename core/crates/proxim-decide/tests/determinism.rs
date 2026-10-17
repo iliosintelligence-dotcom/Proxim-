@@ -151,8 +151,10 @@ fn decide_ignores_input_order_with_revisions_and_duplicates() {
     }
 }
 
+/// engine_spec 2 (7.5): the seed is the install's pacing salt, read only by the pacing draw of a
+/// signpost with `p_serve_milli < 1000`. Without pacing it has no effect at all.
 #[test]
-fn seed_has_no_effect_in_m1() {
+fn seed_has_no_effect_without_pacing() {
     let signposts = world();
     let policy = explain();
     let mut fixes = tour(T0);

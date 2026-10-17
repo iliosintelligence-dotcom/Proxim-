@@ -83,10 +83,11 @@ fn equal_scores_fall_back_to_the_id() {
 #[test]
 fn a_smaller_t_hat_beats_an_absent_one_at_equal_score() {
     // APPROACH (t_hat present, conf 800) and ENTER (t_hat absent, conf 500) fire on the same fix.
-    // ranks 1000 x 800 / 1000 = 800 and 1600 x 500 / 1000 = 800: a tie on score. The circle's
-    // id sorts first, so only the t_hat rule can make the route win.
-    let mut circle_sp = rank(circle_at("a-circle", 0, 2_020_000, 200), 1600);
-    circle_sp.rank_milli = Some(1600);
+    // The route's t_hat is 41.332 s against its 40 s lead, so its timing fit is 984 (7.5) and its
+    // score 1000 x 800 x 984 / 1e6 = 787; the circle's is 1574 x 500 / 1000 = 787: a tie. The
+    // circle's id sorts first, so only the t_hat rule can make the route win.
+    let mut circle_sp = rank(circle_at("a-circle", 0, 2_020_000, 200), 1574);
+    circle_sp.rank_milli = Some(1574);
     let route_sp = rank(route("z-route", 2500, 30), 1000);
     let mut sim = Sim::new(vec![circle_sp, route_sp]);
     let outs = sim.run(&drive_north(T0, 1_400_000, 15_000, 40, 0));
@@ -125,22 +126,36 @@ fn zero_slots_means_nothing_ever_fires_and_nothing_is_committed() {
 }
 
 #[test]
-fn slots_are_capped_at_one_in_m1() {
-    let mut sim = Sim::new(vec![circle("a", 200), circle("b", 200), circle("c", 200)]);
-    sim.policy = Policy {
-        slots: Some(3),
-        ..explain()
+fn slots_are_capped_at_three() {
+    // engine_spec 2 (7.5): a partner may ask for up to 3 slots; the default stays 1.
+    let four = || {
+        vec![
+            circle("a", 200),
+            circle("b", 200),
+            circle("c", 200),
+            circle("d", 200),
+        ]
     };
-    let outs = sim.run(&visit(T0, 0, 0, 4, 0));
-    assert_eq!(fires(&outs[3]).len(), 1);
-    assert_eq!(
-        outs[3]
+    for (asked, fired) in [(None, 1), (Some(2), 2), (Some(3), 3), (Some(9), 3)] {
+        let mut sim = Sim::new(four());
+        sim.policy = Policy {
+            slots: asked,
+            cap_sender_day: None,
+            ..explain()
+        };
+        // Four senders, so the sender cap does not bind.
+        for (k, sp) in sim.signposts.iter_mut().enumerate() {
+            sp.sender = format!("s{k}");
+        }
+        let outs = sim.run(&visit(T0, 0, 0, 4, 0));
+        assert_eq!(fires(&outs[3]).len(), fired, "asked {asked:?}");
+        let lost = outs[3]
             .decisions
             .iter()
             .filter(|d| d.reason == ReasonCode::LostSlot)
-            .count(),
-        2
-    );
+            .count();
+        assert_eq!(lost, 4 - fired, "asked {asked:?}");
+    }
 }
 
 #[test]
