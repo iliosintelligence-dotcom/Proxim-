@@ -98,7 +98,8 @@
 })();
 
 // Price comparison on the business page. Planning estimates for Nigeria; the Proxim
-// price is an example (₦500 per 1,000 views) until launch.
+// price is an example ($0.30 per 1,000 views) until launch. Naira figures
+// converted at about ₦1,500 to the dollar.
 (function () {
   var calc = document.querySelector("[data-calc]");
   if (!calc) return;
@@ -107,12 +108,12 @@
   function set(k, text) { calc.querySelector('[data-out="' + k + '"]').textContent = text; }
   function update() {
     var b = +input.value;
-    out.textContent = "₦" + n(b);
-    set("proxim", n(b / 500 * 1000) + " views");
-    set("social", n(b / 5000 * 1000) + "–" + n(b / 1000 * 1000) + " views");
-    set("google", n(b / 920) + " clicks");
-    set("flyers", n(b / 188) + " flyers");
-    set("billboard", b >= 450000 ? "About 1 month" : "Not enough");
+    out.textContent = "$" + n(b);
+    set("proxim", n(b / 0.30 * 1000) + " views");
+    set("social", n(b / 3.33 * 1000) + "–" + n(b / 0.67 * 1000) + " views");
+    set("google", n(b / 0.61) + " clicks");
+    set("flyers", n(b / 0.125) + " flyers");
+    set("billboard", b >= 300 ? "About 1 month" : "Not enough");
   }
   input.addEventListener("input", update);
   update();

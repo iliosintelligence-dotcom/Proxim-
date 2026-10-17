@@ -71,8 +71,9 @@
   });
 
   function hour(h) { return h + ":00"; }
-  // Example price: ₦500 per 1,000 views, so each naira buys two views.
-  function naira(v) { return "₦" + (+v).toLocaleString("en-US"); }
+  // Example price: $0.30 per 1,000 views.
+  function dollars(v) { return "$" + (+v).toLocaleString("en-US"); }
+  function views(v) { return Math.floor(v / 0.30 * 1000).toLocaleString("en-US"); }
   function days() {
     var on = $$(".chip[data-day]").filter(function (b) { return b.getAttribute("aria-pressed") === "true"; })
       .map(function (b) { return b.dataset.day; });
@@ -88,13 +89,13 @@
     if (+to.value <= +from.value) to.value = String(+from.value + 1);
     $("#from-out").textContent = hour(from.value);
     $("#to-out").textContent = hour(to.value);
-    $("#budget-out").textContent = naira(budget.value);
-    $("#views-out").textContent = (budget.value * 2).toLocaleString("en-US");
+    $("#budget-out").textContent = dollars(budget.value);
+    $("#views-out").textContent = views(budget.value);
     $("#s-head").textContent = head.value;
     $("#s-body").textContent = body.value;
     $("#s-area").textContent = shapeLabel();
     $("#s-when").textContent = days() + ", " + hour(from.value) + " to " + hour(to.value);
-    $("#s-budget").textContent = naira(budget.value) + " a week, about " + (budget.value * 2).toLocaleString("en-US") + " views";
+    $("#s-budget").textContent = dollars(budget.value) + " a week, about " + views(budget.value) + " views";
   }
   function show(i) {
     step = Math.max(0, Math.min(tabs.length - 1, i));
