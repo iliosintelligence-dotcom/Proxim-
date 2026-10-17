@@ -18,72 +18,89 @@ pub fn apply(state: &State, control: &Control, clock: &Clock) -> Result<State, E
     crate::validate::clock(clock)?;
     let now = clock.now_ms.max(state.caps.hwm_ms);
     let mut next = state.clone();
-    next.controls = prune(&state.controls, now);
-    let c = &mut next.controls;
+    let memory_only = match control {
+        Control::Dismiss { memory_only, .. }
+        | Control::Hide { memory_only, .. }
+        | Control::Report { memory_only, .. } => *memory_only,
+    };
+    // A `health_facility` action (memory_only, set by the SDK) changes only `mem.facility`, so
+    // nothing about the advert reaches the persisted state (engine spec 7.4, I7).
+    let (controls, rotation) = if memory_only {
+        (
+            &mut next.mem.facility.controls,
+            &mut next.mem.facility.rotation,
+        )
+    } else {
+        (&mut next.controls, &mut next.rotation)
+    };
+    *controls = prune(controls, now);
     match control {
-        Control::Dismiss { id } => {
+        Control::Dismiss { id, .. } => {
             // The wording last shown goes to the back of the queue (Addendum 02 5.1, `dismiss`).
             let day =
                 crate::rotation::rot_day(crate::calendar::day_week(now, clock.tz_offset_min).0);
-            let mut book = crate::rotation::Book::load(&state.rotation, day);
+            let mut book = crate::rotation::Book::load(rotation, day);
             let mut led = book.view(id.as_str());
             if let Some(&vid) = led.recent.last() {
                 crate::rotation::dismiss(&mut led, vid, day);
                 book.store(id, &led, Some(vid));
-                next.rotation = book.into_rotation()?;
+                *rotation = book.into_rotation()?;
             }
-            let c = &mut next.controls;
-            let until_ms = now.saturating_add(DISMISS_COOLDOWN_MS);
-            match c.dismissed.binary_search_by(|d| d.id.cmp(id)) {
-                Ok(i) => {
-                    if let Some(d) = c.dismissed.get_mut(i) {
-                        d.until_ms = until_ms;
-                    }
-                }
-                Err(i) => {
-                    c.dismissed.insert(
-                        i,
-                        Dismissal {
-                            id: id.clone(),
-                            until_ms,
-                        },
-                    );
-                    if c.dismissed.len() > MAX_DISMISSED {
-                        let soonest = c
-                            .dismissed
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, d)| &d.id != id)
-                            .min_by_key(|(_, d)| (d.until_ms, d.id.clone()))
-                            .map(|(k, _)| k);
-                        if let Some(k) = soonest {
-                            c.dismissed.remove(k);
-                        }
-                    }
-                }
-            }
+            dismiss(controls, id, now.saturating_add(DISMISS_COOLDOWN_MS));
         }
-        Control::Hide { id } => {
-            if let Err(i) = c.hidden.binary_search(id) {
-                if c.hidden.len() >= MAX_HIDDEN {
+        Control::Hide { id, .. } => {
+            if let Err(i) = controls.hidden.binary_search(id) {
+                if controls.hidden.len() >= MAX_HIDDEN {
                     return Err(EngineError::Limit);
                 }
-                c.hidden.insert(i, id.clone());
+                controls.hidden.insert(i, id.clone());
             }
         }
-        Control::Report { sender } => {
+        Control::Report { sender, .. } => {
             if sender.is_empty() {
                 return Err(EngineError::Parse);
             }
-            if let Err(i) = c.reported.binary_search(sender) {
-                if c.reported.len() >= MAX_REPORTED {
+            if let Err(i) = controls.reported.binary_search(sender) {
+                if controls.reported.len() >= MAX_REPORTED {
                     return Err(EngineError::Limit);
                 }
-                c.reported.insert(i, sender.clone());
+                controls.reported.insert(i, sender.clone());
             }
         }
     }
     Ok(next)
+}
+
+/// Rest `id` until `until_ms`; a full list drops the dismissal that ends soonest.
+fn dismiss(c: &mut Controls, id: &proxim_types::Id, until_ms: i64) {
+    match c.dismissed.binary_search_by(|d| d.id.cmp(id)) {
+        Ok(i) => {
+            if let Some(d) = c.dismissed.get_mut(i) {
+                d.until_ms = until_ms;
+            }
+        }
+        Err(i) => {
+            c.dismissed.insert(
+                i,
+                Dismissal {
+                    id: id.clone(),
+                    until_ms,
+                },
+            );
+            if c.dismissed.len() > MAX_DISMISSED {
+                let soonest = c
+                    .dismissed
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, d)| &d.id != id)
+                    .min_by_key(|(_, d)| (d.until_ms, d.id.clone()))
+                    .map(|(k, _)| k);
+                if let Some(k) = soonest {
+                    c.dismissed.remove(k);
+                }
+            }
+        }
+    }
 }
 
 /// Drop dismissals whose rest is over at `now`.

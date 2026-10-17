@@ -230,11 +230,16 @@ impl Prepared {
             reach_mm,
             min_tier: sp.min_path_tier.unwrap_or(0),
             min_conf_milli: match sp.class {
-                Class::Health => sp
+                Class::General => sp.min_path_conf_milli.unwrap_or(MIN_CONF_GENERAL),
+                // Every health class, and a prohibited anchor if one ever reached here: the
+                // health floor (decide drops prohibited anchors before detection).
+                Class::Health
+                | Class::HealthAdjacent
+                | Class::HealthFacility
+                | Class::ProhibitedAnchor => sp
                     .min_path_conf_milli
                     .unwrap_or(MIN_CONF_HEALTH)
                     .max(MIN_CONF_HEALTH),
-                Class::General => sp.min_path_conf_milli.unwrap_or(MIN_CONF_GENERAL),
             },
         })
     }

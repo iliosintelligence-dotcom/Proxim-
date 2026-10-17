@@ -196,7 +196,15 @@ fn dismiss_sends_the_shown_wording_to_the_back() {
         now_ms: morning(0) + 600_000,
         tz_offset_min: 0,
     };
-    sim.state = apply(&sim.state, &Control::Dismiss { id: id.clone() }, &clock).unwrap();
+    sim.state = apply(
+        &sim.state,
+        &Control::Dismiss {
+            id: id.clone(),
+            memory_only: false,
+        },
+        &clock,
+    )
+    .unwrap();
     let shown = *sim.state.rotation.families[0].recent.last().unwrap();
     let after = sim
         .state

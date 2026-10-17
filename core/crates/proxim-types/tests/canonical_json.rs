@@ -129,6 +129,10 @@ fn state_with_every_detector_tag_round_trips() {
                     },
                 },
             ],
+            facility: proxim_types::Volatile {
+                last_fire_ms: Some(3),
+                ..Default::default()
+            },
         },
         controls: proxim_types::Controls {
             dismissed: vec![proxim_types::Dismissal {

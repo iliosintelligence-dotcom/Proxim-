@@ -144,6 +144,48 @@ impl CapsBook {
     }
 }
 
+/// The persisted book (`State.caps`) and the memory-only one for `health_facility` adverts
+/// (`mem.facility`, engine spec 7.4). Every limit counts both: an id lives in one of them, a
+/// sender or the app may have fires in both.
+pub(crate) struct Books {
+    pub persisted: CapsBook,
+    pub volatile: CapsBook,
+}
+
+impl Books {
+    pub fn day_count(&self, id: &str) -> u32 {
+        self.persisted
+            .day_count(id)
+            .saturating_add(self.volatile.day_count(id))
+    }
+
+    pub fn week_count(&self, id: &str) -> u32 {
+        self.persisted
+            .week_count(id)
+            .saturating_add(self.volatile.week_count(id))
+    }
+
+    pub fn sender_day_count(&self, sender: &str) -> u32 {
+        self.persisted
+            .sender_day_count(sender)
+            .saturating_add(self.volatile.sender_day_count(sender))
+    }
+
+    pub fn app_day_count(&self) -> u32 {
+        self.persisted
+            .app_day_count()
+            .saturating_add(self.volatile.app_day_count())
+    }
+
+    pub fn record_fire(&mut self, id: &Id, sender: &str, facility: bool) {
+        if facility {
+            self.volatile.record_fire(id, sender);
+        } else {
+            self.persisted.record_fire(id, sender);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
