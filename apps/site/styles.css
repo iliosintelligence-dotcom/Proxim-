@@ -6,6 +6,18 @@
   src: url("fonts/titan-one-latin-400-normal.woff2") format("woff2");
   font-weight: 400; font-display: swap;
 }
+@font-face { /* naira sign and other extended Latin */
+  font-family: "Titan One";
+  src: url("fonts/titan-one-latin-ext-400-normal.woff2") format("woff2");
+  font-weight: 400; font-display: swap;
+  unicode-range: U+0100-02BA, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0;
+}
+@font-face {
+  font-family: "Nunito";
+  src: url("fonts/nunito-latin-ext-wght-normal.woff2") format("woff2");
+  font-weight: 200 1000; font-display: swap;
+  unicode-range: U+0100-02BA, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0;
+}
 @font-face {
   font-family: "Nunito";
   src: url("fonts/nunito-latin-wght-normal.woff2") format("woff2");
@@ -256,3 +268,28 @@ p { margin: 0; }
 .partner { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; min-width: 0; }
 .partner h3 { font-family: var(--display); font-weight: 400; font-size: 30px; margin-bottom: 4px; }
 .partner p { color: var(--muted); }
+
+/* ---------- Price comparison ---------- */
+.prices { background: var(--night); color: var(--night-text); padding-block: 110px; }
+.prices h2 { font-size: clamp(34px, 5.2vw, 64px); line-height: 1.02; color: var(--on-brand); margin-bottom: 18px; text-wrap: balance; }
+.prices .lede { color: #cdb9aa; max-width: 56ch; font-size: 19px; }
+.calc { display: grid; gap: 48px; margin-top: 56px; align-items: start; }
+@media (min-width: 960px) { .calc { grid-template-columns: 380px 1fr; gap: 72px; } }
+.calc > * { min-width: 0; }
+.calc label { font-weight: 900; display: block; margin-bottom: 10px; }
+.budget-out { font: 400 clamp(48px, 6vw, 72px)/1 var(--display); color: var(--brand); margin-bottom: 18px; font-variant-numeric: tabular-nums; }
+.calc input[type="range"] { width: 100%; accent-color: var(--brand); }
+.calc .hint { color: #a8927f; font-size: 15px; margin-top: 10px; }
+.compare { display: grid; gap: 30px; }
+.cmp { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; align-items: baseline; }
+.cmp b { font-weight: 900; font-size: 20px; color: var(--on-brand); }
+.cmp .num { font: 400 clamp(26px, 3.4vw, 40px)/1 var(--display); color: var(--on-brand); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.cmp .why { grid-column: 1 / -1; color: #a8927f; font-size: 15px; }
+.cmp.us b, .cmp.us .num { color: var(--brand); }
+.cmp.us .num { font-size: clamp(34px, 4.6vw, 56px); text-shadow: 2px 2px 0 var(--brand-shade), 4px 4px 0 var(--brand-shade); }
+.sources { color: #8f7a6b; font-size: 14px; margin-top: 48px; max-width: 80ch; }
+@media (max-width: 640px) {
+  .cmp { grid-template-columns: 1fr; }
+  .cmp .num { text-align: left; white-space: normal; font-size: 30px; }
+  .cmp.us .num { font-size: 40px; }
+}

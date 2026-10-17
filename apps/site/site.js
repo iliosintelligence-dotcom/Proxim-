@@ -96,3 +96,24 @@
 
   function done() { tokens.forEach(function (t) { t.classList.add("go", "settled"); }); }
 })();
+
+// Price comparison on the business page. Planning estimates for Nigeria; the Proxim
+// price is an example (₦500 per 1,000 views) until launch.
+(function () {
+  var calc = document.querySelector("[data-calc]");
+  if (!calc) return;
+  var input = calc.querySelector("#calc-budget"), out = calc.querySelector("#calc-out");
+  function n(v) { return Math.floor(v).toLocaleString("en-US"); }
+  function set(k, text) { calc.querySelector('[data-out="' + k + '"]').textContent = text; }
+  function update() {
+    var b = +input.value;
+    out.textContent = "₦" + n(b);
+    set("proxim", n(b / 500 * 1000) + " views");
+    set("social", n(b / 5000 * 1000) + "–" + n(b / 1000 * 1000) + " views");
+    set("google", n(b / 920) + " clicks");
+    set("flyers", n(b / 188) + " flyers");
+    set("billboard", b >= 450000 ? "About 1 month" : "Not enough");
+  }
+  input.addEventListener("input", update);
+  update();
+})();

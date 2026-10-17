@@ -31,6 +31,8 @@
       from = $("#f-from"), to = $("#f-to"), budget = $("#f-budget");
 
   function hour(h) { return h + ":00"; }
+  // Example price: ₦500 per 1,000 views, so each naira buys two views.
+  function naira(v) { return "₦" + (+v).toLocaleString("en-US"); }
   function days() {
     var on = $$(".chip[data-day]").filter(function (b) { return b.getAttribute("aria-pressed") === "true"; })
       .map(function (b) { return b.dataset.day; });
@@ -48,13 +50,13 @@
     if (+to.value <= +from.value) to.value = String(+from.value + 1);
     $("#from-out").textContent = hour(from.value);
     $("#to-out").textContent = hour(to.value);
-    $("#budget-out").textContent = "$" + budget.value;
-    $("#views-out").textContent = (budget.value / 5 * 1000).toLocaleString("en-US");
+    $("#budget-out").textContent = naira(budget.value);
+    $("#views-out").textContent = (budget.value * 2).toLocaleString("en-US");
     $("#s-head").textContent = head.value;
     $("#s-body").textContent = body.value;
     $("#s-area").textContent = radius.value + " m around Rosa's Café";
     $("#s-when").textContent = days() + ", " + hour(from.value) + " to " + hour(to.value);
-    $("#s-budget").textContent = "$" + budget.value + " a week, about " + (budget.value / 5 * 1000).toLocaleString("en-US") + " views";
+    $("#s-budget").textContent = naira(budget.value) + " a week, about " + (budget.value * 2).toLocaleString("en-US") + " views";
   }
   function show(i) {
     step = Math.max(0, Math.min(tabs.length - 1, i));
