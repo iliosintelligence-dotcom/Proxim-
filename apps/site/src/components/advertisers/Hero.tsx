@@ -182,7 +182,7 @@ export function Hero() {
           Proxim places your banner or notification inside apps that match what you sell, and shows it only to people
           near you. A church invite in a Bible app. A free gym pass in a step counter.
         </p>
-        <div data-intro className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div data-intro className="mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center">
           <Button href="#launch" arrow>
             Launch a campaign
           </Button>

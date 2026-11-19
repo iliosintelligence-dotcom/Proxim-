@@ -146,7 +146,7 @@ export function PubHero() {
           Add Proxim to your app and earn from local ads that fit your users. You decide which brands appear and how
           often. Your users get offers from businesses near them that they actually want.
         </p>
-        <div data-intro className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div data-intro className="mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center">
           <Button href="#start" arrow>
             Start earning
           </Button>
