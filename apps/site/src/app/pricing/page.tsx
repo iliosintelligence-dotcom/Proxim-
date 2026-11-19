@@ -124,7 +124,8 @@ export default function PricingPage() {
       </Section>
 
       <FinalCta
-        statement="Pay for views, not for hope"
+        statement="Pay for {0} views, not for hope"
+        photos={["1709837167686-a2e33aad1bf0"]}
         title="Start with one campaign."
         lead="Pick your niche, draw your radius and launch. If it doesn’t work for you, stop any time. You only pay for views delivered."
         primary={{ href: "/#launch", label: "Launch a campaign" }}

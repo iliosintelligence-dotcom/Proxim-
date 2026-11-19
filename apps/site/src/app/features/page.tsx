@@ -48,7 +48,8 @@ export default function FeaturesPage() {
       <ReportingSection />
       <SafetySection />
       <FinalCta
-        statement="Right app. Right place. Right time."
+        statement="Right app. {0} Right place. {1} Right time."
+        photos={["1649888216899-047093431441", "1687422808191-93810cd07ab0"]}
         title="See it with your own business."
         lead="Build a campaign in two minutes and see exactly who it would reach and what it would cost. No card needed."
         primary={{ href: "/#launch", label: "Build a campaign" }}

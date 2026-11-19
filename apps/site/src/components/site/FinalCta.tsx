@@ -1,17 +1,19 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { gsap, SplitText, useGSAP, prefersReducedMotion } from "@/lib/gsap";
+import { gsap, ScrollTrigger, SplitText, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import { Frame } from "./Frame";
 import { Button } from "./Button";
 import { LogoMark } from "./Logo";
 import { AdPosterWall } from "./AdPosters";
+import { HIcon } from "./HIcon";
 
 /**
  * The finale, shared by every page (Proxim's take on Ledger's ending).
  * Everything happens on one pinned screen:
  *
- * 1. A big statement rises in word by word as the finale comes into view.
+ * 1. A big statement rises in line by line, like every headline on the
+ *    site, and its photo pills pop in after it.
  * 2. Scrolling on lifts it away; Pip appears, rings pulse out of it, and the radius grows until it
  *    fills the screen in blue: proximity is the last thing you see.
  * 3. The moment the blue is full, the call to action and the poster wall
@@ -23,7 +25,8 @@ export function FinalCta({
   lead,
   primary,
   secondary,
-  statement = "Every business deserves to be found nearby",
+  statement = "Every business {0} deserves to be found {1} nearby",
+  photos = ["1698827623494-c4e1196ba0ca", "1687422808191-93810cd07ab0"],
   pip = "Ready when you are.",
 }: {
   id?: string;
@@ -33,14 +36,17 @@ export function FinalCta({
   secondary?: { href: string; label: string };
   /** Kept for compatibility; the finale now shows the poster wall. */
   cards?: ReactNode[];
+  /** Write {0}, {1}… where each photo pill from `photos` goes. */
   statement?: string;
+  photos?: string[];
   pip?: string;
 }) {
   const root = useRef<HTMLElement>(null);
-  // The last word is set in blue: the colour that fills the screen next.
-  const cut = statement.lastIndexOf(" ") + 1;
-  const lead_in = statement.slice(0, cut);
-  const last = statement.slice(cut);
+  // Photo pills go where the {n} markers are; the last word is set in
+  // blue, the colour that fills the screen next.
+  const parts = statement.split(/\{(\d+)\}/);
+  const tail = parts.pop() ?? "";
+  const cut = tail.lastIndexOf(" ") + 1;
 
   useGSAP(
     () => {
@@ -53,15 +59,43 @@ export function FinalCta({
       }
       const pin = q("[data-finale-pin]")[0];
 
-      // 1. The statement rises in, word by word, as the finale scrolls into
-      //    view. It plays on its own, not tied to the scrollbar.
-      const said = SplitText.create(q("[data-statement]")[0], { type: "words", mask: "words", aria: "auto" }).words;
-      gsap.set(said, { yPercent: 110 });
+      // 1. Once the finale is nearly on screen, the statement rises into
+      //    place line by line from behind a mask, the same reveal as every
+      //    headline on the site, then its photo pills pop in.
+      //    It plays on its own, not tied to the scrollbar.
+      const statementEl = q("[data-statement]")[0] as HTMLElement;
+      // Re-splitting rebuilds the pills, so they are looked up fresh each time.
+      const pills = () => statementEl.querySelectorAll("[data-hicon]");
       gsap.set(q("[data-statement-label]"), { y: 16, autoAlpha: 0 });
-      gsap
-        .timeline({ scrollTrigger: { trigger: pin, start: "top 70%", once: true } })
-        .to(q("[data-statement-label]"), { y: 0, autoAlpha: 1, duration: 0.6, ease: "power3.out" })
-        .to(said, { yPercent: 0, duration: 0.9, stagger: 0.06, ease: "power4.out" }, 0.1);
+      // Re-splits itself once the display font has loaded or the width
+      // changes; after the reveal has played, new lines simply stay put.
+      let revealed = false;
+      let lines: Element[] = [];
+      SplitText.create(statementEl, {
+        type: "lines",
+        mask: "lines",
+        autoSplit: true,
+        aria: "auto",
+        onSplit: (self) => {
+          lines = self.lines;
+          if (!revealed) gsap.set(lines, { yPercent: 105 });
+          if (!revealed) gsap.set(pills(), { opacity: 0, scale: 0.4 });
+          gsap.set(statementEl, { autoAlpha: 1 });
+        },
+      });
+      ScrollTrigger.create({
+        trigger: pin,
+        start: "top 20%",
+        once: true,
+        onEnter: () => {
+          revealed = true;
+          gsap
+            .timeline()
+            .to(q("[data-statement-label]"), { y: 0, autoAlpha: 1, duration: 0.6, ease: "power3.out" }, 0)
+            .to(lines, { yPercent: 0, duration: 1.1, ease: "expo.out", stagger: 0.09 }, 0.05)
+            .to(pills(), { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(2)", stagger: 0.1 }, 0.5);
+        },
+      });
 
       // Everything after it waits, hidden, for the scroll.
       gsap.set(q("[data-ring-line]"), { autoAlpha: 0, scale: 0.2 });
@@ -111,9 +145,12 @@ export function FinalCta({
             <p data-statement-label className="t-label mb-6 text-white/60">
               / Proxim
             </p>
-            <p data-statement className="mx-auto max-w-[14ch] font-display text-[clamp(2.8rem,8.5vw,8rem)] leading-[0.95] tracking-[-0.04em] text-balance">
-              {lead_in}
-              <span className="text-blue">{last}</span>
+            <p data-statement className="invisible mx-auto max-w-[14ch] font-display text-[clamp(2.8rem,8.5vw,8rem)] leading-[0.95] tracking-[-0.04em] text-balance">
+              {parts.map((part, i) =>
+                i % 2 ? <HIcon key={i} photo={photos[Number(part)]} /> : part,
+              )}
+              {tail.slice(0, cut)}
+              <span className="text-blue">{tail.slice(cut)}</span>
             </p>
           </div>
         </div>

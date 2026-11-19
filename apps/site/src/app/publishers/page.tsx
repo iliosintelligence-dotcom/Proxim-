@@ -43,7 +43,8 @@ export default function PublishersPage() {
       <PayoutSection />
       <FinalCta
         id="start"
-        statement="Your users are worth more than you think"
+        statement="Your users {0} are worth more than you {1} think"
+        photos={["1620829813573-7c9e1877706f", "1643904524951-2a3a58856745"]}
         title="Your users are already here. Get paid for it."
         lead="Join free, set your rules, and start earning from businesses near your users. Your first payout could land next month."
         primary={{ href: "#", label: "Start earning" }}

@@ -110,7 +110,8 @@ export default function AboutPage() {
       />
 
       <FinalCta
-        statement="Advertising should feel like a recommendation"
+        statement="Advertising {0} should feel like a {1} recommendation"
+        photos={["1687422808248-f807f4ea2a2e", "1687422809069-0fa3546b8471"]}
         title="Two sides. One network."
         lead="Whether you’re a business that wants to be found or an app with an audience worth paying for, there’s a place for you on Proxim."
         primary={{ href: "/#launch", label: "Advertise with Proxim" }}
