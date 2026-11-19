@@ -96,24 +96,24 @@ export function CardStack() {
           </div>
 
           <div className="grid h-full items-center gap-12 py-[clamp(4.5rem,10vw,8rem)] lg:grid-cols-[1fr_1fr] lg:py-0">
-            <div className="relative order-2 mx-auto w-full max-w-[24rem] lg:order-1 lg:h-[24rem]">
+            <div className="relative order-2 mx-auto w-full max-w-[28rem] lg:order-1 lg:h-[min(34rem,68vh)] lg:max-w-[min(36rem,100%)]">
               {cards.map((c, i) => (
                 <article
                   key={c.title}
                   data-stack-card
-                  className={`mb-4 overflow-hidden rounded-2xl p-6 text-white shadow-[0_30px_60px_-28px_rgb(13_13_13/0.55)] lg:absolute lg:inset-x-0 lg:top-0 lg:mb-0 ${c.bg}`}
+                  className={`mb-4 flex flex-col overflow-hidden rounded-2xl p-6 text-white shadow-[0_30px_60px_-28px_rgb(13_13_13/0.55)] lg:absolute lg:inset-0 lg:mb-0 lg:rounded-3xl lg:p-10 ${c.bg}`}
                   style={{ zIndex: i + 1 }}
                 >
                   <div className="flex items-start justify-between">
-                    <span className="grid size-9 place-items-center rounded-full bg-white/15 backdrop-blur">
-                      <c.icon className="size-[18px]" strokeWidth={2} />
+                    <span className="grid size-9 place-items-center rounded-full bg-white/15 backdrop-blur lg:size-12">
+                      <c.icon className="size-[18px] lg:size-6" strokeWidth={2} />
                     </span>
-                    <span className="block size-12 overflow-hidden rounded-full ring-2 ring-white/40">
-                      <Photo id={c.photo} w={96} h={96} />
+                    <span className="block size-12 overflow-hidden rounded-full ring-2 ring-white/40 lg:size-24 lg:ring-4">
+                      <Photo id={c.photo} w={192} h={192} />
                     </span>
                   </div>
-                  <h3 className="mt-14 font-display text-[1.9rem] leading-none tracking-[-0.03em]">{c.title}</h3>
-                  <p className="mt-3 text-[0.92rem] leading-relaxed opacity-80">{c.body}</p>
+                  <h3 className="mt-14 font-display text-[1.9rem] leading-none tracking-[-0.03em] lg:mt-auto lg:text-[clamp(2.6rem,4vw,3.6rem)]">{c.title}</h3>
+                  <p className="mt-3 text-[0.92rem] leading-relaxed opacity-80 lg:mt-5 lg:max-w-[30ch] lg:text-[1.1rem]">{c.body}</p>
                 </article>
               ))}
             </div>
