@@ -28,7 +28,7 @@ export default function PricingPage() {
       />
 
       <section className="bg-paper">
-        <div className="mx-auto w-full max-w-[1240px] px-[var(--gutter)] pb-[clamp(4.5rem,10vw,8rem)] lg:border-x" style={{ borderColor: "var(--line)" }}>
+        <div className="mx-auto w-full max-w-[1240px] px-[var(--gutter)] pb-[var(--section-y)] lg:border-x" style={{ borderColor: "var(--line)" }}>
           <div className="grid gap-4 lg:grid-cols-3">
             {plans.map((p) => (
               <article

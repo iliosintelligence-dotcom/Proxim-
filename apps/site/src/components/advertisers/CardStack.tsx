@@ -76,7 +76,7 @@ export function CardStack() {
         items.slice(1).forEach((card, i) => {
           tl.to(card, { yPercent: 0, rotate: tilt[i + 1], opacity: 1, duration: 1, ease: "power2.out" }, i);
           // The cards underneath sink a little, so the pile reads as depth.
-          tl.to(items.slice(0, i + 1), { scale: (j) => 1 - (i + 1 - j) * 0.04, y: (j) => -(i + 1 - j) * 14, duration: 1, ease: "power2.out" }, i);
+          tl.to(items.slice(0, i + 1), { scale: (j) => 1 - (i + 1 - j) * 0.04, y: (j) => -(i + 1 - j) * 10, duration: 1, ease: "power2.out" }, i);
         });
         tl.to({}, { duration: 0.4 });
       });
@@ -95,8 +95,8 @@ export function CardStack() {
             <span className="t-label self-end text-ink">/ Ads platform</span>
           </div>
 
-          <div className="grid h-full items-center gap-12 py-[clamp(4.5rem,10vw,8rem)] lg:grid-cols-[1fr_1fr] lg:py-0">
-            <div className="relative order-2 mx-auto w-full max-w-[28rem] lg:order-1 lg:h-[min(34rem,68vh)] lg:max-w-[min(36rem,100%)]">
+          <div className="grid h-full items-center gap-12 py-[var(--section-y)] lg:grid-cols-[1fr_1fr] lg:pb-12 lg:pt-[clamp(7rem,18vh,10rem)]">
+            <div className="relative order-2 mx-auto w-full max-w-[28rem] lg:order-1 lg:h-[min(32rem,58vh)] lg:max-w-[min(36rem,100%)]">
               {cards.map((c, i) => (
                 <article
                   key={c.title}

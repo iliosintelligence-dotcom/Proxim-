@@ -28,7 +28,7 @@ export default function ContactPage() {
         lead="Tell us what you want to promote or the app you want to earn from. A real person replies within one working day."
       />
       <section className="bg-paper">
-        <Frame className="grid gap-6 pb-[clamp(4.5rem,10vw,8rem)] lg:grid-cols-[1.35fr_1fr] lg:gap-8">
+        <Frame className="grid gap-6 pb-[var(--section-y)] lg:grid-cols-[1.35fr_1fr] lg:gap-8">
           <div data-reveal>
             <ContactForm />
           </div>

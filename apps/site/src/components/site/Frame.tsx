@@ -60,7 +60,7 @@ export function Section({
   return (
     <section id={id} data-pip={pip} data-screen={night || undefined} className={`${toneClass[tone]} ${className} relative scroll-mt-16 overflow-clip`}>
       <div className="relative border-t" style={{ borderColor: night ? "var(--line-night)" : "var(--line)" }}>
-        <Frame night={night} className={`py-[clamp(4.5rem,10vw,8.5rem)] ${frameClassName}`}>
+        <Frame night={night} className={`py-[var(--section-y)] ${frameClassName}`}>
           {label && <SectionLabel index={index} label={label} night={night} icon={icon} />}
           {children}
         </Frame>

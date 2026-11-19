@@ -41,7 +41,7 @@ export function PhotoBand({
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgb(11_11_11/0.65)_0%,transparent_65%)]" />
       <Frame
         night
-        className={`relative py-[clamp(5rem,12vw,10rem)] ${align === "center" ? "text-center" : ""} ${aside ? "grid items-center gap-10 lg:grid-cols-[1fr_1fr]" : ""}`}
+        className={`relative py-[var(--section-y)] ${align === "center" ? "text-center" : ""} ${aside ? "grid items-center gap-10 lg:grid-cols-[1fr_1fr]" : ""}`}
       >
         <div>
         <SectionLabel label={label} icon={icon} night />

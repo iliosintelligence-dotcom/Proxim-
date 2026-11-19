@@ -66,6 +66,9 @@
   --line-strong: rgb(13 13 13 / 0.16);
   --line-night: rgb(255 255 255 / 0.09);
   --gutter: clamp(1rem, 4vw, 3rem);
+  /* Space above and below every section: 96px on phones and tablets,
+     growing to 160px on wide screens. */
+  --section-y: clamp(6rem, 11vw, 10rem);
   --background: #f3f3f3;
   --foreground: #0d0d0d;
   --card: #ffffff;
