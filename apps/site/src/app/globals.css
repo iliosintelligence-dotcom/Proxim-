@@ -1,0 +1,426 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/*
+  ---break---
+*/
+@custom-variant dark (&:is(.dark *));
+
+/* Momo Trust Display, self-hosted (SIL OFL 1.1). Two files so the naira
+   sign (in the extended set) renders in the display face. */
+@font-face {
+  font-family: "Momo Trust Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/MomoTrustDisplay-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Momo Trust Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/MomoTrustDisplay-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/*
+  Proxim design tokens, in Ledger's balance: a flat light-grey page,
+  white cards, near-black type and sections, soft grey body copy, one
+  strong blue used as a surface, and a yellow kept for small accents
+  (the square on buttons) and the finale. Ad tints live inside ads only.
+*/
+@theme {
+  --color-paper: #f3f3f3;
+  --color-stone: #ebebeb;
+  --color-stone-2: #e1e1e1;
+  --color-ink: #0d0d0d;
+  --color-ink-2: #2b2b2b;
+  --color-faint: #8d8d8d;
+  --color-night: #0d0d0d;
+  --color-night-2: #171717;
+  --color-night-3: #262626;
+  --color-blue: #0054f9;
+  --color-blue-deep: #0044d1;
+  --color-blue-soft: #e6eeff;
+  --color-yellow: #ffde50;
+
+  --color-ad-sun: #ffde50;
+  --color-ad-lime: #d1f88c;
+  --color-ad-peach: #ffbb8f;
+  --color-ad-sky: #c3dbff;
+  --color-ad-candy: #ffb8fc;
+  --color-ad-lilac: #dccbff;
+
+  --font-sans: var(--nf-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Momo Trust Display", var(--nf-inter), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-ui: var(--nf-inter), -apple-system, system-ui, sans-serif;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  --line: rgb(13 13 13 / 0.1);
+  --line-strong: rgb(13 13 13 / 0.16);
+  --line-night: rgb(255 255 255 / 0.09);
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --background: #f3f3f3;
+  --foreground: #0d0d0d;
+  --card: #ffffff;
+  --card-foreground: #0d0d0d;
+  --popover: #ffffff;
+  --popover-foreground: #0d0d0d;
+  --primary: #0d0d0d;
+  --primary-foreground: #ffffff;
+  --secondary: #e1e1e1;
+  --secondary-foreground: #0d0d0d;
+  --muted: #ebebeb;
+  --muted-foreground: #565656;
+  --accent: #ebebeb;
+  --accent-foreground: #0d0d0d;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: rgb(13 13 13 / 0.1);
+  --input: rgb(13 13 13 / 0.14);
+  --ring: #0054f9;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-blue);
+  color: white;
+}
+
+/* Point-based type and radius, used inside phone screens. */
+@utility fs-* {
+  font-size: calc(var(--spacing) * --value(number));
+}
+@utility r-* {
+  border-radius: calc(var(--spacing) * --value(number));
+}
+
+/* Lenis smooth scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* ---------- Typography ---------- */
+
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.75rem, 6.2vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.t-section {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 4.8vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.t-card {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.35rem, 1.9vw, 1.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.t-lead {
+  font-size: clamp(1rem, 1.3vw, 1.125rem);
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+
+.t-label {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+/* ---------- Motion hooks ----------
+   The `js` class is added before first paint, so animated elements are
+   hidden only when the animation director is going to reveal them.
+   Without JS, or with reduced motion, everything is simply visible. */
+html.js [data-led],
+html.js [data-reveal],
+html.js [data-intro],
+html.js [data-ad] {
+  visibility: hidden;
+}
+
+/* Ads in decorative tickers are always shown, never "landed". */
+html.js .ads-visible [data-ad] {
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-led],
+  html.js [data-reveal],
+  html.js [data-intro],
+  html.js [data-ad] {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Range input, styled once and reused across both pages */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 50%;
+  --track: var(--color-stone-2);
+  --track-fill: var(--color-ink);
+  touch-action: pan-y;
+}
+.range:focus-visible {
+  outline: none;
+}
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(
+    to right,
+    var(--track-fill) 0 var(--fill),
+    var(--track) var(--fill) 100%
+  );
+}
+.range::-moz-range-track {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--track);
+}
+.range::-moz-range-progress {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--track-fill);
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid var(--line-strong);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.08),
+    0 4px 12px rgb(0 0 0 / 0.08);
+  transition: transform 0.15s var(--ease-out-quint);
+}
+.range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+}
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgb(0 98 255 / 0.25);
+}
+.range.on-night {
+  --track: var(--color-night-3);
+  --track-fill: white;
+}
+
+/* Phone screens scale everything from the phone's own width, so a phone
+   in the hero and a phone in a card render identically at any size. */
+.phone-screen {
+  container-type: inline-size;
+}
+.phone-ui {
+  /* Inside a phone, Tailwind's spacing unit is one iOS point
+     (the screen is 393pt wide), so p-16 is 16pt and fs-17 is 17pt. */
+  --spacing: calc(100cqw / 393);
+  font-size: calc(var(--spacing) * 17);
+  font-family: var(--nf-inter), -apple-system, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Same point scale for iOS pieces shown outside a phone (e.g. a stack
+   of notifications): the wrapper's width counts as 393pt. */
+.ios-scale {
+  container-type: inline-size;
+}
+.ios-scale > * {
+  --spacing: calc(100cqw / 393);
+  font-size: calc(var(--spacing) * 17);
+  font-family: var(--nf-inter), -apple-system, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+/* Marquee */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 38s linear infinite;
+}
+.marquee-wrap:hover .marquee {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
+
+/* Dotted perforation used on the campaign ticket */
+.perforation {
+  background-image: radial-gradient(circle, var(--line-strong) 1.2px, transparent 1.6px);
+  background-size: 10px 4px;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+/*
+  ---break---
+*/
+@theme inline {
+  --font-heading: "Momo Trust Display", var(--nf-inter), ui-sans-serif, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  /* Ledger's radius set: 8px buttons, 16px cards and nav, 24px panels. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+/*
+  ---break---
+*/
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+/*
+  ---break---
+*/
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
