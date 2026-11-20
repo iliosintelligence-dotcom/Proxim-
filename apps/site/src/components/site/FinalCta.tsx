@@ -171,7 +171,7 @@ export function FinalCta({
             <p data-statement-label className="t-label mb-6 text-white/60">
               / Proxim
             </p>
-            <p data-statement className="invisible mx-auto max-w-[14ch] font-display text-[clamp(2.8rem,8.5vw,8rem)] leading-[0.95] tracking-[-0.04em] text-balance">
+            <p data-statement className="invisible mx-auto max-w-[14ch] font-display text-[clamp(1.75rem,8.6vw,8rem)] leading-[0.95] tracking-[-0.04em] text-balance">
               {parts.map((part, i) =>
                 i % 2 ? <HIcon key={i} photo={photos[Number(part)]} /> : part,
               )}

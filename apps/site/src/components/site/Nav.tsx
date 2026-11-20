@@ -2,8 +2,9 @@
 
 import { Bell, CalendarDays, ChartColumn, Crosshair, MapPin, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import { lockScroll } from "@/lib/lenis";
 import { nicheById } from "@/lib/data";
@@ -39,7 +40,10 @@ const featureItems: { icon: LucideIcon; tone: IconTone; title: string; body: str
  */
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [compact, setCompact] = useState(false);
+  // The page the phone menu is taking you to, while it loads.
+  const [leaving, setLeaving] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const root = useRef<HTMLElement>(null);
@@ -58,11 +62,29 @@ export function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close everything when the route changes.
+  // Close everything when the route changes. The phone menu waits for this
+  // moment, so it lifts off the new page instead of the old one.
   useEffect(() => {
     setMenuOpen(false);
     setSheetOpen(false);
+    setLeaving(null);
   }, [pathname]);
+
+  // Opening the phone menu fetches every page it links to, so a tap swaps
+  // pages straight away.
+  useEffect(() => {
+    if (sheetOpen) ["/", ...links.map((l) => l.href)].forEach((href) => router.prefetch(href));
+  }, [sheetOpen, router]);
+
+  // A tap on a link to another page keeps the menu up (marked as loading)
+  // until that page is ready; a link on this page closes it at once.
+  const sheetTap = (e: React.MouseEvent) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (!a) return;
+    const url = new URL(a.href, window.location.href);
+    if (url.pathname === pathname) setSheetOpen(false);
+    else setLeaving(url.pathname);
+  };
 
   useEffect(() => {
     lockScroll(sheetOpen);
@@ -327,17 +349,21 @@ export function Nav() {
                 <Link
                   href={l.href}
                   tabIndex={sheetOpen ? 0 : -1}
-                  onClick={() => setSheetOpen(false)}
-                  className="flex items-center justify-between py-4 font-display text-[clamp(1.8rem,8vw,2.6rem)] leading-none tracking-[-0.03em]"
+                  onClick={sheetTap}
+                  className={`flex items-center justify-between py-4 font-display text-[clamp(1.8rem,8vw,2.6rem)] leading-none tracking-[-0.03em] transition-colors duration-150 active:text-blue ${
+                    leaving === l.href ? "text-blue" : ""
+                  }`}
                 >
                   {l.label}
-                  <PixelArrow className="!size-5 text-faint" />
+                  <PixelArrow
+                    className={`!size-5 transition-[color,translate] duration-200 ${leaving === l.href ? "translate-x-1 text-blue" : "text-faint"}`}
+                  />
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <div data-sheet-item className="mt-auto grid gap-3 sm:grid-cols-2">
+        <div data-sheet-item onClick={sheetTap} className="mt-auto grid gap-3 sm:grid-cols-2">
           <Button href={cta.href} arrow className="w-full">
             {cta.label}
           </Button>
