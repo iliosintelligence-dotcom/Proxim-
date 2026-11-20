@@ -138,19 +138,24 @@ const screens: { niche: NicheId; format: Format; lock?: boolean; caption: string
   { niche: "faith", format: "notification", lock: true, caption: "On the lock screen" },
 ];
 
-/** Edge-to-edge belt of phones, each showing an ad as a banner or notification. */
+/**
+ * Belt of phones, each showing an ad as a banner or notification. Kept
+ * small on phones so it reads as a strip, not a wall of screens.
+ */
 export function PhoneTicker() {
   return (
     <div data-ad-manual className="ads-visible">
-      <Marquee seconds={70} gap="gap-6" className="w-full py-6">
+      <Marquee seconds={70} gap="gap-4 sm:gap-6" className="w-full py-6">
         {screens.map((s, i) => {
           const n = nicheById(s.niche);
           return (
-            <figure key={i} className="w-[10.5rem] shrink-0 sm:w-[12rem]">
+            <figure key={i} className="w-[7.5rem] shrink-0 sm:w-[10rem] lg:w-[12rem]">
               <Phone label={`${n.ad.brand} ${s.format} ad`}>
                 {s.lock ? <LockScreen niche={n} /> : <AppScreen niche={n} format={s.format} />}
               </Phone>
-              <figcaption className="mt-3 text-center text-[0.8rem] font-medium text-muted-foreground">{s.caption}</figcaption>
+              <figcaption className="mt-2.5 text-center text-[0.7rem] leading-snug font-medium text-muted-foreground sm:mt-3 sm:text-[0.8rem]">
+                {s.caption}
+              </figcaption>
             </figure>
           );
         })}

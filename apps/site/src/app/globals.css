@@ -147,7 +147,8 @@ html.lenis body {
 .t-display {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(2.75rem, 6.2vw, 4.75rem);
+  /* About 38px on a phone (long words like "recommendation." fit), 76px on desktop. */
+  font-size: clamp(2.4rem, 1.3rem + 4.4vw, 4.75rem);
   line-height: 1;
   letter-spacing: -0.03em;
   text-wrap: balance;

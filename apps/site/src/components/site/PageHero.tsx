@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 /**
  * Hero for inner pages. Same parts as the home heroes (label, headline,
  * lead) so every page opens the same way. It can sit centred or left,
- * and can carry a ticker that runs the full width of the screen.
+ * and can carry a ticker that runs between the page's two border lines.
  */
 export function PageHero({
   label,
@@ -23,7 +23,7 @@ export function PageHero({
   lead: string;
   children?: ReactNode;
   align?: "center" | "left";
-  /** Rendered edge to edge under the copy. */
+  /** Rendered under the copy, from one border line to the other. */
   ticker?: ReactNode;
 }) {
   const left = align === "left";
@@ -48,9 +48,11 @@ export function PageHero({
         )}
       </Frame>
       {ticker && (
-        <div data-reveal className="pb-[clamp(3rem,7vw,5rem)]">
-          {ticker}
-        </div>
+        // Same column as the copy, minus its side padding, so the ticker
+        // starts and stops exactly on the border lines.
+        <Frame className="overflow-x-clip !px-0 pb-[clamp(3rem,7vw,5rem)]">
+          <div data-reveal>{ticker}</div>
+        </Frame>
       )}
     </section>
   );
