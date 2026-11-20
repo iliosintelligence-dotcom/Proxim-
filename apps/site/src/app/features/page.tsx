@@ -7,6 +7,7 @@ import { FormatSpecs } from "@/components/features/FormatSpecs";
 import { ReportingSection } from "@/components/features/ReportingSection";
 import { SafetySection } from "@/components/features/SafetySection";
 import { FinalCta } from "@/components/site/FinalCta";
+import { BuilderDemo } from "@/components/features/BuilderDemo";
 import { NotificationAd } from "@/components/phone/Ads";
 import { nicheById } from "@/lib/data";
 
@@ -42,6 +43,7 @@ export default function FeaturesPage() {
             </Link>
           ))}
         </div>
+        <BuilderDemo />
       </PageHero>
       <TargetingSection />
       <FormatSpecs />
