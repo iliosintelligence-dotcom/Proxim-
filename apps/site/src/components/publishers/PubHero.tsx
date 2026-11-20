@@ -72,37 +72,40 @@ export function PubHero() {
         delay: 0.3,
       });
 
-      // The cards slide out from behind the phone into their places, then
-      // breathe gently. Scrolling away, they drift apart a little.
-      const cards = gsap.utils.toArray<HTMLElement>("[data-card]");
-      cards.forEach((el, i) => {
-        const side = el.dataset.card === "left" ? 1 : -1;
-        gsap.from(el, {
-          x: side * 60,
-          autoAlpha: 0,
-          duration: 1.1,
-          ease: "expo.out",
-          delay: 0.9 + (i % 2) * 0.12,
-        });
-        gsap.to(el.querySelector("[data-card-float]"), {
-          y: i % 2 ? 5 : -5,
-          duration: 2.6 + (i % 3) * 0.4,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-        });
-        gsap.to(el, {
-          x: -side * 24,
-          y: -30,
-          ease: "none",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 40%",
-            end: "bottom top",
-            scrub: 0.8,
-          },
-        });
+      // The cards come out of the phone as they scroll into view: each blue
+      // dot pops on the phone's edge, its dashed line draws outward, and the
+      // card slides out along it. Only the cards this screen size shows are
+      // animated, so the trigger is measured on what you can actually see.
+      const cards = gsap.utils.toArray<HTMLElement>("[data-card]").filter((el) => el.offsetParent !== null);
+      const outward = (el: HTMLElement) => (el.dataset.card === "left" ? 1 : -1);
+      // The compact cards on smaller screens have no line or dot.
+      const lines = cards.flatMap((el) => [...el.querySelectorAll("[data-line]")]);
+      const dots = cards.flatMap((el) => [...el.querySelectorAll("[data-dot]")]);
+      cards.forEach((el) => gsap.set(el.querySelector("[data-card-box]"), { x: outward(el) * 48, autoAlpha: 0 }));
+      if (lines.length) gsap.set(lines, { scaleX: 0 });
+      if (dots.length) gsap.set(dots, { scale: 0 });
+      const reveal = gsap.timeline({
+        paused: true,
+        defaults: { ease: "power3.out" },
+        onComplete: () => {
+          // Then each card breathes, line and all, so it never comes loose.
+          cards.forEach((el, i) =>
+            gsap.to(el, { y: i % 2 ? 5 : -5, duration: 2.6 + (i % 3) * 0.4, ease: "sine.inOut", yoyo: true, repeat: -1 }),
+          );
+        },
       });
+      cards.forEach((el, i) => {
+        const at = i * 0.12;
+        const line = el.querySelector("[data-line]");
+        const dot = el.querySelector("[data-dot]");
+        if (dot) reveal.to(dot, { scale: 1, duration: 0.3, ease: "back.out(3)" }, at);
+        if (line) reveal.to(line, { scaleX: 1, duration: 0.35 }, at + 0.1);
+        reveal.to(el.querySelector("[data-card-box]"), { x: 0, autoAlpha: 1, duration: 0.6 }, at + (line ? 0.2 : 0));
+      });
+      if (cards.length) {
+        const top = cards.reduce((a, b) => (a.getBoundingClientRect().top < b.getBoundingClientRect().top ? a : b));
+        ScrollTrigger.create({ trigger: top, start: "top 88%", once: true, onEnter: () => reveal.play() });
+      }
 
       const loop = gsap
         .timeline({ repeat: -1, delay: 2.6 })
@@ -235,7 +238,7 @@ export function PubHero() {
                 data-card="left"
                 className="absolute -left-[22%] top-[16%] z-10 w-[9.5rem] sm:-left-[34%] sm:w-[11rem] lg:hidden"
               >
-                <div data-card-float className={`${cardBox} p-3`}>
+                <div data-card-box className={`${cardBox} p-3`}>
                   <p className="text-[0.62rem] font-medium tracking-wide text-faint uppercase">
                     Earned this month
                   </p>
@@ -248,7 +251,7 @@ export function PubHero() {
                 data-card="right"
                 className="absolute -right-[22%] top-[34%] z-10 w-[9.5rem] sm:-right-[34%] sm:w-[11rem] lg:hidden"
               >
-                <div data-card-float className={`${cardBox} p-3`}>
+                <div data-card-box className={`${cardBox} p-3`}>
                   <p className="text-[0.62rem] font-medium tracking-wide text-faint uppercase">
                     Just now
                   </p>
@@ -327,23 +330,19 @@ const cardBox =
   "rounded-2xl bg-white text-left shadow-[0_18px_40px_-20px_rgb(13_13_13/0.35)] ring-1 ring-black/5";
 
 /** One dashboard card beside the phone, tied to it by a short dotted line. */
-function Card({
-  side,
-  children,
-}: {
-  side: "left" | "right";
-  children: React.ReactNode;
-}) {
+function Card({ side, children }: { side: "left" | "right"; children: React.ReactNode }) {
+  const left = side === "left";
   return (
     <div data-card={side} className="relative w-[16rem]">
+      {/* Dotted line from the card to the phone, ending in a blue dot on the phone's edge. */}
       <span
         aria-hidden="true"
-        className={`absolute top-1/2 flex w-[clamp(1.5rem,4vw,3.5rem)] items-center ${side === "left" ? "left-full" : "right-full flex-row-reverse"}`}
+        className={`absolute top-1/2 flex w-[clamp(1.5rem,4vw,3.5rem)] -translate-y-1/2 items-center ${left ? "left-full" : "right-full flex-row-reverse"}`}
       >
-        <span className="h-px flex-1 border-t border-dashed border-ink/25" />
-        <span className="size-1.5 rounded-full bg-blue" />
+        <span data-line className={`h-0 flex-1 border-t border-dashed border-ink/30 ${left ? "origin-right" : "origin-left"}`} />
+        <span data-dot className="size-2 shrink-0 rounded-full bg-blue ring-4 ring-blue/15" />
       </span>
-      <div data-card-float className={`${cardBox} p-4`}>
+      <div data-card-box className={`${cardBox} p-4`}>
         {children}
       </div>
     </div>
