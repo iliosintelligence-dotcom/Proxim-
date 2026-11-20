@@ -107,7 +107,7 @@ export function Footer() {
   );
 
   return (
-    <footer ref={root} className="overflow-hidden bg-blue px-2 pb-2 sm:px-3 sm:pb-3">
+    <footer ref={root} className="overflow-hidden bg-blue p-2 sm:p-3">
       <div data-footer-card className="mx-auto max-w-[1400px] origin-bottom rounded-3xl bg-white px-[var(--gutter)] pt-10 text-ink sm:pt-12">
         <div className="grid gap-10 md:grid-cols-[1.35fr_repeat(3,1fr)]">
           {/* Community card */}
