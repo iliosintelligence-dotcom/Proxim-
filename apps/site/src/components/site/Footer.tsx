@@ -78,7 +78,9 @@ export function Footer() {
           scale: 1,
           borderRadius: 24,
           ease: "none",
-          scrollTrigger: { trigger: root.current, start: "top bottom", end: "top 35%", scrub: 0.8 },
+          // Settles exactly at the bottom of the page, so it always finishes
+          // expanding, however tall the screen is.
+          scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom bottom", scrub: 0.8 },
         },
       );
       gsap.from(q("[data-footer-col]"), {
