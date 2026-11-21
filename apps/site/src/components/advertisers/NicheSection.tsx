@@ -26,7 +26,7 @@ export function NicheSection() {
       );
       gsap.fromTo('[aria-checked="true"] [data-niche-icon]', { scale: 0.85 }, { scale: 1, duration: 0.6, ease: "back.out(3)" });
     },
-    { scope: list, dependencies: [niche] },
+    { scope: list, dependencies: [niche], lazy: true },
   );
 
   return (

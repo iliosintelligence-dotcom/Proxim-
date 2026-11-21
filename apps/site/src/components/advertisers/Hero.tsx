@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import type React from "react";
 import { MapPin } from "lucide-react";
 import { gsap, ScrollTrigger, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import { adIn } from "@/lib/adMotion";
@@ -61,34 +62,9 @@ export function Hero() {
   const { contextSafe } = useGSAP(
     () => {
       const reduce = prefersReducedMotion();
-      const intro = gsap.utils.toArray<HTMLElement>("[data-intro]");
-      if (reduce) {
-        gsap.set(intro, { autoAlpha: 1 });
-        return;
-      }
-      // Read everything first, then only write. Interleaving the two made
-      // the browser recalculate the whole page's styles once per element,
-      // which held up arriving on this page by most of a second.
-      const cards = gsap.utils.toArray<HTMLElement>("[data-card-wrap]");
-      const phones = gsap.utils.toArray<HTMLElement>("[data-hero-phone]");
-      const routes = gsap.utils.toArray<SVGPathElement>("[data-route]");
-      const lengths = routes.map((p) => p.getTotalLength());
-      [...intro, ...cards, ...phones].forEach((el) => gsap.getProperty(el, "y"));
-
-      gsap.fromTo(intro, { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1.1, stagger: 0.06, delay: 0.3 });
-      gsap.fromTo(
-        cards,
-        { y: 26, scale: 0.94, autoAlpha: 0 },
-        { y: 0, scale: 1, autoAlpha: 1, duration: 1.2, stagger: { each: 0.08, from: "center" }, delay: 0.55 },
-      );
-      gsap.fromTo(phones, { y: 60, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1.3, delay: 0.4 });
-      routes.forEach((p, i) => {
-        gsap.fromTo(
-          p,
-          { strokeDashoffset: lengths[i] },
-          { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", delay: 0.9 + i * 0.06 },
-        );
-      });
+      // The intro (copy, businesses, phone, routes) runs on CSS so it shows
+      // as soon as the page paints; see .intro-* in globals.css.
+      if (reduce) return;
 
       // Leaving the hero pulls back from the neighbourhood: businesses
       // drift outward and the phone eases back.
@@ -180,18 +156,18 @@ export function Hero() {
   return (
     <section ref={root} data-ad-manual className="relative overflow-hidden bg-paper">
       <Frame className="pt-[clamp(2.75rem,6.5vw,5rem)] text-center">
-        <p data-intro className="t-label inline-flex items-center gap-2 text-ink">
+        <p className="intro-rise t-label inline-flex items-center gap-2 text-ink">
           <MapPin className="size-3.5 text-blue" strokeWidth={2.2} />
           / Built for businesses across Nigeria
         </p>
-        <h1 data-led className="t-display mx-auto mt-6 max-w-[18ch]">
+        <h1 className="led-rise t-display mx-auto mt-6 max-w-[18ch]">
           Put your ad where it belongs.
         </h1>
-        <p data-intro className="t-lead mx-auto mt-5 max-w-[40rem]">
+        <p className="intro-rise t-lead mx-auto mt-5 max-w-[40rem]" style={{ "--i": 1 } as React.CSSProperties}>
           Proxim places your banner or notification inside apps that match what you sell, and shows it only to people
           near you. A church invite in a Bible app. A free gym pass in a step counter.
         </p>
-        <div data-intro className="mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center">
+        <div className="intro-rise mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center" style={{ "--i": 2 } as React.CSSProperties}>
           <Button href="#launch" arrow>
             Launch a campaign
           </Button>
@@ -199,7 +175,7 @@ export function Hero() {
             See how it works
           </Button>
         </div>
-        <p data-intro className="t-label mt-5 text-faint">
+        <p className="intro-rise t-label mt-5 text-faint" style={{ "--i": 3 } as React.CSSProperties}>
           From {naira((impressionSteps[0] / 1000) * advertiserCpm.banner)} · No contracts · Pay only for views
         </p>
       </Frame>
@@ -212,6 +188,8 @@ export function Hero() {
               <path
                 key={i}
                 data-route
+                className="route-in"
+                style={{ "--i": i } as React.CSSProperties}
                 d={pathFor(i)}
                 fill="none"
                 stroke="rgb(28 25 23 / 0.16)"
@@ -232,8 +210,16 @@ export function Hero() {
             <div
               key={s.id}
               data-card-wrap
-              className="absolute"
-              style={{ left: `${(s.x / W) * 100}%`, top: `${(s.y / H) * 100}%`, width: `${(CARD / W) * 100}%` }}
+              className="intro-pop absolute"
+              style={
+                {
+                  left: `${(s.x / W) * 100}%`,
+                  top: `${(s.y / H) * 100}%`,
+                  width: `${(CARD / W) * 100}%`,
+                  // pop in from the phone outward
+                  "--i": Math.round(Math.abs(s.x + CARD / 2 - (PHONE.x + PHONE.w / 2)) / 160),
+                } as React.CSSProperties
+              }
             >
               <BusinessCard spot={s} active={active === i} dim={active !== i} onPick={() => pick(i)} />
             </div>
@@ -241,7 +227,7 @@ export function Hero() {
 
           <div
             data-hero-phone
-            className="absolute"
+            className="intro-phone absolute"
             style={{ left: `${(PHONE.x / W) * 100}%`, top: `${(PHONE.y / H) * 100}%`, width: `${(PHONE.w / W) * 100}%` }}
           >
             <HeroPhone spot={spot} />
@@ -251,19 +237,19 @@ export function Hero() {
 
       {/* Phone and tablet: the phone, then the businesses as a swipeable row */}
       <div className="mt-12 lg:hidden">
-        <div data-hero-phone className="mx-auto w-[min(17rem,64vw)]">
+        <div data-hero-phone className="intro-phone mx-auto w-[min(17rem,64vw)]">
           <HeroPhone spot={spot} />
         </div>
         <div className="mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-[var(--gutter)] pb-2 [scrollbar-width:none]">
           {spots.map((s, i) => (
-            <div key={s.id} data-card-wrap className="w-[11.5rem] shrink-0 snap-center">
+            <div key={s.id} data-card-wrap className="intro-pop w-[11.5rem] shrink-0 snap-center" style={{ "--i": i } as React.CSSProperties}>
               <BusinessCard spot={s} active={active === i} onPick={() => pick(i)} />
             </div>
           ))}
         </div>
       </div>
 
-      <div data-intro className="relative mx-auto mt-8 flex w-fit items-center gap-3 rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[0.85rem] shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+      <div className="intro-rise relative mx-auto mt-8 flex w-fit items-center gap-3 rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[0.85rem] shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
         <span className="relative flex size-2">
           <span className="absolute inset-0 animate-ping rounded-full bg-[#22c55e]/60" />
           <span className="relative size-2 rounded-full bg-[#22c55e]" />

@@ -94,7 +94,7 @@ export function IntegrationSection() {
         },
       );
     },
-    { scope: code, dependencies: [lang], revertOnUpdate: true },
+    { scope: code, dependencies: [lang], revertOnUpdate: true, lazy: true },
   );
 
   return (

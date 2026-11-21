@@ -59,18 +59,9 @@ export function PubHero() {
 
   useGSAP(
     () => {
-      const intro = gsap.utils.toArray<HTMLElement>("[data-intro]");
-      if (prefersReducedMotion()) {
-        gsap.set(intro, { autoAlpha: 1 });
-        return;
-      }
-      gsap.from(intro, {
-        y: 24,
-        autoAlpha: 0,
-        duration: 1.2,
-        stagger: 0.08,
-        delay: 0.3,
-      });
+      // The intro (copy and phone) runs on CSS so it shows as soon as the
+      // page paints; see .intro-* in globals.css.
+      if (prefersReducedMotion()) return;
 
       // The cards come out of the phone as they scroll into view: each blue
       // dot pops on the phone's edge, its dashed line draws outward, and the
@@ -153,24 +144,21 @@ export function PubHero() {
       className="relative overflow-hidden bg-paper"
     >
       <Frame className="pt-[clamp(2.75rem,6.5vw,5rem)] text-center">
-        <p
-          data-intro
-          className="t-label inline-flex items-center gap-2 text-ink"
-        >
+        <p className="intro-rise t-label inline-flex items-center gap-2 text-ink">
           <Smartphone className="size-3.5 text-blue" strokeWidth={2.2} />/ For
           app owners and developers
         </p>
-        <h1 data-led className="t-display mx-auto mt-6 max-w-[19ch]">
+        <h1 className="led-rise t-display mx-auto mt-6 max-w-[19ch]">
           Get paid for the attention you already have.
         </h1>
-        <p data-intro className="t-lead mx-auto mt-5 max-w-[40rem]">
+        <p className="intro-rise t-lead mx-auto mt-5 max-w-[40rem]" style={{ "--i": 1 } as React.CSSProperties}>
           Add Proxim to your app and earn from local ads that fit your users.
           You decide which brands appear and how often. Your users get offers
           from businesses near them that they actually want.
         </p>
         <div
-          data-intro
-          className="mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center"
+          className="intro-rise mx-auto mt-8 grid w-full max-w-[20rem] gap-3 sm:flex sm:w-auto sm:max-w-none sm:justify-center"
+          style={{ "--i": 2 } as React.CSSProperties}
         >
           <Button href="#start" arrow>
             Start earning
@@ -179,7 +167,7 @@ export function PubHero() {
             Estimate your earnings
           </Button>
         </div>
-        <p data-intro className="t-label mt-5 text-faint">
+        <p className="intro-rise t-label mt-5 text-faint" style={{ "--i": 3 } as React.CSSProperties}>
           Free to join · Paid monthly in naira · Live in an afternoon
         </p>
       </Frame>
@@ -227,7 +215,7 @@ export function PubHero() {
           {/* The phone */}
           <div className="relative h-full w-[min(17.5rem,64vw)] shrink-0 lg:w-auto">
             <div className="absolute inset-x-0 bottom-0 translate-y-[30%]">
-              <div data-intro>
+              <div className="intro-phone">
                 <Phone label={`Daily Word app showing a ${ad.ad.brand} banner`}>
                   <AppScreen niche={ad} host="faith" format="banner" />
                 </Phone>

@@ -2,7 +2,7 @@
 
 import { Bell, CalendarDays, ChartColumn, Crosshair, MapPin, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type React from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
@@ -40,7 +40,6 @@ const featureItems: { icon: LucideIcon; tone: IconTone; title: string; body: str
  */
 export function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [compact, setCompact] = useState(false);
   // The page the phone menu is taking you to, while it loads.
   const [leaving, setLeaving] = useState<string | null>(null);
@@ -70,19 +69,35 @@ export function Nav() {
     setLeaving(null);
   }, [pathname]);
 
-  // Opening the phone menu fetches every page it links to, so a tap swaps
-  // pages straight away.
+  /*
+    The phone menu loads pages the ordinary way (a full page load) rather
+    than building the next page in place. On a phone the browser shows a
+    static page from the CDN far sooner than scripts can assemble it, and
+    the old page is simply dropped instead of being taken apart. Opening
+    the menu warms the browser cache with every page it links to.
+  */
   useEffect(() => {
-    if (sheetOpen) ["/", ...links.map((l) => l.href)].forEach((href) => router.prefetch(href));
-  }, [sheetOpen, router]);
+    if (!sheetOpen) return;
+    ["/", ...links.map((l) => l.href)].forEach((href) => {
+      if (href === pathname || document.head.querySelector(`link[rel=prefetch][href="${href}"]`)) return;
+      const l = document.createElement("link");
+      l.rel = "prefetch";
+      l.as = "document";
+      l.href = href;
+      document.head.appendChild(l);
+    });
+  }, [sheetOpen, pathname]);
 
   // A tap on a link to another page keeps the menu up (marked as loading)
-  // until that page is ready; a link on this page closes it at once.
+  // until the next page appears; a link on this page just closes it.
   const sheetTap = (e: React.MouseEvent) => {
     const a = (e.target as HTMLElement).closest("a");
     if (!a) return;
     const url = new URL(a.href, window.location.href);
-    if (url.pathname === pathname) setSheetOpen(false);
+    if (url.pathname === pathname && url.hash === window.location.hash) {
+      e.preventDefault();
+      setSheetOpen(false);
+    } else if (url.pathname === pathname) setSheetOpen(false);
     else setLeaving(url.pathname);
   };
 
@@ -346,7 +361,7 @@ export function Nav() {
           <ul>
             {[{ label: "Home", href: "/" }, ...links].map((l) => (
               <li key={l.href} data-sheet-item className="border-b" style={{ borderColor: "var(--line)" }}>
-                <Link
+                <a
                   href={l.href}
                   tabIndex={sheetOpen ? 0 : -1}
                   onClick={sheetTap}
@@ -358,7 +373,7 @@ export function Nav() {
                   <PixelArrow
                     className={`!size-5 transition-[color,translate] duration-200 ${leaving === l.href ? "translate-x-1 text-blue" : "text-faint"}`}
                   />
-                </Link>
+                </a>
               </li>
             ))}
           </ul>

@@ -80,7 +80,8 @@ export function CardStack() {
         });
         tl.to({}, { duration: 0.4 });
       });
-      return () => mm.revert();
+      // The matchMedia belongs to this component's context, so it is
+      // reverted (or dropped, when leaving the page) along with it.
     },
     { scope: root },
   );

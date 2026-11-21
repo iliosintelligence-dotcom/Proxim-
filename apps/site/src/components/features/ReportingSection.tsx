@@ -62,7 +62,7 @@ export function ReportingSection() {
         onToggle: (s) => (s.isActive ? tick.play() : tick.pause()),
       });
     },
-    { scope: root },
+    { scope: root, lazy: true },
   );
 
   return (

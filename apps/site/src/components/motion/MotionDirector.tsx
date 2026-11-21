@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
-import { gsap, ScrollTrigger, SplitText, prefersReducedMotion } from "@/lib/gsap";
+import { gsap, ScrollTrigger, SplitText, prefersReducedMotion, dropContext } from "@/lib/gsap";
 import { adIn } from "@/lib/adMotion";
 import type { Format } from "@/lib/data";
 import { setLenis } from "@/lib/lenis";
@@ -43,6 +43,10 @@ export function MotionDirector() {
     if (!window.location.hash) lenisRef.current?.scrollTo(0, { immediate: true });
     const reduce = prefersReducedMotion();
 
+    // The page these animations belong to. If it's gone by cleanup time,
+    // the route changed: drop the animations rather than restoring styles
+    // on elements that no longer exist.
+    const page = document.querySelector("main")?.firstElementChild ?? null;
     const ctx = gsap.context(() => {
       const leds = gsap.utils.toArray<HTMLElement>("[data-led]");
       const reveals = gsap.utils.toArray<HTMLElement>("[data-reveal]");
@@ -90,74 +94,86 @@ export function MotionDirector() {
         );
       });
 
-      leds.forEach((el) => {
+      // Headlines, copy and ads are set up only as they reach the screen.
+      // Preparing every one on load (splitting text, measuring trigger
+      // points) cost seconds on a phone before the first headline could
+      // show; this way the work is spread out as you scroll.
+      const setupLed = (el: HTMLElement) => {
         const icons = el.querySelectorAll("[data-hicon]");
+        let played = false;
         gsap.set(el, { autoAlpha: 1 });
         // Re-splits itself once the display font has loaded or the width
-        // changes, so line breaks are always the real ones.
+        // changes, so line breaks are always the real ones. Only the first
+        // split animates.
         SplitText.create(el, {
           type: "lines",
           mask: "lines",
           autoSplit: true,
           aria: "auto",
-          onSplit: (self) =>
-            gsap.from(self.lines, {
-              yPercent: 105,
-              duration: 1.1,
-              ease: "expo.out",
-              stagger: 0.09,
-              scrollTrigger: { trigger: el, start: "top 88%", once: true },
-            }),
+          onSplit: (self) => {
+            if (played) return;
+            played = true;
+            return gsap.from(self.lines, { yPercent: 105, duration: 1.1, ease: "expo.out", stagger: 0.09 });
+          },
         });
-        if (icons.length) {
-          gsap.set(icons, { opacity: 0, scale: 0.4 });
-          gsap.to(icons, {
-            opacity: 1,
-            scale: 1,
-            duration: 0.8,
-            ease: "back.out(2)",
-            delay: 0.5,
-            stagger: 0.1,
-            scrollTrigger: { trigger: el, start: "top 88%", once: true },
-          });
-        }
-      });
+        if (icons.length)
+          gsap.fromTo(
+            icons,
+            { opacity: 0, scale: 0.4 },
+            { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(2)", delay: 0.5, stagger: 0.1 },
+          );
+      };
 
       // Ads never just sit on the page: they land when their phone scrolls
       // into view. Sections that choreograph their own ads opt out with
       // [data-ad-manual].
-      gsap.utils
-        .toArray<HTMLElement>("[data-ad]")
-        .filter((el) => !el.closest("[data-ad-manual]"))
-        .forEach((el) => {
-          ScrollTrigger.create({
-            trigger: el.parentElement ?? el,
-            start: "top 85%",
-            once: true,
-            onEnter: () => adIn(el, el.dataset.ad as Format, 0.15),
-          });
-        });
+      const ads = gsap.utils.toArray<HTMLElement>("[data-ad]").filter((el) => !el.closest("[data-ad-manual]"));
+      const adOf = new Map(ads.map((el) => [el.parentElement ?? el, el]));
 
-      gsap.set(reveals, { autoAlpha: 0, y: 18 });
-      ScrollTrigger.batch(reveals, {
-        start: "top 90%",
-        once: true,
-        onEnter: (batch) =>
-          gsap.to(batch, {
-            autoAlpha: 1,
-            y: 0,
-            duration: 1,
-            ease: "expo.out",
-            stagger: 0.07,
-            delay: 0.08,
+      // The observer's area reaches far above the screen, so anything that
+      // has been scrolled past counts as seen, even after a fast flick that
+      // jumped it from below the screen to above it in one go.
+      const show = (els: Element[], bottom: string, run: (els: HTMLElement[]) => void) => {
+        const rootMargin = `100000px 0px ${bottom} 0px`;
+        if (!els.length) return () => {};
+        const io = new IntersectionObserver(
+          (entries) => {
+            const hit = entries.filter((e) => e.isIntersecting).map((e) => e.target as HTMLElement);
+            if (!hit.length) return;
+            hit.forEach((t) => io.unobserve(t));
+            ctx.add(() => run(hit));
+          },
+          { rootMargin },
+        );
+        els.forEach((el) => io.observe(el));
+        return () => io.disconnect();
+      };
+
+      const stops = [
+        // as the top of a headline passes 88% of the screen
+        show(leds, "-12%", (els) => els.forEach(setupLed)),
+        // copy and cards fade up together, a beat apart
+        show(reveals, "-10%", (els) =>
+          gsap.fromTo(
+            els,
+            { autoAlpha: 0, y: 18 },
+            { autoAlpha: 1, y: 0, duration: 1, ease: "expo.out", stagger: 0.07, delay: 0.08 },
+          ),
+        ),
+        show([...adOf.keys()], "-15%", (els) =>
+          els.forEach((holder) => {
+            const ad = adOf.get(holder)!;
+            adIn(ad, ad.dataset.ad as Format, 0.15);
           }),
-      });
+        ),
+      ];
+      return () => stops.forEach((stop) => stop());
     });
 
     // Fonts change line lengths; re-measure trigger points once they're in.
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
-    return () => ctx.revert();
+    return () => (page && !page.isConnected ? dropContext(ctx) : ctx.revert());
   }, [pathname]);
 
   return null;

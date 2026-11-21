@@ -54,7 +54,7 @@ export function LivePhone({
       gsap.fromTo(scr, { autoAlpha: 0.4, scale: 0.985 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: "power2.out" });
       adIn(ad, format, 0.22);
     },
-    { scope: root, dependencies: [niche.id, format, host, replayKey, showAd], revertOnUpdate: true },
+    { scope: root, dependencies: [niche.id, format, host, replayKey, showAd], revertOnUpdate: true, lazy: true },
   );
 
   return (

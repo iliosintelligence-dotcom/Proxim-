@@ -63,7 +63,7 @@ export function LaunchSection({
       const added = Array.from(days.current!.children).slice(from, c.days);
       gsap.fromTo(added, { scale: 0.2 }, { scale: 1, duration: 0.5, ease: "back.out(3)", stagger: 0.02 });
     },
-    { dependencies: [c.days], scope: days },
+    { dependencies: [c.days], scope: days, lazy: true },
   );
 
   return (
@@ -245,7 +245,7 @@ function CampaignOutcomes({ total }: { total: number }) {
         gsap.to(el.firstElementChild, { y: i % 2 ? 4 : -4, duration: 2.4 + i * 0.3, ease: "sine.inOut", yoyo: true, repeat: -1 }),
       );
     },
-    { scope: root },
+    { scope: root, lazy: true },
   );
 
   // A small pulse whenever the campaign changes.
@@ -258,7 +258,7 @@ function CampaignOutcomes({ total }: { total: number }) {
       }
       gsap.fromTo("[data-pill-body]", { scale: 1 }, { scale: 1.035, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out", stagger: 0.03 });
     },
-    { scope: root, dependencies: [total] },
+    { scope: root, dependencies: [total], lazy: true },
   );
 
   return (

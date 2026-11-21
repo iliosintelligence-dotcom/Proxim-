@@ -78,7 +78,7 @@ export function Marquee({
         el.removeEventListener("pointerleave", leave);
       };
     },
-    { scope: root, dependencies: [vertical] },
+    { scope: root, dependencies: [vertical], lazy: true },
   );
 
   return (

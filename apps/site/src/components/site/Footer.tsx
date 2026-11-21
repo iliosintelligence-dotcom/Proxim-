@@ -105,7 +105,7 @@ export function Footer() {
         .to({}, { duration: 2.6 });
       ScrollTrigger.create({ trigger: root.current, start: "top bottom", onToggle: (s) => (s.isActive ? ping.play() : ping.pause()) });
     },
-    { scope: root },
+    { scope: root, lazy: true },
   );
 
   return (

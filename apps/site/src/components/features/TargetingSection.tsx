@@ -50,7 +50,7 @@ export function TargetingSection() {
         onToggle: (s) => [nicheTl, sonarTl].forEach((l) => (s.isActive ? l.play() : l.pause())),
       });
     },
-    { scope: root },
+    { scope: root, lazy: true },
   );
 
   return (
