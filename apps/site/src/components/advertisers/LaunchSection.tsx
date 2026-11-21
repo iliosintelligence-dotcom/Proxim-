@@ -154,11 +154,11 @@ export function LaunchSection({
 
             <div className="px-6 pb-5 pt-4">
               <p className="t-label text-faint">Runs for {c.days} {c.days === 1 ? "day" : "days"}</p>
-              <div ref={days} className="mt-2.5 grid grid-cols-[repeat(15,1fr)] gap-1" aria-hidden="true">
+              <div ref={days} className="mt-2.5 grid grid-cols-[repeat(15,1fr)] gap-x-1 gap-y-1.5" aria-hidden="true">
                 {Array.from({ length: MAX_DAYS }, (_, i) => (
                   <span
                     key={i}
-                    className={`aspect-square rounded-[2px] transition-colors duration-300 ${i < c.days ? "bg-ink" : "bg-stone-2"}`}
+                    className={`h-4 rounded-full transition-colors duration-300 ${i < c.days ? "bg-blue" : "bg-stone-2"}`}
                   />
                 ))}
               </div>
@@ -315,8 +315,9 @@ function Pickers() {
   const select =
     "h-11 w-full appearance-none rounded-xl border border-[var(--line-strong)] bg-white px-3.5 pr-9 text-[0.92rem] focus-visible:outline-2 focus-visible:outline-blue";
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <div>
+    // Format gets a full row wherever the column is too narrow for three across.
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="sm:col-span-2 md:col-span-1 lg:col-span-2 xl:col-span-1">
         <p className="t-label text-faint">Format</p>
         <div role="radiogroup" aria-label="Format" className="mt-2 grid h-11 grid-cols-2 rounded-xl bg-stone p-1">
           {formats.map(([f, l]) => (

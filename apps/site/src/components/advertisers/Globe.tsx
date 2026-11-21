@@ -51,15 +51,38 @@ function build(city: City, radius: number) {
 export function Globe({ cityId, radius, className = "" }: { cityId: string; radius: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const globeRef = useRef<CobeGlobe | null>(null);
+  // The globe is built later than the first render, so it reads the latest
+  // city and radius from here rather than from the first render.
+  const latest = useRef({ cityId, radius });
+  latest.current = { cityId, radius };
   const target = useRef(toAngles(9, 8));
   const current = useRef({ ...target.current });
   const drag = useRef<{ x: number; y: number } | null>(null);
   const dragOffset = useRef({ phi: 0, theta: 0 });
 
-  // Create once.
+  // Created once, and only when the reader scrolls near it: building the
+  // globe is the heaviest thing on the page, so it stays out of page loads
+  // and page changes.
   useEffect(() => {
     const canvas = canvasRef.current!;
+    let stop: (() => void) | null = null;
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting || stop) return;
+        near.disconnect();
+        stop = start();
+      },
+      { rootMargin: "800px 0px" },
+    );
+    near.observe(canvas);
+    return () => {
+      near.disconnect();
+      stop?.();
+    };
+
+    function start() {
     const reduce = prefersReducedMotion();
+    const { cityId, radius } = latest.current;
     const city = cities.find((c) => c.id === cityId)!;
     target.current = toAngles(city.lat - 1, city.lon);
     current.current = { ...target.current };
@@ -125,7 +148,7 @@ export function Globe({ cityId, radius, className = "" }: { cityId: string; radi
       globe.destroy();
       globeRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
   }, []);
 
   // Turn to the chosen city and redraw its radius.

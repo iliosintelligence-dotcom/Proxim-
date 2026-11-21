@@ -66,19 +66,28 @@ export function Hero() {
         gsap.set(intro, { autoAlpha: 1 });
         return;
       }
-      gsap.from(intro, { y: 18, autoAlpha: 0, duration: 1.1, stagger: 0.06, delay: 0.3 });
-      gsap.from("[data-card-wrap]", {
-        y: 26,
-        scale: 0.94,
-        autoAlpha: 0,
-        duration: 1.2,
-        stagger: { each: 0.08, from: "center" },
-        delay: 0.55,
-      });
-      gsap.from("[data-hero-phone]", { y: 60, autoAlpha: 0, duration: 1.3, delay: 0.4 });
-      gsap.utils.toArray<SVGPathElement>("[data-route]").forEach((p, i) => {
-        const len = p.getTotalLength();
-        gsap.fromTo(p, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", delay: 0.9 + i * 0.06 });
+      // Read everything first, then only write. Interleaving the two made
+      // the browser recalculate the whole page's styles once per element,
+      // which held up arriving on this page by most of a second.
+      const cards = gsap.utils.toArray<HTMLElement>("[data-card-wrap]");
+      const phones = gsap.utils.toArray<HTMLElement>("[data-hero-phone]");
+      const routes = gsap.utils.toArray<SVGPathElement>("[data-route]");
+      const lengths = routes.map((p) => p.getTotalLength());
+      [...intro, ...cards, ...phones].forEach((el) => gsap.getProperty(el, "y"));
+
+      gsap.fromTo(intro, { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1.1, stagger: 0.06, delay: 0.3 });
+      gsap.fromTo(
+        cards,
+        { y: 26, scale: 0.94, autoAlpha: 0 },
+        { y: 0, scale: 1, autoAlpha: 1, duration: 1.2, stagger: { each: 0.08, from: "center" }, delay: 0.55 },
+      );
+      gsap.fromTo(phones, { y: 60, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1.3, delay: 0.4 });
+      routes.forEach((p, i) => {
+        gsap.fromTo(
+          p,
+          { strokeDashoffset: lengths[i] },
+          { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", delay: 0.9 + i * 0.06 },
+        );
       });
 
       // Leaving the hero pulls back from the neighbourhood: businesses

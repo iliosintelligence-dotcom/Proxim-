@@ -58,7 +58,7 @@ export default function PricingPage() {
                 <div className="mt-auto pt-8">
                   <Button
                     href={p.id === "agency" ? "/contact" : "/#launch"}
-                    variant={p.featured ? "primary" : "secondary"}
+                    variant={p.featured ? "night" : "secondary"}
                     arrow
                     className="w-full"
                   >
@@ -98,7 +98,7 @@ export default function PricingPage() {
               app, paid monthly in naira.
             </p>
           </div>
-          <Button href="/publishers" variant="secondary" arrow>
+          <Button href="/publishers" variant="secondary" arrow className="justify-self-start lg:justify-self-auto">
             Earn with Proxim
           </Button>
         </div>
